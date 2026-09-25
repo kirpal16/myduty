@@ -1,0 +1,578 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  /* --font-sans used to be `var(--font-sans)` — pointing at itself. It
+     resolved to nothing, so `font-sans` on <body> fell through to the
+     browser default and the whole app rendered in Times New Roman, while the
+     webfont was downloaded and used by no element at all.
+
+     Noto Sans Gujarati sits after Inter so it only supplies the characters
+     Inter has no glyph for; the browser walks the stack per character. */
+  --font-sans: var(--font-inter), var(--font-gujarati), ui-sans-serif, system-ui,
+    -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo,
+    Consolas, monospace;
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --primary: #4f46e5;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #1e293b;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #eef2ff;
+  --accent-foreground: #3730a3;
+  --destructive: #ef4444;
+  --border: #e2e8f0;
+  --input: #cbd5e1;
+  --ring: #6366f1;
+  --chart-1: #4f46e5;
+  --chart-2: #06b6d4;
+  --chart-3: #10b981;
+  --chart-4: #f59e0b;
+  --chart-5: #ec4899;
+  --radius: 0.75rem;
+  --sidebar: #0f172a;
+  --sidebar-foreground: #f8fafc;
+  --sidebar-primary: #6366f1;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #1e293b;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #1e293b;
+  --sidebar-ring: #6366f1;
+}
+
+.dark {
+  --background: #090d16;
+  --foreground: #f8fafc;
+  --card: #111827;
+  --card-foreground: #f8fafc;
+  --popover: #111827;
+  --popover-foreground: #f8fafc;
+  --primary: #6366f1;
+  --primary-foreground: #ffffff;
+  --secondary: #1f2937;
+  --secondary-foreground: #f8fafc;
+  --muted: #1e293b;
+  --muted-foreground: #94a3b8;
+  --accent: #2e1065;
+  --accent-foreground: #c084fc;
+  --destructive: #f87171;
+  --border: #1f2937;
+  --input: #374151;
+  --ring: #818cf8;
+  --chart-1: #6366f1;
+  --chart-2: #38bdf8;
+  --chart-3: #34d399;
+  --chart-4: #fbbf24;
+  --chart-5: #f472b6;
+  --sidebar: #090d16;
+  --sidebar-foreground: #f8fafc;
+  --sidebar-primary: #818cf8;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #1e293b;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #1e293b;
+  --sidebar-ring: #818cf8;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased selection:bg-indigo-500/20 selection:text-indigo-600 dark:selection:text-indigo-300;
+  }
+  html {
+    @apply font-sans scroll-smooth;
+  }
+}
+
+/* Custom modern scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.4);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.7);
+}
+
+/*
+ * Both of these were already in use across the app -- on the horizontally
+ * scrolling pill rows and inside FormSelect's option list -- but neither was
+ * ever defined, so a native scrollbar showed under them on touch devices.
+ */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
+}
+
+/* Glassmorphism helpers */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.dark .glass-panel {
+  background: rgba(17, 24, 39, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(31, 41, 55, 0.8);
+}
+
+/* ==========================================================================
+   FullCalendar Modern Theme Overrides
+   ========================================================================== */
+.fc {
+  --fc-border-color: var(--border);
+  --fc-page-bg-color: transparent;
+  --fc-neutral-bg-color: var(--muted);
+  --fc-list-event-hover-bg-color: var(--muted);
+  --fc-today-bg-color: rgba(99, 102, 241, 0.06);
+  font-family: inherit;
+}
+
+.dark .fc {
+  --fc-today-bg-color: rgba(99, 102, 241, 0.12);
+}
+
+.fc .fc-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem !important;
+}
+
+.fc .fc-toolbar-title {
+  font-size: 1.15rem !important;
+  font-weight: 800 !important;
+  color: var(--foreground);
+  letter-spacing: -0.02em;
+}
+
+.fc .fc-button {
+  background-color: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--foreground) !important;
+  border-radius: 0.75rem !important;
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+  padding: 0.45rem 0.85rem !important;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  text-transform: capitalize;
+  transition: all 0.15s ease-in-out;
+}
+
+.fc .fc-button:hover {
+  background-color: var(--muted) !important;
+  border-color: rgba(99, 102, 241, 0.4) !important;
+}
+
+.fc .fc-button-primary:not(:disabled).fc-button-active,
+.fc .fc-button-primary:not(:disabled):active {
+  background-color: #4f46e5 !important;
+  border-color: #4f46e5 !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 4px 0 rgba(79, 70, 229, 0.3) !important;
+}
+
+.fc .fc-col-header-cell {
+  padding: 0.75rem 0.25rem !important;
+  background-color: rgba(241, 245, 249, 0.5);
+  border-color: var(--border) !important;
+}
+
+.dark .fc .fc-col-header-cell {
+  background-color: rgba(30, 41, 59, 0.4);
+}
+
+.fc .fc-col-header-cell-cushion {
+  font-size: 0.75rem !important;
+  font-weight: 700 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+  text-decoration: none !important;
+}
+
+.fc .fc-daygrid-day-frame {
+  min-height: 100px;
+  padding: 4px;
+  transition: background-color 0.15s ease;
+}
+
+.fc .fc-daygrid-day-frame:hover {
+  background-color: rgba(99, 102, 241, 0.02);
+}
+
+.fc .fc-daygrid-day-top {
+  flex-direction: row;
+  justify-content: flex-end;
+  padding: 4px 6px;
+}
+
+.fc .fc-daygrid-day-number {
+  font-size: 0.8rem !important;
+  font-weight: 700 !important;
+  color: var(--muted-foreground);
+  text-decoration: none !important;
+  border-radius: 9999px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.fc .fc-day-today .fc-daygrid-day-number {
+  background-color: #4f46e5;
+  color: #ffffff !important;
+  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.4);
+}
+
+/* Weekend shading */
+.fc .fc-day-sat .fc-daygrid-day-frame,
+.fc .fc-day-sun .fc-daygrid-day-frame {
+  background-color: rgba(241, 245, 249, 0.45);
+}
+
+.dark .fc .fc-day-sat .fc-daygrid-day-frame,
+.dark .fc .fc-day-sun .fc-daygrid-day-frame {
+  background-color: rgba(15, 23, 42, 0.35);
+}
+
+/* Event pills */
+.fc-event {
+  border-radius: 0.5rem !important;
+  padding: 2px 6px !important;
+  margin-bottom: 2px !important;
+  font-size: 0.72rem !important;
+  font-weight: 600 !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  border: none !important;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.fc-event:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+}
+
+.fc-event-main {
+  padding: 1px 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* ---------------------------------------------------------------------------
+   Charts on a touch screen
+
+   Recharts 3 enables `accessibilityLayer` by default, which puts tabIndex={0}
+   on the chart. Tapping one therefore FOCUSES it and the browser paints a
+   focus ring — the dark frame that appeared around charts on a phone but never
+   on a desktop, because a mouse click does not linger the same way.
+
+   Suppressing the ring for pointer and touch focus while keeping it for
+   :focus-visible means keyboard users still see where they are. Written here
+   rather than as a Tailwind arbitrary variant because `[&_*:focus]:outline-none`
+   silently produced no CSS at all — verified against the built stylesheet.
+   --------------------------------------------------------------------------- */
+.recharts-wrapper:focus,
+.recharts-surface:focus,
+.recharts-wrapper *:focus {
+  outline: none;
+}
+
+.recharts-wrapper:focus-visible,
+.recharts-surface:focus-visible {
+  outline: 2px solid var(--color-indigo-500, #6366f1);
+  outline-offset: 2px;
+}
+
+/* Stops the grey flash mobile browsers paint over a tapped element. */
+.recharts-wrapper,
+.recharts-wrapper * {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ---------------------------------------------------------------------------
+   Printing (TA and Holiday Worked reports).
+
+   The printable report is already on the page (`.report-print`, hidden on
+   screen); everything else carries `print:hidden`. These rules make the
+   paper version plain: white page, black text whatever theme the app is in,
+   the column headings repeated on every page, and no row split across two.
+   --------------------------------------------------------------------------- */
+@media print {
+  /* No page margin: that is what makes browsers (and Android) stop stamping
+     their own date / title / URL header and footer on the sheet. The report
+     supplies its own margins (.rp-space rows and .rp-body padding). */
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+
+  /* Paper is white whatever theme the app is in: strip every app background
+     and shadow, then let the report's own shading back in below. */
+  html,
+  body,
+  body * {
+    background-color: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+    height: auto !important;
+  }
+
+  .min-h-screen {
+    min-height: 0 !important;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .report-print .rp-table thead th {
+    background-color: #e6e6e6 !important;
+  }
+
+  .report-print .rp-table tbody tr:nth-child(even) td {
+    background-color: #f5f5f5 !important;
+  }
+}
+
+/* The printed report (visible only when printing — see ReportPrintView). */
+.report-print {
+  color: #000;
+  font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+}
+
+.report-print .rp-page {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.report-print .rp-page > thead,
+.report-print .rp-table > thead {
+  display: table-header-group;
+}
+
+.report-print .rp-page > tfoot {
+  display: table-footer-group;
+}
+
+.report-print .rp-space {
+  height: 12mm;
+  padding: 0;
+  border: 0;
+}
+
+.report-print .rp-body {
+  padding: 0 14mm;
+}
+
+.report-print .rp-letterhead {
+  display: flex;
+  align-items: center;
+  gap: 4mm;
+  padding-bottom: 3mm;
+  border-bottom: 3px double #000;
+}
+
+.report-print .rp-logo {
+  width: 17mm;
+  height: 17mm;
+  object-fit: contain;
+}
+
+.report-print .rp-org {
+  flex: 1;
+}
+
+.report-print .rp-org-name {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 17pt;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1.1;
+}
+
+.report-print .rp-org-sub {
+  margin-top: 1mm;
+  font-size: 10pt;
+}
+
+.report-print .rp-period {
+  text-align: right;
+  font-size: 8.5pt;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.report-print .rp-period strong {
+  display: block;
+  margin-top: 0.5mm;
+  font-size: 11.5pt;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.report-print .rp-title {
+  margin: 6mm 0 5mm;
+  text-align: center;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 14pt;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.report-print .rp-details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2mm 10mm;
+  margin-bottom: 6mm;
+  padding: 3.5mm 5mm;
+  border: 1px solid #000;
+  font-size: 10pt;
+}
+
+.report-print .rp-details > div {
+  display: flex;
+  gap: 2mm;
+}
+
+.report-print .rp-details dt {
+  min-width: 30mm;
+  font-weight: 700;
+}
+
+.report-print .rp-details dt::after {
+  content: ":";
+}
+
+.report-print .rp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 9.5pt;
+}
+
+.report-print .rp-table th,
+.report-print .rp-table td {
+  border: 1px solid #444;
+  padding: 1.8mm 2.2mm;
+  text-align: left;
+  vertical-align: top;
+}
+
+.report-print .rp-table th {
+  font-size: 8.5pt;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.report-print .rp-table tr {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.report-print .rp-idx {
+  width: 8mm;
+  text-align: center !important;
+}
+
+.report-print .rp-num {
+  text-align: right !important;
+  white-space: nowrap;
+}
+
+.report-print .rp-empty {
+  padding: 10mm 0;
+  text-align: center;
+  font-size: 11pt;
+}
