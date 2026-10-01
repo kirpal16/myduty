@@ -85,13 +85,30 @@ export function formatSafeDateMonthYear(dateInput: string | Date | number): stri
 }
 
 /**
- * Returns deterministic time "09:30 AM" or "14:30"
+ * Returns deterministic time "09:30 AM" or "14:30" without timezone offset jumping
  */
 export function formatSafeTime(dateInput: string | Date | number, format12h = false): string {
-  const d = typeof dateInput === "object" ? dateInput : new Date(dateInput);
-  if (isNaN(d.getTime())) return "";
-  const hours = d.getHours();
-  const minutes = String(d.getMinutes()).padStart(2, "0");
+  if (!dateInput && dateInput !== 0) return "";
+  let hours: number;
+  let minutes: string;
+
+  if (typeof dateInput === "string") {
+    const m = /T(\d{2}):(\d{2})/.exec(dateInput);
+    if (m) {
+      hours = Number(m[1]);
+      minutes = m[2];
+    } else {
+      const d = new Date(dateInput);
+      if (isNaN(d.getTime())) return "";
+      hours = d.getUTCHours();
+      minutes = String(d.getUTCMinutes()).padStart(2, "0");
+    }
+  } else {
+    const d = typeof dateInput === "object" ? dateInput : new Date(dateInput);
+    if (isNaN(d.getTime())) return "";
+    hours = d.getUTCHours();
+    minutes = String(d.getUTCMinutes()).padStart(2, "0");
+  }
 
   if (!format12h) {
     return `${String(hours).padStart(2, "0")}:${minutes}`;

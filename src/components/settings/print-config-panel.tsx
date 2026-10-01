@@ -301,7 +301,7 @@ export function PrintConfigPanel({
             </div>
             <div class="sig-box">
               <p style="margin: 0; font-weight: bold;">લિ. સહી</p>
-              <p style="margin: 25px 0 0 0; font-weight: bold;">${signatoryName}</p>
+              <p style="margin: 2px 0 0 0; font-weight: bold;">${signatoryName}</p>
             </div>
           </div>
         `
@@ -359,7 +359,7 @@ export function PrintConfigPanel({
             </div>
             <div class="sig-box">
               <p style="margin: 0; font-weight: bold;">Signature</p>
-              <p style="margin: 25px 0 0 0; font-weight: bold;">${signatoryName}</p>
+              <p style="margin: 2px 0 0 0; font-weight: bold;">${signatoryName}</p>
             </div>
           </div>
         `
@@ -807,9 +807,9 @@ export function PrintConfigPanel({
                       <p className="text-[10px] text-slate-500 italic mt-1">{footerNote}</p>
                     )}
                   </div>
-                  <div className="text-right space-y-1">
+                  <div className="text-right">
                     <p className="font-bold text-slate-900">લિ. સહી</p>
-                    <p className="font-semibold text-slate-800 pt-3">{signatoryName}</p>
+                    <p className="font-semibold text-slate-800 pt-0.5">{signatoryName}</p>
                   </div>
                 </div>
               </div>
@@ -884,9 +884,9 @@ export function PrintConfigPanel({
                       <p className="text-[10px] text-slate-500 italic mt-1">{footerNote}</p>
                     )}
                   </div>
-                  <div className="text-right space-y-1">
+                  <div className="text-right">
                     <p className="font-bold text-slate-900">Signature</p>
-                    <p className="font-semibold text-slate-800 pt-3">{signatoryName}</p>
+                    <p className="font-semibold text-slate-800 pt-0.5">{signatoryName}</p>
                   </div>
                 </div>
               </div>

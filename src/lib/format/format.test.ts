@@ -40,8 +40,8 @@ describe("localInputToISO / isoToLocalInput", () => {
     // whatever the offset, rather than being reinterpreted as 18:00 UTC.
     const iso = localInputToISO("2026-09-08T18:00");
     const back = new Date(iso);
-    expect(back.getHours()).toBe(18);
-    expect(back.getDate()).toBe(8);
+    expect(back.getUTCHours()).toBe(18);
+    expect(back.getUTCDate()).toBe(8);
   });
 
   it("produces an instant with an explicit offset", () => {

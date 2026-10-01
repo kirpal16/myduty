@@ -35,6 +35,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
+  viewportFit: "cover",
 };
 
 export const metadata: Metadata = {
@@ -49,7 +50,9 @@ export const metadata: Metadata = {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "My Duty",
+    startupImage: "/icons/icon-512.png",
   },
+  formatDetection: { telephone: false },
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },

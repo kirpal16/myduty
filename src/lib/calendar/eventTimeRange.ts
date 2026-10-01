@@ -27,31 +27,38 @@ export function eventTimeRange(
   if (Number.isNaN(start.getTime())) return "";
 
   const dayKey = toDateKey(viewedDay);
-  const startKey = toDateKey(start);
+  const startKey = toDateKey(event.start);
 
   const end = event.end ? new Date(event.end) : null;
   const endValid = end && !Number.isNaN(end.getTime());
-  const endKey = endValid ? toDateKey(end) : null;
+  const endKey = event.end && endValid ? toDateKey(event.end) : null;
 
-  // Deterministic "Sep 11", never toLocaleDateString(undefined): the server
-  // (Node, en-US) and the browser (e.g. en-IN, "11 Sept") disagree, and this
-  // label is rendered on both — a hydration mismatch on the calendar.
-  const shortDate = (d: Date) => `${formatSafeMonthShort(d)} ${d.getDate()}`;
+  // Deterministic "Sep 11" without timezone offset shifts
+  const shortDate = (isoStr: string) => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(isoStr);
+    if (m) {
+      const monthIdx = Number(m[2]) - 1;
+      const dayNum = Number(m[3]);
+      return `${formatSafeMonthShort(new Date(2026, monthIdx, 1))} ${dayNum}`;
+    }
+    const d = new Date(isoStr);
+    return `${formatSafeMonthShort(d)} ${d.getUTCDate()}`;
+  };
 
   // A day in the middle of a longer duty: no start, no end, just cover.
   if (startKey < dayKey && endKey && endKey > dayKey) return "All day (ongoing)";
 
   const startLabel =
     startKey === dayKey
-      ? formatTime(start, timeFormat)
-      : `${shortDate(start)} ${formatTime(start, timeFormat)}`;
+      ? formatTime(event.start, timeFormat)
+      : `${shortDate(event.start)} ${formatTime(event.start, timeFormat)}`;
 
-  if (!endValid || !endKey) return startLabel;
+  if (!endValid || !endKey || !event.end) return startLabel;
 
   const endLabel =
     endKey === dayKey
-      ? formatTime(end, timeFormat)
-      : `${shortDate(end)} ${formatTime(end, timeFormat)}`;
+      ? formatTime(event.end, timeFormat)
+      : `${shortDate(event.end)} ${formatTime(event.end, timeFormat)}`;
 
   return `${startLabel} – ${endLabel}`;
 }

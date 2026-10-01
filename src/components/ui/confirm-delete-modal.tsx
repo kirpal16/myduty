@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { AlertTriangle, Trash2, X, Loader2 } from "lucide-react";
 import { ModalPortal, MODAL_Z } from "./modal-portal";
 import { useBodyScrollLock } from "@/lib/hooks/useBodyScrollLock";
+import { useModalBackClose } from "@/lib/hooks/useModalBackClose";
 
 export interface ConfirmDeleteModalProps {
   isOpen: boolean;
@@ -27,6 +28,7 @@ export function ConfirmDeleteModal({
   // Reference-counted, so closing this modal while it sits over the open
   // mobile drawer no longer unlocks the page underneath.
   useBodyScrollLock(isOpen);
+  useModalBackClose(isOpen, onClose);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -44,7 +46,7 @@ export function ConfirmDeleteModal({
       onClick={() => {
         if (!isPending) onClose();
       }}
-      className={`fixed inset-0 ${MODAL_Z} flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in-0 duration-150`}
+      className={`fixed inset-0 ${MODAL_Z} flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in-0 duration-150 print:hidden`}
     >
       <div
         onClick={(e) => e.stopPropagation()}

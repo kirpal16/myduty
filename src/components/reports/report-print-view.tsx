@@ -187,11 +187,11 @@ export function ReportPrintView({
                       <p>સ્થળ: {footerPlace}</p>
                       {footerNote && <p className="text-[10px] text-gray-600">{footerNote}</p>}
                     </div>
-                    <div className="text-right space-y-1">
+                    <div className="text-right">
                       <p className="font-bold">લિ. સહી</p>
-                      <div className="pt-6">
+                      <div className="pt-0.5">
                         {config.signatoryName ? (
-                          <p className="font-bold whitespace-pre-line">{config.signatoryName}</p>
+                          <p className="font-bold whitespace-pre-line">{config.signatoryName.trim()}</p>
                         ) : (
                           <>
                             <p className="font-bold">{officer?.name ?? "____________________"}</p>
@@ -269,11 +269,11 @@ export function ReportPrintView({
                       <p>Place: {footerPlace}</p>
                       {footerNote && <p className="text-[10px] text-gray-600">{footerNote}</p>}
                     </div>
-                    <div className="text-right space-y-1">
+                    <div className="text-right">
                       <p className="font-bold">Signature</p>
-                      <div className="pt-6">
+                      <div className="pt-0.5">
                         {config.signatoryName ? (
-                          <p className="font-bold whitespace-pre-line">{config.signatoryName}</p>
+                          <p className="font-bold whitespace-pre-line">{config.signatoryName.trim()}</p>
                         ) : (
                           <>
                             <p className="font-bold">{officer?.name ?? "____________________"}</p>

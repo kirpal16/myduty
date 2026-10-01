@@ -29,7 +29,7 @@ import {
   holidayLeaveConflictMessage,
   datesInRange,
 } from "@/lib/leave/holidayLeaveRules";
-import { toDateKey } from "@/lib/format/datetime";
+import { toDateKey, toWallClockISO } from "@/lib/format/datetime";
 import type { DutyStatus } from "@/types/database";
 
 export type DutyFormState =
@@ -189,8 +189,8 @@ export async function createDuty(
     return {
       user_id: auth.user!.id,
       duty_type_id: d.dutyTypeId,
-      starts_at: slot.startsAt.toISOString(),
-      ends_at: slot.endsAt.toISOString(),
+      starts_at: toWallClockISO(slot.startsAt),
+      ends_at: toWallClockISO(slot.endsAt),
       location: d.location ?? null,
       notes: d.notes ?? null,
       status,
@@ -285,8 +285,8 @@ export async function updateDuty(
     return { message: "You can only edit your own duty log." };
   }
 
-  const startsAt = new Date(d.startsAt);
-  const endsAt = new Date(d.endsAt);
+  const startsAt = new Date(toWallClockISO(d.startsAt));
+  const endsAt = new Date(toWallClockISO(d.endsAt));
 
   // Editing can move the duty onto a day already taken as Holiday Leave, so
   // the same exclusion applies here as on create.
@@ -312,8 +312,8 @@ export async function updateDuty(
     .from("duties")
     .update({
       duty_type_id: d.dutyTypeId,
-      starts_at: startsAt.toISOString(),
-      ends_at: endsAt.toISOString(),
+      starts_at: toWallClockISO(startsAt),
+      ends_at: toWallClockISO(endsAt),
       location: d.location ?? null,
       notes: d.notes ?? null,
       ta_from_place: d.taFromPlace ?? null,

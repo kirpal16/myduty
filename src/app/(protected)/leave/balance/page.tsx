@@ -343,13 +343,15 @@ export default async function LeaveBalancePage({
               const cappedAway = Number(b.capped_away ?? 0);
               const totalAvailable = Number(b.total_available ?? allocated + carriedIn);
               const used = Number(b.used ?? 0);
+              const totalHlWorked = Number(holidaysWorked ?? 0);
+              const totalHlUsed = holidaysTaken + totalHlWorked;
               const remaining = isHL
-                ? Math.max(0, totalAvailable - holidaysTaken)
+                ? Math.max(0, totalAvailable - totalHlUsed)
                 : Number(b.remaining ?? 0);
               const isOver = remaining < 0;
               const percentUsed =
                 totalAvailable > 0
-                  ? Math.min(100, Math.round(((isHL ? holidaysTaken : used) / totalAvailable) * 100))
+                  ? Math.min(100, Math.round(((isHL ? totalHlUsed : used) / totalAvailable) * 100))
                   : 0;
 
               return (
@@ -413,11 +415,11 @@ export default async function LeaveBalancePage({
                         Used
                       </span>
                       <span className="text-sm font-bold text-foreground">
-                        {isHL ? holidaysTaken : used}
+                        {isHL ? totalHlUsed : used}
                       </span>
-                      {isHL && (holidaysWorked ?? 0) > 0 && (
+                      {isHL && totalHlWorked > 0 && (
                         <span className="block text-[10px] font-semibold text-amber-600 dark:text-amber-400 leading-tight">
-                          +{(holidaysWorked ?? 0)} {(holidaysWorked ?? 0) === 1 ? "duty worked" : "duties worked"}
+                          {holidaysTaken} leave + {totalHlWorked} {totalHlWorked === 1 ? "duty worked" : "duties worked"}
                         </span>
                       )}
                     </div>

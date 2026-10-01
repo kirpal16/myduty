@@ -18,11 +18,12 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ColorDot } from "@/components/ui/color-dot";
-import { DeleteHolidayButton } from "@/components/holiday/delete-holiday-button";
 import { DeleteLeaveButton } from "@/components/leave/delete-leave-button";
 import { DeleteDutyButton } from "@/components/duty/delete-duty-button";
 import { DutyHolidayBadge, DutyTaBadge } from "@/components/duty/duty-badges";
 import { formatSafeDateFull, formatSafeTime } from "@/lib/format/safeDate";
+import { useBodyScrollLock } from "@/lib/hooks/useBodyScrollLock";
+import { useModalBackClose } from "@/lib/hooks/useModalBackClose";
 import type { CalendarEvent } from "./modern-calendar";
 
 export interface DayDetailsModalProps {
@@ -32,12 +33,23 @@ export interface DayDetailsModalProps {
   events: CalendarEvent[];
 }
 
+const cleanHolidayTitle = (title: string) =>
+  title
+    .replace(/^Holiday:\s*/i, "")
+    .replace(/^My holiday:\s*/i, "")
+    .replace(/^Optional Holiday:\s*/i, "")
+    .replace(/\s*-\s*કૃષ્ણ જન્મોત્સવ/gi, "")
+    .trim();
+
 export function DayDetailsModal({
   isOpen,
   onClose,
   date,
   events,
 }: DayDetailsModalProps) {
+  useBodyScrollLock(isOpen);
+  useModalBackClose(isOpen, onClose);
+
   if (!isOpen) return null;
 
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -62,7 +74,7 @@ export function DayDetailsModal({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-in fade-in-0 duration-150"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-in fade-in-0 duration-150 print:hidden"
     >
       <div
         onClick={(e) => e.stopPropagation()}
@@ -108,7 +120,7 @@ export function DayDetailsModal({
         </div>
 
         {/* Scrollable Event List */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto overscroll-contain p-6 space-y-4 custom-scrollbar">
           {/* Holidays / Off-Days Section */}
           {holidays.length > 0 && (
             <div className="space-y-2">
@@ -131,10 +143,7 @@ export function DayDetailsModal({
                       <div className="space-y-1 flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-xs font-bold text-foreground">
-                            {h.title
-                              .replace("Holiday: ", "")
-                              .replace("My holiday: ", "")
-                              .replace("Optional Holiday: ", "")}
+                            {cleanHolidayTitle(h.title)}
                           </span>
                           <span
                             className={`text-[10px] font-semibold px-2 py-0.5 rounded-lg border ${
@@ -162,8 +171,6 @@ export function DayDetailsModal({
                         </p>
                       )}
                     </div>
-
-                    <DeleteHolidayButton id={h.id} iconOnly size="sm" />
                   </div>
                 );
               })}

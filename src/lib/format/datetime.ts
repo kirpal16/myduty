@@ -22,7 +22,9 @@ export function formatDateTime(
   timeFormat: TimeFormat,
 ): string {
   const d = typeof value === "string" ? new Date(value) : value;
-  return d.toLocaleString(undefined, {
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleString("en-US", {
+    timeZone: "UTC",
     year: "numeric",
     month: "short",
     day: "numeric",
@@ -43,7 +45,9 @@ export function formatTime(
 /** Dates carry no time, so the preference doesn't apply here. */
 export function formatDate(value: string | Date): string {
   const d = typeof value === "string" ? new Date(value) : value;
-  return d.toLocaleDateString(undefined, {
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("en-US", {
+    timeZone: "UTC",
     year: "numeric",
     month: "short",
     day: "numeric",
@@ -58,55 +62,76 @@ export function formatDateRange(startDate: string, endDate: string): string {
 }
 
 /**
- * <input type="datetime-local"> speaks wall-clock with no offset
- * ("2026-09-08T18:00"). Handing that straight to a timestamptz column makes
- * Postgres resolve it against UTC, so an 18:00 IST duty was stored as 18:00Z
- * and read back as 23:30 IST — which is what pushed evening duties onto the
- * next day in the calendar.
- *
- * Every write path converts through here, so the instant that reaches the
- * database is the one the officer meant.
+ * Converts a <input type="datetime-local"> value ("2026-09-08T18:00")
+ * to a UTC ISO string ("2026-09-08T18:00:00.000Z") preserving the exact wall-clock instant.
  */
 export function localInputToISO(value: string): string {
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) {
-    throw new Error(`Not a valid datetime-local value: ${value}`);
+  if (!value) return "";
+  if (value.endsWith("Z") || /[+-]\d{2}:\d{2}$/.test(value)) {
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) throw new Error(`Not a valid datetime value: ${value}`);
+    return d.toISOString();
   }
-  return d.toISOString();
+  const m = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})(?::(\d{2}))?$/.exec(value);
+  if (!m) {
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) {
+      throw new Error(`Not a valid datetime-local value: ${value}`);
+    }
+    return d.toISOString();
+  }
+  const [, date, time, sec = "00"] = m;
+  return `${date}T${time}:${sec}.000Z`;
 }
 
 /** The inverse, for pre-filling the same input from a stored instant. */
 export function isoToLocalInput(iso: string | Date): string {
+  if (!iso) return "";
+  if (typeof iso === "string") {
+    const m = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/.exec(iso);
+    if (m) return `${m[1]}T${m[2]}`;
+  }
   const d = typeof iso === "string" ? new Date(iso) : iso;
   if (Number.isNaN(d.getTime())) return "";
   const pad = (n: number) => String(n).padStart(2, "0");
   return (
-    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +
-    `T${pad(d.getHours())}:${pad(d.getMinutes())}`
+    `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}` +
+    `T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`
   );
 }
 
-/** Local calendar-day key ("2026-09-08"), never UTC-shifted. */
+/**
+ * Converts a Date or string to an ISO string with the wall-clock time preserved as UTC.
+ */
+export function toWallClockISO(d: Date | string): string {
+  if (typeof d === "string") return localInputToISO(d);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:00.000Z`;
+}
+
+/** Local calendar-day key ("2026-09-08"), never shifted across timezones. */
 export function toDateKey(value: string | Date): string {
+  if (typeof value === "string") {
+    const m = /^(\d{4}-\d{2}-\d{2})/.exec(value);
+    if (m) return m[1];
+  }
   const d = typeof value === "string" ? new Date(value) : value;
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
 /**
- * The first and last instant of a local calendar day, as ISO strings for a
+ * The first and last instant of a calendar day, as ISO strings for a
  * timestamptz range filter.
- *
- * Date filters used to append a literal "Z" to the date, which asked Postgres
- * for the UTC day. In IST that window starts 5h30m late, so an evening duty
- * fell outside its own day's range and vanished from the filtered list.
  */
 export function localDayStart(dateKey: string): string {
   const [y, m, d] = dateKey.split("-").map(Number);
-  return new Date(y, m - 1, d, 0, 0, 0, 0).toISOString();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(y)}-${pad(m)}-${pad(d)}T00:00:00.000Z`;
 }
 
 export function localDayEnd(dateKey: string): string {
   const [y, m, d] = dateKey.split("-").map(Number);
-  return new Date(y, m - 1, d, 23, 59, 59, 999).toISOString();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(y)}-${pad(m)}-${pad(d)}T23:59:59.999Z`;
 }

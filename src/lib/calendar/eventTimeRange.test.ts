@@ -3,7 +3,7 @@ import { eventTimeRange } from "./eventTimeRange";
 
 const day = (y: number, m: number, d: number) => new Date(y, m - 1, d);
 const at = (y: number, m: number, d: number, hh: number, mm = 0) =>
-  new Date(y, m - 1, d, hh, mm).toISOString();
+  new Date(Date.UTC(y, m - 1, d, hh, mm)).toISOString();
 
 describe("eventTimeRange", () => {
   it("shows plain times for a duty inside one day", () => {

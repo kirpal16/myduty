@@ -129,12 +129,43 @@
 @layer base {
   * {
     @apply border-border;
+    /* Remove the blue tap-flash on Android Chrome. Without this every
+       interactive element flashes a translucent rectangle on press. */
+    -webkit-tap-highlight-color: transparent;
   }
   body {
     @apply bg-background text-foreground antialiased selection:bg-indigo-500/20 selection:text-indigo-600 dark:selection:text-indigo-300;
+    /* Prevent pull-to-refresh from accidentally reloading the PWA.
+       The app has its own reload / update flow (PwaRegister). */
+    overscroll-behavior: none;
   }
   html {
     @apply font-sans scroll-smooth;
+    /* Eliminate the 300 ms tap-delay on mobile (iOS Safari, older Android)
+       without disabling pinch-to-zoom. */
+    touch-action: manipulation;
+  }
+}
+
+/* Safe-area padding for notched phones (iPhone X+, Android punch-hole).
+   Only takes effect when viewport-fit=cover is set in the layout metadata.
+   Applied to the app shell's mobile header and content, and to bottom-fixed
+   elements like the PWA update banner. */
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+}
+
+@media (max-width: 767px) {
+  .mobile-header-safe {
+    height: calc(4rem + var(--sat));
+    padding-top: var(--sat);
+  }
+  .mobile-main-safe {
+    padding-top: calc(4rem + var(--sat)) !important;
+    padding-bottom: calc(0.5rem + var(--sab));
   }
 }
 
@@ -402,10 +433,24 @@
     background: #fff !important;
     color: #000 !important;
     height: auto !important;
+    /* Reset useBodyScrollLock — without this the body stays fixed-positioned
+       with overflow:hidden while printing, breaking pagination and letting
+       modal content bleed onto paper. */
+    position: static !important;
+    overflow: visible !important;
+    width: auto !important;
+    top: auto !important;
+    padding-right: 0 !important;
   }
 
   .min-h-screen {
     min-height: 0 !important;
+  }
+
+  /* Modal overlays (fixed full-screen backdrops) must never reach paper.
+     This catches every modal regardless of which component renders it. */
+  .fixed {
+    display: none !important;
   }
 
   * {

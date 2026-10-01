@@ -111,7 +111,7 @@ export const GUJARAT_GOVT_HOLIDAYS_CATALOG: Record<number, GujaratGovtHoliday[]>
     { name: "Muharram (મોહરમ)", date: "2026-06-26", isGovernment: true },
     { name: "Independence Day (સ્વાતંત્ર્ય દિન)", date: "2026-08-15", isGovernment: true },
     { name: "Raksha Bandhan (રક્ષાબંધન)", date: "2026-08-28", isGovernment: true },
-    { name: "Janmashtami (જન્માષ્ટમી - કૃષ્ણ જન્મોત્સવ)", date: "2026-09-04", isGovernment: true },
+    { name: "Janmashtami (જન્માષ્ટમી)", date: "2026-09-04", isGovernment: true },
     { name: "Samvatsari / Ganesh Chaturthi (સંવત્સરી / ગણેશ ચતુર્થી)", date: "2026-09-14", isGovernment: true },
     { name: "Eid-e-Milad (ઈદ-એ-મિલાદ)", date: "2026-09-25", isGovernment: true },
     { name: "Mahatma Gandhi Jayanti (ગાંધી જયંતિ)", date: "2026-10-02", isGovernment: true },

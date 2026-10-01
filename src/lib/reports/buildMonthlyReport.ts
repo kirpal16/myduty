@@ -127,8 +127,10 @@ const LEAVE_COLUMNS: ColumnDef[] = [
 ];
 
 const hhmm = (iso: string) => {
+  const m = /T(\d{2}:\d{2})/.exec(iso);
+  if (m) return m[1];
   const d = new Date(iso);
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  return `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}`;
 };
 
 const named = (v: unknown) => (v as { name: string } | null)?.name ?? null;

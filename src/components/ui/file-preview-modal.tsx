@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { X, ZoomIn, ZoomOut, Download, ExternalLink, FileText } from "lucide-react";
 import { ModalPortal, MODAL_Z } from "./modal-portal";
 import { useBodyScrollLock } from "@/lib/hooks/useBodyScrollLock";
+import { useModalBackClose } from "@/lib/hooks/useModalBackClose";
 
 export interface FilePreviewModalProps {
   isOpen: boolean;
@@ -25,6 +26,7 @@ export function FilePreviewModal({
   const [zoom, setZoom] = useState(1);
 
   useBodyScrollLock(isOpen);
+  useModalBackClose(isOpen, onClose);
 
   // Each new file opens at 1x rather than inheriting the last one's zoom.
   useEffect(() => {
@@ -57,7 +59,7 @@ export function FilePreviewModal({
     <ModalPortal>
     <div
       onClick={onClose}
-      className={`fixed inset-0 ${MODAL_Z} flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in-0 duration-200`}
+      className={`fixed inset-0 ${MODAL_Z} flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in-0 duration-200 print:hidden`}
     >
       <div
         onClick={(e) => e.stopPropagation()}

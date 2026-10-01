@@ -4,6 +4,7 @@ import { NavLink as Link } from "@/components/ui/nav-link";
 import Image from "next/image";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useBodyScrollLock } from "@/lib/hooks/useBodyScrollLock";
+import { useModalBackClose } from "@/lib/hooks/useModalBackClose";
 import { useEffect, useRef, useState } from "react";
 import { logout } from "@/actions/auth";
 import { QueryScrollPreserver } from "@/components/ui/query-scroll-preserver";
@@ -78,15 +79,8 @@ export function AppShell({
   // content underneath instead of the menu.
   useBodyScrollLock(open);
 
-  // Escape closes it, matching ConfirmDeleteModal and FilePreviewModal.
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open]);
+  // Closes on back button/gesture or Escape key.
+  useModalBackClose(open, () => setOpen(false));
 
   // Move focus into the drawer, and hand it back to the button that opened it.
   // Otherwise a keyboard or screen-reader user is left at the top of the
@@ -284,8 +278,8 @@ export function AppShell({
   return (
     <div className="flex min-h-screen bg-background">
       <QueryScrollPreserver />
-      {/* Mobile top bar */}
-      <header className="fixed top-0 inset-x-0 z-40 flex h-16 items-center justify-between border-b border-border/80 bg-card/90 backdrop-blur-md px-4 md:hidden print:hidden">
+      {/* Mobile top bar — safe-area padding accounts for notch / status bar */}
+      <header className="mobile-header-safe fixed top-0 inset-x-0 z-40 flex items-center justify-between border-b border-border/80 bg-card/90 backdrop-blur-md px-4 md:hidden print:hidden">
         <div className="flex items-center gap-3">
           <button
             ref={menuButtonRef}
@@ -366,8 +360,8 @@ export function AppShell({
         </div>
       )}
 
-      {/* Main content body with responsive padding */}
-      <div className="flex-1 min-w-0 flex flex-col pt-16 md:pt-0 overflow-x-hidden print:pt-0 print:overflow-visible">
+      {/* Main content body with responsive padding and mobile safe-area */}
+      <div className="mobile-main-safe flex-1 min-w-0 flex flex-col pt-16 md:pt-0 overflow-x-hidden print:pt-0 print:overflow-visible">
         {children}
       </div>
     </div>

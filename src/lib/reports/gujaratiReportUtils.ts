@@ -133,8 +133,10 @@ export function formatGujaratiShiftTime(
   useGujaratiDigits = false,
 ): string {
   if (!shiftTime) return "—";
-  // Replace hyphens or "to" with Gujarati "થી"
+  // Translate "Next Day" and replace hyphens or "to" with Gujarati "થી"
   let cleaned = shiftTime
+    .replace(/\(next\s*day\)/gi, "(બીજે દિવસે)")
+    .replace(/next\s*day/gi, "બીજે દિવસે")
     .replace(/:/g, "/")
     .replace(/\s*-\s*/g, " થી ")
     .replace(/\s+to\s+/gi, " થી ");
@@ -257,12 +259,23 @@ export const DUTY_TRANSLATIONS: Record<string, string> = {
 
   // Days & Common terms
   sunday: "રવિવાર",
+  "sunday off": "રવિવાર",
   monday: "સોમવાર",
   tuesday: "મંગળવાર",
   wednesday: "બુધવાર",
   thursday: "ગુરૂવાર",
   friday: "શુક્રવાર",
   saturday: "શનિવાર",
+  "2nd saturday": "બીજો શનિવાર",
+  "4th saturday": "ચોથો શનિવાર",
+  "second saturday": "બીજો શનિવાર",
+  "fourth saturday": "ચોથો શનિવાર",
+  "2nd saturday off": "બીજો શનિવાર",
+  "4th saturday off": "ચોથો શનિવાર",
+  "2nd saturday off (બીજો શનિવાર)": "બીજો શનિવાર",
+  "4th saturday off (ચોથો શનિવાર)": "ચોથો શનિવાર",
+  "2nd saturday off (બીજો શનિવાર રજા)": "બીજો શનિવાર",
+  "4th saturday off (ચોથો શનિવાર રજા)": "ચોથો શનિવાર",
   holiday: "જાહેર રજા",
   "public holiday": "જાહેર રજા",
   "government holiday": "સરકારી રજા",

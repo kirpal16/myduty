@@ -31,6 +31,9 @@ import {
   toAsciiNumerals,
 } from "@/lib/reports/gujaratiReportUtils";
 
+import { useBodyScrollLock } from "@/lib/hooks/useBodyScrollLock";
+import { useModalBackClose } from "@/lib/hooks/useModalBackClose";
+
 /** Escapes text written into the print HTML. */
 const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -47,6 +50,9 @@ export function ReportEditModal({
   onClose: () => void;
 }) {
   const { toast } = useToast();
+  useBodyScrollLock(isOpen);
+  useModalBackClose(isOpen, onClose);
+
   const [useGujaratiDigits, setUseGujaratiDigits] = useState<boolean>(
     initialReport.useGujaratiDigits ?? true,
   );
@@ -115,7 +121,7 @@ export function ReportEditModal({
   };
 
   const getInitialSignatory = (saved = getSavedConfig()) => {
-    if (saved.signatoryName) return saved.signatoryName;
+    if (saved.signatoryName) return saved.signatoryName.trim();
     return `${officer?.name ?? "પોલીસ અધિકારી"}\n${officer?.post ?? ""}${officer?.employeeCode ? ` બ.નં. ${officer.employeeCode}` : ""}\n${officer?.posting ?? ""}`.trim();
   };
 
@@ -373,10 +379,10 @@ export function ReportEditModal({
                       <p>તારીખ: ${esc(reportDate)}</p>
                       <p>સ્થળ: ${esc(place)}</p>
                     </div>
-                    <div class="text-right space-y-1">
+                    <div class="text-right">
                       <p class="font-bold">લિ. સહી</p>
-                      <div class="pt-6 whitespace-pre-line font-semibold">
-                        ${esc(signatory)}
+                      <div class="pt-0.5 whitespace-pre-line font-semibold">
+                        ${esc(signatory.trim())}
                       </div>
                     </div>
                   </div>
@@ -412,7 +418,7 @@ export function ReportEditModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-2 sm:p-4 backdrop-blur-xs">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-2 sm:p-4 backdrop-blur-xs print:hidden">
       <div className="flex h-[95vh] w-full max-w-5xl flex-col rounded-2xl bg-card border border-border shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Top App Bar */}
         <div className="flex items-center justify-between border-b border-border px-3 py-2.5 bg-muted/40 sm:px-6 sm:py-3 shrink-0 gap-1.5 sm:gap-4 overflow-hidden">
@@ -483,7 +489,7 @@ export function ReportEditModal({
         </div>
 
         {/* Scrollable Letterhead Canvas */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 bg-background">
+        <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-5 bg-background">
           <div className="max-w-4xl mx-auto rounded-xl border border-border bg-card p-5 sm:p-8 shadow-sm space-y-5">
             {/* Header Title Preview */}
             <div className="text-center pb-4 border-b border-border/80 space-y-1">

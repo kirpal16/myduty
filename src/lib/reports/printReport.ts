@@ -632,7 +632,16 @@ export function buildPrintReport(input: {
         const dist = r.ta_distance_km ? formatGujaratiDistance(String(r.ta_distance_km), useGujaratiDigits) : "";
         const rawHoliday = r.holiday_name ? String(r.holiday_name) : DASH;
         const translatedHoliday = translateDutyTypeToGujarati(rawHoliday) || rawHoliday;
-        const rem = dist ? `${vAcronym} / ${dist}` : translatedHoliday;
+        const hasTa = Boolean(r.ta_from || r.ta_to || r.ta_amount || (r.ta_distance_km && Number(r.ta_distance_km) > 0));
+        const routeStr = formatGujaratiRoute(r.ta_from ? String(r.ta_from) : null, r.ta_to ? String(r.ta_to) : null);
+        let rem = translatedHoliday;
+        if (hasTa) {
+          if (routeStr && routeStr !== "—") {
+            rem = dist && dist !== "—" ? `${routeStr} (${vAcronym} / ${dist})` : routeStr;
+          } else if (dist && dist !== "—") {
+            rem = `${vAcronym} / ${dist}`;
+          }
+        }
 
         return {
           srNo: sr,

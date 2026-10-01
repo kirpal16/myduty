@@ -126,6 +126,7 @@ export function PwaRegister() {
     <div
       role="status"
       className="fixed inset-x-0 bottom-0 z-[120] flex justify-center p-3 sm:p-4 print:hidden"
+      style={{ paddingBottom: "calc(var(--sab) + 0.75rem)" }}
     >
       <div className="flex w-full max-w-md items-center gap-3 rounded-2xl border border-indigo-500/40 bg-slate-900/95 p-3 text-slate-100 shadow-2xl backdrop-blur-md">
         <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500/20 text-indigo-300">
