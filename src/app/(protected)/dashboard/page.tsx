@@ -374,7 +374,13 @@ async function DashboardBody({
       />
 
       {/* Metric Stat Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3.5 sm:gap-4.5">
+      <div
+        className={`grid grid-cols-2 gap-3 sm:gap-4.5 ${
+          binpagariDays > 0
+            ? "sm:grid-cols-3 xl:grid-cols-6"
+            : "sm:grid-cols-3 xl:grid-cols-5"
+        }`}
+      >
         <StatCard
           title="Duty Logs"
           value={dutyCount}
@@ -416,16 +422,12 @@ async function DashboardBody({
           icon={IndianRupee}
           color="emerald"
           trend={periodLabel}
-          // Five tiles leave an odd one out on a two-column phone and six do
-          // not, so this stretches only when the Binpagari tile is absent.
           className={binpagariDays > 0 ? undefined : "col-span-2 sm:col-span-1"}
           href={`/duty?${dutyLinkParams}`}
         />
-        {/* Only when there is unpaid leave to report: a permanent "0 days"
-            tile would push a real figure off a phone screen for nothing. */}
         {binpagariDays > 0 && (
           <StatCard
-            title="Binpagari"
+            title="Binpagari (LWP)"
             value={formatDays(binpagariDays)}
             icon={IndianRupee}
             color="rose"
@@ -434,16 +436,6 @@ async function DashboardBody({
                 ? `-${formatCurrency(binpagariDeduction)} salary`
                 : "Set daily rate in Settings"
             }
-            // A sixth tile would sit alone at the end of a five-column row.
-            // Measured: widening the grid to six instead starts truncating
-            // the tiles that were already there, so this one takes the last
-            // row whole -- which also leaves the deduction room to read in
-            // full rather than as "-₹5,000 salar…".
-            // Half width on a phone so six tiles make three even rows. At xl
-            // a sixth tile would sit alone at the end of a five-column row,
-            // and widening the grid to six truncates the tiles that were
-            // already there -- so it takes that last row whole instead.
-            className="xl:col-span-5"
             href="/leave"
           />
         )}

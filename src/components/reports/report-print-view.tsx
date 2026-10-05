@@ -5,6 +5,11 @@ import type { PrintOfficer, PrintReport } from "@/lib/reports/printReport";
 import {
   formatGujaratiDate,
   getGujaratiReportHeaders,
+  toGujaratiNumerals,
+  formatGujaratiBuckleNumber,
+  transliterateToGujarati,
+  formatGujaratiPoliceRank,
+  parseApplicantLineSegments,
 } from "@/lib/reports/gujaratiReportUtils";
 
 /**
@@ -132,6 +137,23 @@ export function ReportPrintView({
                     </div>
                   )}
 
+                  {/* Applicant Line (Rank, Name, Buckle No) - Directly Above Subject */}
+                  {(report.fromLines || fallbackHeaders.fromLines) && (
+                    <div className="mb-3 text-sm text-gray-900 tracking-wide">
+                      {parseApplicantLineSegments(report.fromLines || fallbackHeaders.fromLines).map((seg, i) =>
+                        seg.isBold ? (
+                          <strong key={i} className="font-bold text-black">
+                            {seg.text}
+                          </strong>
+                        ) : (
+                          <span key={i} className="font-normal">
+                            {seg.text}
+                          </span>
+                        ),
+                      )}
+                    </div>
+                  )}
+
                   {/* Subject */}
                   <div className="mb-3 text-sm font-bold">
                     <span>વિષય: </span>
@@ -191,13 +213,17 @@ export function ReportPrintView({
                       <p className="font-bold">લિ. સહી</p>
                       <div className="pt-0.5">
                         {config.signatoryName ? (
-                          <p className="font-bold whitespace-pre-line">{config.signatoryName.trim()}</p>
+                          <p className="font-bold whitespace-pre-line">
+                            {report.useGujaratiDigits ?? true
+                              ? toGujaratiNumerals(config.signatoryName.trim())
+                              : config.signatoryName.trim()}
+                          </p>
                         ) : (
                           <>
-                            <p className="font-bold">{officer?.name ?? "____________________"}</p>
+                            <p className="font-bold">{transliterateToGujarati(officer?.name) || (officer?.name ?? "____________________")}</p>
                             <p className="text-gray-700">
-                              {officer?.post ?? "પોલીસ અધિકારી"}
-                              {officer?.employeeCode ? ` બ.નં. ${officer.employeeCode}` : ""}
+                              {formatGujaratiPoliceRank(officer?.post) || (officer?.post ?? "પોલીસ અધિકારી")}
+                              {officer?.employeeCode ? ` બ.નં. ${formatGujaratiBuckleNumber(officer.employeeCode, report.useGujaratiDigits ?? true)}` : ""}
                             </p>
                             {officer?.posting && <p className="text-gray-600">{officer.posting}</p>}
                           </>

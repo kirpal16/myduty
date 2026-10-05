@@ -19,6 +19,13 @@ import {
 import { updateUserSettings } from "@/actions/settings";
 import { useToast } from "@/components/ui/toast";
 import type { UserSettings } from "@/lib/settings/getUserSettings";
+import {
+  toGujaratiNumerals,
+  toAsciiNumerals,
+  formatGujaratiBuckleNumber,
+  transliterateToGujarati,
+  formatGujaratiPoliceRank,
+} from "@/lib/reports/gujaratiReportUtils";
 
 export function PrintConfigPanel({
   settings,
@@ -58,11 +65,20 @@ export function PrintConfigPanel({
     settings.printStationName || officerPosting || "QRT અરવલ્લી પોલીસ",
   );
 
+  const gujOfficerName = transliterateToGujarati(officerName) || officerName;
+  const gujOfficerPost = formatGujaratiPoliceRank(officerPost) || (officerPost ?? "");
+  const gujBuckleNo = formatGujaratiBuckleNumber(employeeCode, settings.printUseGujaratiDigits ?? true);
+  const defaultSig = `${gujOfficerName}${gujOfficerPost ? `, ${gujOfficerPost}` : ""}${gujBuckleNo ? ` બ.નં. ${gujBuckleNo}` : ""}`;
+
   // Signatory & Footer fields
-  const [signatoryName, setSignatoryName] = useState(
-    settings.printSignatoryName ||
-      `${officerName}${officerPost ? `, ${officerPost}` : ""}${employeeCode ? ` બ.નં. ${employeeCode}` : ""}`,
-  );
+  const [signatoryName, setSignatoryName] = useState(() => {
+    if (settings.printSignatoryName) {
+      return (settings.printUseGujaratiDigits ?? true)
+        ? toGujaratiNumerals(settings.printSignatoryName)
+        : settings.printSignatoryName;
+    }
+    return defaultSig;
+  });
   const [footerPlace, setFooterPlace] = useState(
     settings.printFooterPlace || (officerPosting?.split(",")[0] ?? "") || "અરવલ્લી",
   );
@@ -97,7 +113,7 @@ export function PrintConfigPanel({
         if (saved.defaultVehicle !== undefined) setDefaultVehicle(saved.defaultVehicle);
         if (saved.useGujaratiDigits !== undefined) setUseGujaratiDigits(saved.useGujaratiDigits);
       }
-    } catch {}
+    } catch { }
   }, []);
 
   const handleResetDefaults = () => {
@@ -107,7 +123,7 @@ export function PrintConfigPanel({
     const defaultH2En = "Duty & Roster Records";
     const defaultRec = "પોલીસ સબ ઇન્સપેક્ટરશ્રી";
     const defaultSta = officerPosting || "QRT અરવલ્લી પોલીસ";
-    const defaultSig = `${officerName}${officerPost ? `, ${officerPost}` : ""}${employeeCode ? ` બ.નં. ${employeeCode}` : ""}`;
+    const defaultSig = `${gujOfficerName}${gujOfficerPost ? `, ${gujOfficerPost}` : ""}${gujBuckleNo ? ` બ.નં. ${gujBuckleNo}` : ""}`;
     const defaultPlace = (officerPosting?.split(",")[0] ?? "") || "અરવલ્લી";
     const defaultNote = "";
 
@@ -140,7 +156,7 @@ export function PrintConfigPanel({
           useGujaratiDigits: true,
         }),
       );
-    } catch {}
+    } catch { }
 
     toast("પ્રિન્ટ સેટિંગ્સ મૂળ સ્થિતિમાં રીસેટ થઈ ગયા (Reset to defaults)");
   };
@@ -186,7 +202,7 @@ export function PrintConfigPanel({
             useGujaratiDigits,
           }),
         );
-      } catch {}
+      } catch { }
 
       const res = await updateUserSettings(undefined, formData);
       if (res?.ok) {
@@ -238,9 +254,8 @@ export function PrintConfigPanel({
         </style>
       </head>
       <body>
-        ${
-          previewTab === "gu"
-            ? `
+        ${previewTab === "gu"
+        ? `
           <div class="header-row">
             <img src="/Gujarat-police.png" class="logo" alt="Gujarat Police" />
             <div class="titles">
@@ -301,11 +316,11 @@ export function PrintConfigPanel({
             </div>
             <div class="sig-box">
               <p style="margin: 0; font-weight: bold;">લિ. સહી</p>
-              <p style="margin: 2px 0 0 0; font-weight: bold;">${signatoryName}</p>
+              <p style="margin: 2px 0 0 0; font-weight: bold;">${useGujaratiDigits ? toGujaratiNumerals(signatoryName) : signatoryName}</p>
             </div>
           </div>
         `
-            : `
+        : `
           <div class="header-row">
             <img src="/Gujarat-police.png" class="logo" alt="Gujarat Police" />
             <div class="titles">
@@ -363,7 +378,7 @@ export function PrintConfigPanel({
             </div>
           </div>
         `
-        }
+      }
       </body>
       </html>
     `;
@@ -572,7 +587,7 @@ export function PrintConfigPanel({
                 type="text"
                 value={signatoryName}
                 onChange={(e) => setSignatoryName(e.target.value)}
-                placeholder="દા.ત. કિર્પાલસિંહ ભગવતસિંહ, પો.હે.કો. બ.નં. ૧૬"
+                placeholder="દા.ત. કિરપાલસિંહ દિલીપસિંહ, પો.હે.કો. બ.નં. ૧૬"
                 className="w-full rounded-xl border border-border bg-background px-3.5 py-2 text-xs font-medium sm:text-sm text-foreground focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
               />
             </div>
@@ -622,22 +637,20 @@ export function PrintConfigPanel({
                   <button
                     type="button"
                     onClick={() => setDefaultVehicle("private")}
-                    className={`flex items-center justify-center p-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                      defaultVehicle === "private"
+                    className={`flex items-center justify-center p-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${defaultVehicle === "private"
                         ? "border-amber-500 bg-amber-500/10 text-amber-700 dark:text-amber-300 ring-2 ring-amber-500/20"
                         : "border-border bg-background text-muted-foreground hover:bg-muted"
-                    }`}
+                      }`}
                   >
                     <span>ખાનગી (ખ.વા.)</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setDefaultVehicle("government")}
-                    className={`flex items-center justify-center p-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                      defaultVehicle === "government"
+                    className={`flex items-center justify-center p-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${defaultVehicle === "government"
                         ? "border-indigo-500 bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 ring-2 ring-indigo-500/20"
                         : "border-border bg-background text-muted-foreground hover:bg-muted"
-                    }`}
+                      }`}
                   >
                     <span>સરકારી (સ.વા.)</span>
                   </button>
@@ -651,23 +664,27 @@ export function PrintConfigPanel({
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => setUseGujaratiDigits(true)}
-                    className={`flex items-center justify-center p-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                      useGujaratiDigits
+                    onClick={() => {
+                      setUseGujaratiDigits(true);
+                      setSignatoryName((prev) => toGujaratiNumerals(prev));
+                    }}
+                    className={`flex items-center justify-center p-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${useGujaratiDigits
                         ? "border-emerald-500 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 ring-2 ring-emerald-500/20"
                         : "border-border bg-background text-muted-foreground hover:bg-muted"
-                    }`}
+                      }`}
                   >
                     <span>ગુજરાતી (૧, ૨, ૩)</span>
                   </button>
                   <button
                     type="button"
-                    onClick={() => setUseGujaratiDigits(false)}
-                    className={`flex items-center justify-center p-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                      !useGujaratiDigits
+                    onClick={() => {
+                      setUseGujaratiDigits(false);
+                      setSignatoryName((prev) => toAsciiNumerals(prev));
+                    }}
+                    className={`flex items-center justify-center p-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${!useGujaratiDigits
                         ? "border-emerald-500 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 ring-2 ring-emerald-500/20"
                         : "border-border bg-background text-muted-foreground hover:bg-muted"
-                    }`}
+                      }`}
                   >
                     <span>અંગ્રેજી (1, 2, 3)</span>
                   </button>
@@ -684,22 +701,20 @@ export function PrintConfigPanel({
               <button
                 type="button"
                 onClick={() => setPreviewTab("gu")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  previewTab === "gu"
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${previewTab === "gu"
                     ? "bg-card text-foreground shadow-xs border border-border/80"
                     : "text-muted-foreground hover:text-foreground"
-                }`}
+                  }`}
               >
                 <span>🇬🇺 ગુજરાતી લેટરહેડ</span>
               </button>
               <button
                 type="button"
                 onClick={() => setPreviewTab("en")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  previewTab === "en"
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${previewTab === "en"
                     ? "bg-card text-foreground shadow-xs border border-border/80"
                     : "text-muted-foreground hover:text-foreground"
-                }`}
+                  }`}
               >
                 <span>🇬🇧 અંગ્રેજી લેટરહેડ</span>
               </button>

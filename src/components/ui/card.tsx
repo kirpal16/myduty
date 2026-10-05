@@ -94,39 +94,41 @@ export function StatCard({
 
   const scheme = colorMap[color] ?? colorMap.indigo;
 
-  const shell = `relative overflow-hidden rounded-2xl border border-border/80 bg-card p-4 sm:p-4.5 shadow-xs hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md transition-all duration-200 flex items-center justify-between gap-3 min-w-0 ${className}`;
+  const shell = `relative overflow-hidden rounded-2xl border border-border/80 bg-card p-3.5 sm:p-4.5 shadow-xs hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md transition-all duration-200 flex flex-col justify-between gap-2.5 min-w-0 ${className}`;
 
   const body = (
     <>
-      <div className={`absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r ${scheme.accent} opacity-80`} />
+      <div className={`absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r ${scheme.accent} opacity-35`} />
 
-      <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+      <div className="flex items-start justify-between gap-1.5 w-full">
         <span
-          className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground truncate"
+          className="text-[10.5px] sm:text-[11px] font-bold uppercase tracking-wider text-muted-foreground line-clamp-2 leading-tight min-h-[1.75rem] flex items-center"
           title={title}
         >
           {title}
         </span>
+        <div
+          className={`flex size-8 sm:size-10 shrink-0 items-center justify-center rounded-xl border shadow-2xs ${scheme.bg}`}
+        >
+          <Icon className="size-4 sm:size-5" />
+        </div>
+      </div>
+
+      <div className="flex flex-col min-w-0">
         <span
-          className="text-xl sm:text-2xl font-bold tracking-tight text-foreground truncate mt-0.5"
+          className="text-lg sm:text-2xl font-bold tracking-tight text-foreground truncate"
           title={String(value)}
         >
           {value}
         </span>
         {trend && (
           <span
-            className="text-[11px] text-muted-foreground/80 truncate mt-0.5"
+            className="text-[10px] sm:text-[11px] text-muted-foreground/80 truncate mt-0.5"
             title={trend}
           >
             {trend}
           </span>
         )}
-      </div>
-
-      <div
-        className={`flex size-11 sm:size-12 shrink-0 items-center justify-center rounded-2xl border shadow-2xs ${scheme.bg}`}
-      >
-        <Icon className="size-5 sm:size-5.5" />
       </div>
     </>
   );

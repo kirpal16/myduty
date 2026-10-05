@@ -588,6 +588,532 @@ export function translateDayTypeToGujarati(dayType: string | null | undefined): 
   return dayType;
 }
 
+/**
+ * Known police designations and ranks with official Gujarat Police abbreviations.
+ */
+export const POLICE_RANK_TRANSLATIONS: Record<string, string> = {
+  // Constables & Armed Constables
+  wapc: "વુ.આ. પો.કો.",
+  "w.a.p.c.": "વુ.આ. પો.કો.",
+  "w.a.p.c": "વુ.આ. પો.કો.",
+  "women armed police constable": "વુ.આ. પો.કો.",
+  "woman armed police constable": "વુ.આ. પો.કો.",
+  "female armed police constable": "વુ.આ. પો.કો.",
+  wpc: "વુ.પો.કો.",
+  "w.p.c.": "વુ.પો.કો.",
+  "w.p.c": "વુ.પો.કો.",
+  "women police constable": "વુ.પો.કો.",
+  "woman police constable": "વુ.પો.કો.",
+  "female police constable": "વુ.પો.કો.",
+  apc: "આ.પો.કો.",
+  "a.p.c.": "આ.પો.કો.",
+  "a.p.c": "આ.પો.કો.",
+  "armed police constable": "આ.પો.કો.",
+  "armed constable": "આ.પો.કો.",
+  pc: "પો.કો.",
+  "p.c.": "પો.કો.",
+  "p.c": "પો.કો.",
+  "police constable": "પો.કો.",
+  constable: "પો.કો.",
+  "unarmed police constable": "બિ.આ.પો.કો.",
+  "unarmed constable": "બિ.આ.પો.કો.",
+  uapc: "બિ.આ.પો.કો.",
+  "u.a.p.c.": "બિ.આ.પો.કો.",
+
+  // Head Constables
+  wahc: "વુ.આ. હે.કો.",
+  "w.a.h.c.": "વુ.આ. હે.કો.",
+  "woman armed head constable": "વુ.આ. હે.કો.",
+  "women armed head constable": "વુ.આ. હે.કો.",
+  whc: "વુ.હે.કો.",
+  "w.h.c.": "વુ.હે.કો.",
+  "woman head constable": "વુ.હે.કો.",
+  "women head constable": "વુ.હે.કો.",
+  ahc: "આ.હે.કો.",
+  "a.h.c.": "આ.હે.કો.",
+  "armed head constable": "આ.હે.કો.",
+  hc: "હે.કો.",
+  "h.c.": "હે.કો.",
+  "head constable": "હે.કો.",
+  "unarmed head constable": "બિ.આ.હે.કો.",
+
+  // Officers
+  asi: "એ.એસ.આઇ.",
+  "a.s.i.": "એ.એસ.આઇ.",
+  "assistant sub inspector": "એ.એસ.આઇ.",
+  "asst sub inspector": "એ.એસ.આઇ.",
+  psi: "પી.એસ.આઇ.",
+  "p.s.i.": "પી.એસ.આઇ.",
+  "police sub inspector": "પી.એસ.આઇ.",
+  "sub inspector": "પી.એસ.આઇ.",
+  pi: "પી.આઇ.",
+  "p.i.": "પી.આઇ.",
+  "police inspector": "પી.આઇ.",
+  inspector: "પી.આઇ.",
+  dysp: "ના.પો.અધિ.",
+  "dy.sp": "ના.પો.અધિ.",
+  "d.y.s.p.": "ના.પો.અધિ.",
+  "deputy superintendent of police": "ના.પો.અધિ.",
+  sp: "પો.અધિ.",
+  "s.p.": "પો.અધિ.",
+  "superintendent of police": "પો.અધિ.",
+  cp: "પો.કમિ.",
+  "c.p.": "પો.કમિ.",
+  "commissioner of police": "પો.કમિ.",
+
+  // Lokrakshak & others
+  lrd: "લોકરક્ષક",
+  "l.r.d.": "લોકરક્ષક",
+  lokrakshak: "લોકરક્ષક",
+  "lok rakshak": "લોકરક્ષક",
+  wlrd: "મહિલા લોકરક્ષક",
+  "w.l.r.d.": "મહિલા લોકરક્ષક",
+  "women lokrakshak": "મહિલા લોકરક્ષક",
+  "woman lokrakshak": "મહિલા લોકરક્ષક",
+  driver: "ડ્રાઇવર",
+  "police driver": "ડ્રાઇવર",
+  grd: "જી.આર.ડી.",
+  "g.r.d.": "જી.આર.ડી.",
+  "home guard": "હોમગાર્ડ",
+  homeguard: "હોમગાર્ડ",
+};
+
+/**
+ * Checks if a string contains Gujarati Unicode characters.
+ */
+export function containsGujarati(text: string | null | undefined): boolean {
+  if (!text) return false;
+  return /[\u0A80-\u0AFF]/.test(text);
+}
+
+/**
+ * Common names dictionary for highly accurate Gujarati conversions.
+ */
+const GUJARATI_NAME_MAP: Record<string, string> = {
+  shruti: "શ્રુતિ",
+  ajay: "અજય",
+  ajaysinh: "અજયસિંહ",
+  kirpal: "કિરપાલ",
+  kirpalsinh: "કિરપાલસિંહ",
+  kripal: "કિરપાલ",
+  kripalsinh: "કિરપાલસિંહ",
+  dilip: "દિલીપ",
+  dilipsinh: "દિલીપસિંહ",
+  dilipsingh: "દિલીપસિંહ",
+  bhagwatsinh: "ભગવતસિંહ",
+  bhagwat: "ભગવત",
+  harsh: "હર્ષ",
+  hardik: "હાર્દિક",
+  jay: "જય",
+  vijay: "વિજય",
+  sanjay: "સંજય",
+  amit: "અમિત",
+  rahul: "રાહુલ",
+  nikunj: "નિકુંજ",
+  chirag: "ચિરાગ",
+  bhavesh: "ભાવેશ",
+  kamlesh: "કમલેશ",
+  rajesh: "રાજેશ",
+  mahesh: "મહેશ",
+  ramesh: "રમેશ",
+  suresh: "સુરેશ",
+  dinesh: "દિનેશ",
+  naresh: "નરેશ",
+  hitesh: "હિતેશ",
+  paresh: "પરેશ",
+  kalpesh: "કલ્પેશ",
+  mukesh: "મુકેશ",
+  yogesh: "યોગેશ",
+  jagdish: "જગદીશ",
+  pravin: "પ્રવીણ",
+  ashok: "અશોક",
+  anand: "આનંદ",
+  ketan: "કેતન",
+  pratik: "પ્રતીક",
+  dharmesh: "ધર્મેશ",
+  vishal: "વિશાલ",
+  pooja: "પૂજા",
+  neha: "નેહા",
+  priya: "પ્રિયા",
+  shreya: "શ્રેયા",
+  hetal: "હેતલ",
+  kinjal: "કિંજલ",
+  bhumika: "ભૂમિકા",
+  payal: "પાયલ",
+  artiben: "આરતીબેન",
+  patel: "પટેલ",
+  shah: "શાહ",
+  joshi: "જોષી",
+  parmar: "પરમાર",
+  rathod: "રાઠોડ",
+  jadeja: "જાડેજા",
+  solanki: "સોલંકી",
+  makwana: "મકવાણા",
+  zala: "ઝાલા",
+  chauhan: "ચૌહાણ",
+  chavda: "ચાવડા",
+  gohil: "ગોહિલ",
+  vaghela: "વાઘેલા",
+  barad: "બારડ",
+  rabari: "રબારી",
+  bharwad: "ભરવાડ",
+  ahir: "આહીર",
+  desai: "દેસાઈ",
+  dave: "દવે",
+  trivedi: "ત્રિવેદી",
+  bhatt: "ભટ્ટ",
+  pandya: "પંડ્યા",
+  sharma: "શર્મા",
+  verma: "વર્મા",
+  modi: "મોદી",
+  soni: "સોની",
+  rajput: "રાજપૂત",
+  rajpoot: "રાજપૂત",
+};
+
+/**
+ * Phonetically transliterates a single English word to Gujarati script.
+ */
+function phoneticWordToGujarati(word: string): string {
+  const lower = word.toLowerCase();
+  if (GUJARATI_NAME_MAP[lower]) return GUJARATI_NAME_MAP[lower];
+
+  // Compound suffix checks (e.g. sinh, singh, bhai, ben, kumar)
+  if (lower.endsWith("sinh") && lower.length > 4) {
+    const base = lower.slice(0, -4);
+    return phoneticWordToGujarati(base) + "સિંહ";
+  }
+  if (lower.endsWith("singh") && lower.length > 5) {
+    const base = lower.slice(0, -5);
+    return phoneticWordToGujarati(base) + "સિંહ";
+  }
+  if (lower.endsWith("bhai") && lower.length > 4) {
+    const base = lower.slice(0, -4);
+    return phoneticWordToGujarati(base) + "ભાઈ";
+  }
+  if (lower.endsWith("ben") && lower.length > 3) {
+    const base = lower.slice(0, -3);
+    return phoneticWordToGujarati(base) + "બેન";
+  }
+  if (lower.endsWith("kumar") && lower.length > 5) {
+    const base = lower.slice(0, -5);
+    return phoneticWordToGujarati(base) + "કુમાર";
+  }
+
+  // Token-by-token phonetic parser
+  let out = "";
+  let i = 0;
+  const len = lower.length;
+
+  const CONSONANTS: Record<string, string> = {
+    shr: "શ્ર",
+    ksh: "ક્ષ",
+    gy: "જ્ઞ",
+    chh: "છ",
+    ch: "ચ",
+    kh: "ખ",
+    gh: "ઘ",
+    jh: "ઝ",
+    th: "થ",
+    dh: "ધ",
+    ph: "ફ",
+    bh: "ભ",
+    sh: "શ",
+    tr: "ત્ર",
+    pr: "પ્ર",
+    br: "બ્ર",
+    dr: "દ્ર",
+    kr: "ક્ર",
+    gr: "ગ્ર",
+    k: "ક",
+    g: "ગ",
+    j: "જ",
+    z: "ઝ",
+    t: "ત",
+    d: "દ",
+    n: "ન",
+    p: "પ",
+    f: "ફ",
+    b: "બ",
+    m: "મ",
+    y: "ય",
+    r: "ર",
+    l: "લ",
+    v: "વ",
+    w: "વ",
+    s: "સ",
+    h: "હ",
+  };
+
+  const VOWEL_MATRAS: Record<string, string> = {
+    aa: "ા",
+    ee: "ી",
+    oo: "ૂ",
+    ai: "ૈ",
+    au: "ૌ",
+    ou: "ૌ",
+    a: "", // implicit
+    i: "િ",
+    u: "ુ",
+    e: "ે",
+    o: "ો",
+  };
+
+  const INITIAL_VOWELS: Record<string, string> = {
+    aa: "આ",
+    ee: "ઈ",
+    oo: "ઊ",
+    ai: "ઐ",
+    au: "ઔ",
+    ou: "ઔ",
+    a: "અ",
+    i: "ઇ",
+    u: "ઉ",
+    e: "એ",
+    o: "ઓ",
+  };
+
+  let prevWasConsonant = false;
+
+  while (i < len) {
+    // Check 3-char consonants
+    const sub3 = lower.slice(i, i + 3);
+    if (CONSONANTS[sub3]) {
+      out += CONSONANTS[sub3];
+      i += 3;
+      prevWasConsonant = true;
+      continue;
+    }
+
+    // Check 2-char consonants
+    const sub2 = lower.slice(i, i + 2);
+    if (CONSONANTS[sub2]) {
+      out += CONSONANTS[sub2];
+      i += 2;
+      prevWasConsonant = true;
+      continue;
+    }
+
+    // Check 2-char vowels
+    if (VOWEL_MATRAS[sub2] !== undefined) {
+      if (prevWasConsonant) {
+        out += VOWEL_MATRAS[sub2];
+      } else {
+        out += INITIAL_VOWELS[sub2] || "અ";
+      }
+      i += 2;
+      prevWasConsonant = false;
+      continue;
+    }
+
+    // Check 1-char consonants
+    const c1 = lower[i];
+    if (CONSONANTS[c1]) {
+      out += CONSONANTS[c1];
+      i += 1;
+      prevWasConsonant = true;
+      continue;
+    }
+
+    // Check 1-char vowels
+    if (VOWEL_MATRAS[c1] !== undefined) {
+      if (prevWasConsonant) {
+        // End of word 'a' usually sounds like 'ા' in names (e.g., Pooja -> પૂજા, Neha -> નેહા)
+        if (c1 === "a" && i === len - 1) {
+          out += "ા";
+        } else {
+          out += VOWEL_MATRAS[c1];
+        }
+      } else {
+        out += INITIAL_VOWELS[c1] || "અ";
+      }
+      i += 1;
+      prevWasConsonant = false;
+      continue;
+    }
+
+    // Pass punctuation or numbers through
+    out += c1;
+    i++;
+    prevWasConsonant = false;
+  }
+
+  return out;
+}
+
+/**
+ * Transliterates an English string (name or words) to Gujarati script.
+ * If the string already contains Gujarati characters, it is preserved untouched.
+ */
+export function transliterateToGujarati(text: string | null | undefined): string {
+  if (!text) return "";
+  const trimmed = text.trim();
+  if (!trimmed) return "";
+  if (containsGujarati(trimmed)) return trimmed;
+
+  return trimmed
+    .split(/\s+/)
+    .map((word) => phoneticWordToGujarati(word))
+    .join(" ");
+}
+
+/**
+ * Converts English Police Rank / Designation to official Gujarat Police acronym.
+ * e.g. "W.A.P.C." / "WAPC" -> "વુ.આ. પો.કો.", "Police Constable" -> "પો.કો."
+ * If already Gujarati, keeps it unchanged.
+ */
+export function formatGujaratiPoliceRank(post: string | null | undefined): string {
+  if (!post) return "";
+  const trimmed = post.trim();
+  if (!trimmed) return "";
+  if (containsGujarati(trimmed)) return trimmed;
+
+  const key = trimmed.toLowerCase().replace(/_/g, " ").replace(/\s+/g, " ");
+  if (POLICE_RANK_TRANSLATIONS[key]) {
+    return POLICE_RANK_TRANSLATIONS[key];
+  }
+  const noDots = key.replace(/\./g, "").trim();
+  if (POLICE_RANK_TRANSLATIONS[noDots]) {
+    return POLICE_RANK_TRANSLATIONS[noDots];
+  }
+  return transliterateToGujarati(trimmed);
+}
+
+/**
+ * Formats a buckle/badge number cleanly into Gujarati numerals.
+ * e.g. "0782" or "BK-0782" -> "૦૭૮૨"
+ */
+export function formatGujaratiBuckleNumber(
+  buckleInput: string | null | undefined,
+  useGujaratiDigits = true,
+): string {
+  if (!buckleInput) return "";
+  const cleaned = buckleInput.trim();
+  if (!cleaned) return "";
+
+  // Strip prefixes like "BK-", "Buckle #", "B.No-", "B.No.", "No.", "બ.નં-"
+  const stripped = cleaned
+    .replace(/^(bk|b\.?\s*no\.?|buckle\s*#?|no\.?|બ\.?\s*નં\.?-?)\s*/i, "")
+    .trim();
+
+  return useGujaratiDigits ? toGujaratiNumerals(stripped) : stripped;
+}
+
+/**
+ * Formats the official Gujarat Police applicant / officer identification line:
+ * e.g. "નામ- વુ.આ. પો.કો. શ્રુતિ અજયસિંહ બ.નં- ૦૭૮૨"
+ * Displays above the subject line in printed / exported official reports.
+ */
+export function formatGujaratiApplicantLine(
+  officer: {
+    name?: string | null;
+    post?: string | null;
+    employeeCode?: string | null;
+  } | null | undefined,
+  useGujaratiDigits = true,
+): string {
+  if (!officer) return "";
+
+  const rank = formatGujaratiPoliceRank(officer.post);
+  const name = transliterateToGujarati(officer.name);
+  const buckle = formatGujaratiBuckleNumber(officer.employeeCode, useGujaratiDigits);
+
+  const parts = [rank, name].filter(Boolean).join(" ").trim();
+  if (!parts && !buckle) return "";
+
+  const nameSection = parts || "પોલીસ કર્મી";
+  const buckleSection = buckle ? ` બ.નં- ${buckle}` : "";
+
+  return `નામ- ${nameSection}${buckleSection}`.trim();
+}
+
+/**
+ * Parses applicant line into segments indicating which portions are bold labels
+ * (e.g. "નામ-", "નામ:", "નામ", "બ.નં-", "બ.નં:", "બ.નં.", "બ.નં") versus standard text.
+ */
+export function parseApplicantLineSegments(
+  text: string,
+): Array<{ text: string; isBold: boolean }> {
+  if (!text) return [];
+  const regex = /(?<=\s|^)(?:નામ\s*[-:]*|બ\.?\s*નં\.?\s*[-:]*)/g;
+  const parts = text.split(regex);
+  const matches = text.match(regex) || [];
+
+  const segments: Array<{ text: string; isBold: boolean }> = [];
+  for (let i = 0; i < parts.length; i++) {
+    if (parts[i]) {
+      segments.push({ text: parts[i], isBold: false });
+    }
+    if (i < matches.length) {
+      segments.push({ text: matches[i], isBold: true });
+    }
+  }
+  return segments;
+}
+
+/**
+ * Formats applicant line HTML with "નામ" and "બ.નં" labels enclosed in bold tags.
+ * e.g. "નામ- વુ.આ. પો.કો. શ્રુતિ અજયસિંહ બ.નં- ૦૭૮૨" ->
+ * '<strong class="font-bold text-black">નામ-</strong> વુ.આ. પો.કો. શ્રુતિ અજયસિંહ <strong class="font-bold text-black">બ.નં-</strong> ૦૭૮૨'
+ */
+export function formatApplicantLineBoldHtml(text: string): string {
+  if (!text) return "";
+  const esc = (s: string) =>
+    s
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+
+  const safe = esc(text);
+  return safe.replace(
+    /(?<=\s|^)(?:નામ\s*[-:]*|બ\.?\s*નં\.?\s*[-:]*)/g,
+    (match) => `<strong class="font-bold text-black">${match}</strong>`,
+  );
+}
+
+
+/**
+ * Formats and sanitizes a signatory block for Gujarati official letterhead:
+ * - Converts English names (e.g. "kirpalsinh solanki" -> "કિરપાલસિંહ સોલંકી")
+ * - Converts any digits (especially buckle number e.g. "0783" -> "૦૭૮૩") to Gujarati numerals
+ * - Converts known English police ranks to Gujarati acronyms
+ */
+export function formatGujaratiSignatory(
+  signatoryText: string | null | undefined,
+  useGujaratiDigits = true,
+): string {
+  if (!signatoryText) return "";
+  const lines = signatoryText.split("\n");
+  const formattedLines = lines.map((line) => {
+    let l = line.trim();
+    if (!l) return "";
+
+    // If the line is entirely English, transliterate it
+    if (!containsGujarati(l)) {
+      l = transliterateToGujarati(l);
+    } else {
+      // If line has Gujarati but also English words/names before or after,
+      // e.g. "kirpalsinh solanki વુ. આ. લો. ર."
+      l = l.replace(/\b[A-Za-z]+\b/g, (match) => {
+        const lower = match.toLowerCase();
+        if (lower === "qrt") return "QRT";
+        if (POLICE_RANK_TRANSLATIONS[lower]) return POLICE_RANK_TRANSLATIONS[lower];
+        return transliterateToGujarati(match);
+      });
+    }
+
+    // Convert digits to Gujarati numerals if enabled
+    if (useGujaratiDigits) {
+      l = toGujaratiNumerals(l);
+    }
+    return l;
+  });
+
+  return formattedLines.join("\n");
+}
+
 export function getGujaratiReportHeaders(input: {
   reportType: "ta" | "holiday" | "duty" | "leave";
   periodLabel: string;
@@ -615,24 +1141,35 @@ export function getGujaratiReportHeaders(input: {
 
   const station = printSettings?.stationName || officer?.posting || officer?.department || "પોલીસ સ્ટેશન";
   const recipient = printSettings?.recipientTitle || (reportType === "holiday" ? "પો.ઇ.સા.શ્રી" : "પોલીસ સબ ઇન્સપેક્ટરશ્રી");
-  const designation = officer?.post || "પો.કો.";
-  const buckleNo = officer?.employeeCode || "";
+  const designation = formatGujaratiPoliceRank(officer?.post) || "પો.કો.";
+  const buckleNo = formatGujaratiBuckleNumber(officer?.employeeCode, useGujaratiDigits);
 
-  const officerName = officer?.name ?? "પોલીસ અધિકારી";
-  const officerDetails = printSettings?.signatoryName || `${officerName}${officer?.post ? `, ${officer.post}` : ""}${buckleNo ? ` બ.નં. ${buckleNo}` : ""}`;
+  const officerName = transliterateToGujarati(officer?.name) || "પોલીસ અધિકારી";
+  const rawSig = printSettings?.signatoryName?.trim();
+  const officerDetails = rawSig
+    ? (useGujaratiDigits ? toGujaratiNumerals(rawSig) : rawSig)
+    : `${officerName}${designation ? `, ${designation}` : ""}${buckleNo ? ` બ.નં. ${buckleNo}` : ""}`;
+
+  // Formats official applicant line: "નામ- વુ.આ. પો.કો. શ્રુતિ અજયસિંહ બ.નં- ૦૭૮૨"
+  const fromLines = formatGujaratiApplicantLine(officer, useGujaratiDigits);
+
+  const fallbackFooterRight = `${officerName}\n${designation}${buckleNo ? ` (${buckleNo})` : ""}\n${station}`.trim();
+  const resolvedFooterRight = rawSig
+    ? (useGujaratiDigits ? toGujaratiNumerals(rawSig) : rawSig)
+    : fallbackFooterRight;
 
   if (reportType === "ta") {
     // Format 1: TA Bill (Photo 1) - e.g. "માહે- ૦૫/૨૦૨૪ નું મુસાફરી ભથ્થાબીલ"
     return {
       title: `માહે- ${numericPeriod} નું મુસાફરી ભથ્થાબીલ`,
       subject: `માહે- ${numericPeriod} નું મુસાફરી ભથ્થાબીલ રજૂ કરવા બાબત.`,
-      salutation: `સવિનય જણાવવાનું કે હું નીચે સહી કરનાર ${officerDetails} નાએ માહે ${displayPeriod} દરમિયાન બજાવેલ ફરજ તેમજ મુસાફરીની વિગત નીચે મુજબ પત્રકમાં દર્શાવેલ છે જે મુસાફરી ભથ્થાબીલ રજૂ કરી મંજુર કરવા વિનંતી છે.`,
+      salutation: `સવિનય જણાવવાનું કે હું નીચે સહી કરનાર ${officerDetails} નાએ માહે ${displayPeriod} દરમિયાન બજાવેલ ફરજ તેમજ મુસાફરીની વિગત નીચે મુજબ પત્રકમાં દર્શાવેલ છે.`,
       displayPeriod,
       numericPeriod,
       toLines: `પ્રતિ,\n${recipient},\n${station}`,
-      fromLines: `નામ: ${officer?.name ?? "પોલીસ કર્મી"} ${designation} બ.નં- ${buckleNo}`.trim(),
+      fromLines: fromLines || `નામ: ${officerName} ${designation} બ.નં- ${buckleNo}`.trim(),
       footerLeft: "",
-      footerRight: printSettings?.signatoryName || `${officer?.name ?? ""}\n${designation}\n${station}`.trim(),
+      footerRight: resolvedFooterRight,
     };
   }
 
@@ -651,9 +1188,9 @@ export function getGujaratiReportHeaders(input: {
       displayPeriod,
       numericPeriod,
       toLines: `પ્રતિ,\n${recipient},\n${station}`,
-      fromLines: `નામ: ${officer?.name ?? "પોલીસ કર્મી"} ${designation} બ.નં- ${buckleNo}`.trim(),
+      fromLines: fromLines || `નામ: ${officerName} ${designation} બ.નં- ${buckleNo}`.trim(),
       footerLeft: "",
-      footerRight: printSettings?.signatoryName || `${officer?.name ?? ""}\n${designation}\n${station}`.trim(),
+      footerRight: resolvedFooterRight,
     };
   }
 
@@ -661,12 +1198,12 @@ export function getGujaratiReportHeaders(input: {
   return {
     title: `માહે - ${namedPeriod} જાહેર રજાનો ક્લેઇમ`,
     subject: `માહે- ${namedPeriod} જાહેર રજાના ક્લેઇમનું બીલ મંજુર કરવા બાબત.`,
-    salutation: `સવિનય જણાવવાનું કે હું નીચે સહી કરનાર ${officerDetails} નાએ માહે ${displayPeriod} દરમિયાન જાહેર રજાના દિવસોમાં બજાવેલ ફરજની વિગત નીચે મુજબ પત્રકમાં દર્શાવેલ છે જે જાહેર રજાના ક્લેઇમનું બીલ મંજુર કરવા વિનંતી છે.`,
+    salutation: `સવિનય જણાવવાનું કે હું નીચે સહી કરનાર ${officerDetails} નાએ માહે ${displayPeriod} દરમિયાન જાહેર રજાના દિવસોમાં બજાવેલ ફરજની વિગત નીચે મુજબ પત્રકમાં દર્શાવેલ છે.`,
     displayPeriod,
     numericPeriod,
     toLines: `પ્રતિ,\n${recipient}\n${station}\nગુજરાત પોલીસ`,
-    fromLines: `નામ: ${officer?.name ?? "પોલીસ કર્મી"}\nહોદ્દો: ${designation}, બ.નં - ${buckleNo}`.trim(),
+    fromLines: fromLines || `નામ- ${designation} ${officerName}${buckleNo ? ` બ.નં - ${buckleNo}` : ""}`.trim(),
     footerLeft: "",
-    footerRight: printSettings?.signatoryName || `લિ. સહી\n${officer?.name ?? ""}\n${designation} (${buckleNo})`,
+    footerRight: rawSig ? (useGujaratiDigits ? toGujaratiNumerals(rawSig) : rawSig) : `લિ. સહી\n${officerName}\n${designation} (${buckleNo})`,
   };
 }

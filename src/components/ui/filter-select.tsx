@@ -44,6 +44,7 @@ export function FilterSelect({
   value,
   icon = "filter",
   clearable = true,
+  clearValue,
   className = "",
 }: {
   paramName: string;
@@ -65,6 +66,10 @@ export function FilterSelect({
    * difference between reading "2026" and reading "2...".
    */
   clearable?: boolean;
+  /**
+   * Value to apply when clearing (defaults to "all" if options contain "all", else "").
+   */
+  clearValue?: string;
   className?: string;
 }) {
   const router = useRouter();
@@ -87,10 +92,43 @@ export function FilterSelect({
   const [alignRight, setAlignRight] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
+  const optionsListRef = useRef<HTMLDivElement>(null);
+  const selectedItemRef = useRef<HTMLButtonElement>(null);
 
   const Icon = ICONS[icon] || Filter;
   const selectedValue = searchParams?.get(paramName) ?? value ?? defaultValue;
   const selectedOption = options.find((opt) => opt.value === selectedValue);
+
+  // Determine what value counts as "cleared" (defaults to "all" if present, else "")
+  const resolvedClearValue =
+    clearValue !== undefined
+      ? clearValue
+      : options.some((o) => o.value === "all")
+      ? "all"
+      : "";
+
+  const isCleared = !selectedValue || selectedValue === resolvedClearValue;
+
+  // Auto-scroll the dropdown list to center the selected option when opening
+  useEffect(() => {
+    if (isOpen && !searchQuery) {
+      const timer = setTimeout(() => {
+        if (selectedItemRef.current && optionsListRef.current) {
+          const container = optionsListRef.current;
+          const item = selectedItemRef.current;
+          const itemRect = item.getBoundingClientRect();
+          const containerRect = container.getBoundingClientRect();
+          const relativeTop = itemRect.top - containerRect.top + container.scrollTop;
+
+          container.scrollTop = Math.max(
+            0,
+            relativeTop - container.clientHeight / 2 + item.clientHeight / 2
+          );
+        }
+      }, 10);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, searchQuery, selectedValue]);
 
   // Close when clicking outside
   useEffect(() => {
@@ -164,7 +202,7 @@ export function FilterSelect({
         className={`w-full h-9 flex items-center justify-between gap-2 rounded-xl border px-2.5 sm:px-3 text-xs font-medium transition-all shadow-2xs cursor-pointer ${
           isOpen
             ? "border-indigo-500 ring-2 ring-indigo-500/20 bg-card text-foreground"
-            : selectedValue
+            : !isCleared
             ? "border-indigo-500/40 bg-indigo-500/5 text-foreground hover:bg-indigo-500/10"
             : "border-border bg-card text-muted-foreground hover:text-foreground hover:bg-muted/50"
         }`}
@@ -172,7 +210,7 @@ export function FilterSelect({
         <div className="flex items-center gap-1.5 truncate">
           <div
             className={`flex size-4.5 shrink-0 items-center justify-center rounded-md transition-colors ${
-              selectedValue
+              !isCleared
                 ? "bg-indigo-500/15 text-indigo-600 dark:text-indigo-400"
                 : "text-muted-foreground"
             }`}
@@ -190,14 +228,14 @@ export function FilterSelect({
         </div>
 
         <div className="flex items-center gap-1 shrink-0">
-          {clearable && selectedValue && (
+          {clearable && !isCleared && (
             <span
               onClick={(e) => {
                 e.stopPropagation();
-                handleSelect("");
+                handleSelect(resolvedClearValue);
               }}
-              title="Clear filter"
-              className="p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+              title="Clear to whole year"
+              className="p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
             >
               <X className="size-3" />
             </span>
@@ -233,7 +271,10 @@ export function FilterSelect({
           )}
 
           {/* Options List */}
-          <div className="max-h-56 overflow-y-auto space-y-0.5 custom-scrollbar pr-0.5">
+          <div
+            ref={optionsListRef}
+            className="max-h-56 overflow-y-auto space-y-0.5 custom-scrollbar pr-0.5"
+          >
             {/* "All" reset row.
                 Hidden when an option already carries the same label, or it
                 renders twice — the dashboard passes placeholder={String(year)}
@@ -244,15 +285,16 @@ export function FilterSelect({
             {!options.some((o) => o.label === placeholder) && (
             <button
               type="button"
-              onClick={() => handleSelect("")}
+              ref={isCleared ? selectedItemRef : undefined}
+              onClick={() => handleSelect(resolvedClearValue)}
               className={`w-full flex items-center justify-between gap-2 rounded-xl px-2.5 py-2 text-xs transition-all cursor-pointer ${
-                !selectedValue
+                isCleared
                   ? "bg-indigo-600 text-white font-semibold shadow-xs"
                   : "text-foreground hover:bg-muted/70 font-medium"
               }`}
             >
               <span className="truncate">{placeholder}</span>
-              {!selectedValue && <Check className="size-3.5 shrink-0" />}
+              {isCleared && <Check className="size-3.5 shrink-0" />}
             </button>
             )}
 
@@ -262,6 +304,7 @@ export function FilterSelect({
               return (
                 <button
                   key={opt.value}
+                  ref={isSelected ? selectedItemRef : undefined}
                   type="button"
                   onClick={() => handleSelect(opt.value)}
                   className={`w-full flex items-center justify-between gap-2 rounded-xl px-2.5 py-2 text-xs transition-all cursor-pointer ${

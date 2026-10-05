@@ -29,6 +29,10 @@ import {
   getGujaratiReportHeaders,
   toGujaratiNumerals,
   toAsciiNumerals,
+  formatGujaratiBuckleNumber,
+  transliterateToGujarati,
+  formatGujaratiPoliceRank,
+  formatApplicantLineBoldHtml,
 } from "@/lib/reports/gujaratiReportUtils";
 
 import { useBodyScrollLock } from "@/lib/hooks/useBodyScrollLock";
@@ -120,12 +124,22 @@ export function ReportEditModal({
     return "અરવલ્લી";
   };
 
-  const getInitialSignatory = (saved = getSavedConfig()) => {
-    if (saved.signatoryName) return saved.signatoryName.trim();
-    return `${officer?.name ?? "પોલીસ અધિકારી"}\n${officer?.post ?? ""}${officer?.employeeCode ? ` બ.નં. ${officer.employeeCode}` : ""}\n${officer?.posting ?? ""}`.trim();
+  const getInitialSignatory = (saved = getSavedConfig(), digits = useGujaratiDigits) => {
+    if (saved.signatoryName) {
+      return digits ? toGujaratiNumerals(saved.signatoryName.trim()) : saved.signatoryName.trim();
+    }
+    const name = transliterateToGujarati(officer?.name) || (officer?.name ?? "પોલીસ અધિકારી");
+    const post = formatGujaratiPoliceRank(officer?.post) || (officer?.post ?? "");
+    const buckle = formatGujaratiBuckleNumber(officer?.employeeCode, digits);
+    const line2 = [post, buckle ? `બ.નં. ${buckle}` : ""].filter(Boolean).join(" ");
+    return `${name}\n${line2}\n${officer?.posting ?? ""}`.trim();
   };
 
+  const getApplicantText = (digits = useGujaratiDigits) =>
+    initialReport.fromLines || defaultHeaders(digits).fromLines || "";
+
   const [toLines, setToLines] = useState<string>(getInitialToLines);
+  const [applicantLine, setApplicantLine] = useState<string>(() => getApplicantText());
   const [subject, setSubject] = useState<string>(getSubjectText());
   const [salutation, setSalutation] = useState<string>(getSalutationText());
   const [rows, setRows] = useState<Record<string, string>[]>(() =>
@@ -211,6 +225,7 @@ export function ReportEditModal({
     ]);
     setSubject(getSubjectText(useGujaratiDigits));
     setSalutation(getSalutationText(useGujaratiDigits));
+    setApplicantLine(getApplicantText(useGujaratiDigits));
   }, [isOpen, initialReport, officer, useGujaratiDigits]);
 
   if (!isOpen) return null;
@@ -221,20 +236,28 @@ export function ReportEditModal({
     setReportDate((prev) =>
       nextVal ? toGujaratiNumerals(prev) : toAsciiNumerals(prev),
     );
+    setApplicantLine((prev) =>
+      nextVal ? toGujaratiNumerals(prev) : toAsciiNumerals(prev),
+    );
+    setSignatory((prev) =>
+      nextVal ? toGujaratiNumerals(prev) : toAsciiNumerals(prev),
+    );
   };
 
   const handleReset = () => {
     const saved = getSavedConfig();
+    const defaultDigits = initialReport.useGujaratiDigits ?? true;
     setHeader1(getInitialHeader1(saved));
     setHeader2(getInitialHeader2(saved));
     setToLines(getInitialToLines(saved));
     setPlace(getInitialPlace(saved));
-    setSignatory(getInitialSignatory(saved));
+    setSignatory(getInitialSignatory(saved, defaultDigits));
     setRows(initialReport.rows.map((r) => ({ ...r })));
     setColumns(initialReport.columns);
-    setSubject(getSubjectText(initialReport.useGujaratiDigits ?? true));
-    setSalutation(getSalutationText(initialReport.useGujaratiDigits ?? true));
-    setUseGujaratiDigits(initialReport.useGujaratiDigits ?? true);
+    setSubject(getSubjectText(defaultDigits));
+    setSalutation(getSalutationText(defaultDigits));
+    setApplicantLine(getApplicantText(defaultDigits));
+    setUseGujaratiDigits(defaultDigits);
     setReportDate(
       formatGujaratiDate(new Date(), {
         useGujaratiDigits: initialReport.useGujaratiDigits ?? true,
@@ -338,6 +361,8 @@ export function ReportEditModal({
                     ${esc(toLines)}
                   </div>
 
+                  ${applicantLine ? `<div class="mb-3 text-sm text-gray-900 tracking-wide">${formatApplicantLineBoldHtml(applicantLine)}</div>` : ""}
+
                   <div class="mb-3 text-sm font-bold">
                     <span>વિષય: </span>
                     <span>${esc(subject)}</span>
@@ -382,7 +407,7 @@ export function ReportEditModal({
                     <div class="text-right">
                       <p class="font-bold">લિ. સહી</p>
                       <div class="pt-0.5 whitespace-pre-line font-semibold">
-                        ${esc(signatory.trim())}
+                        ${esc(useGujaratiDigits ? toGujaratiNumerals(signatory.trim()) : signatory.trim())}
                       </div>
                     </div>
                   </div>
@@ -525,14 +550,26 @@ export function ReportEditModal({
                   પ્રતિ (To Address - Editable):
                 </label>
                 <textarea
-                  rows={3}
+                  rows={5}
                   value={toLines}
                   onChange={(e) => setToLines(e.target.value)}
                   className="w-full rounded-xl border border-border bg-background p-2.5 text-xs font-medium text-foreground focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                 />
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-2.5">
+                <div>
+                  <label className="block text-xs font-bold text-foreground mb-1">
+                    અરજદાર વિગત (હોદ્દો / નામ / બકલ નં - વિષય ઉપર):
+                  </label>
+                  <input
+                    type="text"
+                    value={applicantLine}
+                    onChange={(e) => setApplicantLine(e.target.value)}
+                    placeholder="દા.ત. નામ- વુ.આ. પો.કો. શ્રુતિ અજયસિંહ બ.નં- ૦૭૮૨"
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs font-bold text-foreground focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  />
+                </div>
                 <div>
                   <label className="block text-xs font-bold text-foreground mb-1">
                     વિષય (Subject - Editable):
@@ -881,29 +918,31 @@ export function ReportEditModal({
         </div>
 
         {/* Footer Actions */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-t border-border px-4 py-3 bg-muted/30 sm:px-6 gap-2">
-          <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-            <span>A4 સાઇઝમાં સત્તાવાર લેટરહેડ સાથે પ્રિન્ટ થશે.</span>
-            <span className="hidden sm:inline">•</span>
-            <span className="font-mono text-[11px] text-foreground/80 font-medium">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between border-t border-border px-4 py-3 bg-muted/30 sm:px-6 gap-3">
+          <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground min-w-0">
+            <span className="truncate">A4 સાઇઝમાં સત્તાવાર લેટરહેડ સાથે પ્રિન્ટ થશે.</span>
+            <span className="hidden sm:inline text-muted-foreground/60">•</span>
+            <span className="font-mono text-[11px] text-foreground/80 font-medium truncate" title={pdfFileName}>
               PDF: {pdfFileName}
             </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="grid grid-cols-2 sm:flex sm:items-center sm:justify-end gap-2.5 w-full sm:w-auto shrink-0">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl border border-border text-xs font-semibold text-foreground hover:bg-muted transition-colors cursor-pointer"
+              className="flex items-center justify-center px-4 sm:px-5 py-2.5 sm:py-2 rounded-xl border border-border bg-background text-xs sm:text-sm font-semibold text-foreground hover:bg-muted transition-colors cursor-pointer text-center whitespace-nowrap shrink-0"
             >
-              બંધ કરો (Close)
+              <span className="whitespace-nowrap">બંધ કરો</span>
+              <span className="hidden sm:inline ml-1 text-muted-foreground font-normal whitespace-nowrap">(Close)</span>
             </button>
             <button
               type="button"
               onClick={handlePrint}
-              className="flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2 text-xs font-semibold text-white shadow-md shadow-indigo-600/30 hover:bg-indigo-500 transition-all cursor-pointer sm:text-sm"
+              className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 sm:px-5 py-2.5 sm:py-2 text-xs sm:text-sm font-semibold text-primary-foreground shadow-xs hover:bg-primary/90 active:scale-98 transition-all cursor-pointer text-center whitespace-nowrap shrink-0"
             >
-              <Printer className="size-4" />
-              <span>પ્રિન્ટ કરો (Print Letterhead)</span>
+              <Printer className="size-4 shrink-0" />
+              <span className="whitespace-nowrap">પ્રિન્ટ કરો</span>
+              <span className="hidden sm:inline whitespace-nowrap">(Print Letterhead)</span>
             </button>
           </div>
         </div>

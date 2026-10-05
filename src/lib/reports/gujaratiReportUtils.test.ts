@@ -14,6 +14,8 @@ import {
   translateDutyTypeToGujarati,
   formatDutyTypeDropdownLabel,
   sortDutyTypesForDropdown,
+  parseApplicantLineSegments,
+  formatApplicantLineBoldHtml,
 } from "./gujaratiReportUtils";
 
 describe("gujaratiReportUtils", () => {
@@ -137,7 +139,7 @@ describe("gujaratiReportUtils", () => {
         reportType: "ta",
         periodLabel: "05/2024",
         officer: {
-          name: "કિર્પાલસિંહ ભગવતસિંહ",
+          name: "કિરપાલસિંહ ભગવતસિંહ",
           post: "પો.હે.કો.",
           employeeCode: "16",
           posting: "વરાછા પો.સ્ટે.",
@@ -147,8 +149,9 @@ describe("gujaratiReportUtils", () => {
 
       expect(headers.title).toContain("મુસાફરી ભથ્થાબીલ");
       expect(headers.toLines).toContain("પ્રતિ,");
-      expect(headers.footerRight).toContain("કિર્પાલસિંહ ભગવતસિંહ");
-      expect(headers.salutation).toContain("મુસાફરી ભથ્થાબીલ રજૂ કરી મંજુર કરવા વિનંતી છે.");
+      expect(headers.footerRight).toContain("કિરપાલસિંહ ભગવતસિંહ");
+      expect(headers.salutation).toContain("બજાવેલ ફરજ તેમજ મુસાફરીની વિગત");
+      expect(headers.fromLines).toBe("નામ- પો.હે.કો. કિરપાલસિંહ ભગવતસિંહ બ.નં- ૧૬");
     });
 
     it("returns correct Holiday Claim headers matching Photo 2", () => {
@@ -156,14 +159,76 @@ describe("gujaratiReportUtils", () => {
         reportType: "holiday",
         periodLabel: "ફેબ્રુઆરી/2024",
         officer: {
-          name: "કિર્પાલસિંહ",
+          name: "કિરપાલસિંહ",
           post: "પો.હે.કો.",
         },
       });
 
       expect(headers.title).toContain("જાહેર રજાનો ક્લેઇમ");
       expect(headers.toLines).toContain("પ્રતિ,");
-      expect(headers.salutation).toContain("જાહેર રજાના ક્લેઇમનું બીલ મંજુર કરવા વિનંતી છે.");
+      expect(headers.salutation).toContain("જાહેર રજાના દિવસોમાં બજાવેલ ફરજની વિગત");
+      expect(headers.fromLines).toBe("નામ- પો.હે.કો. કિરપાલસિંહ");
+    });
+
+    it("formats applicant line with rank first, name second, buckle number third and English-to-Gujarati conversion", () => {
+      // Exactly matching user photo: "નામ- વુ.આ. પો.કો. શ્રુતિ અજયસિંહ બ.નં- ૦૭૮૨"
+      const headers = getGujaratiReportHeaders({
+        reportType: "ta",
+        periodLabel: "સપ્ટેમ્બર 2026",
+        officer: {
+          name: "Shruti Ajaysinh",
+          post: "W.A.P.C.",
+          employeeCode: "0782",
+        },
+        useGujaratiDigits: true,
+      });
+
+      expect(headers.fromLines).toBe("નામ- વુ.આ. પો.કો. શ્રુતિ અજયસિંહ બ.નં- ૦૭૮૨");
+    });
+
+    it("converts Rajput in names to Gujarati રાજપૂત", () => {
+      const headers = getGujaratiReportHeaders({
+        reportType: "ta",
+        periodLabel: "સપ્ટેમ્બર 2026",
+        officer: {
+          name: "Shruti Rajput",
+          post: "W.A.P.C.",
+          employeeCode: "0782",
+        },
+        useGujaratiDigits: true,
+      });
+
+      expect(headers.fromLines).toBe("નામ- વુ.આ. પો.કો. શ્રુતિ રાજપૂત બ.નં- ૦૭૮૨");
+    });
+
+    it("converts Kirpal in names to Gujarati કિરપાલ (not kripal)", () => {
+      const headers = getGujaratiReportHeaders({
+        reportType: "ta",
+        periodLabel: "સપ્ટેમ્બર 2026",
+        officer: {
+          name: "Kirpal Rajput",
+          post: "Police Constable",
+          employeeCode: "16",
+        },
+        useGujaratiDigits: true,
+      });
+
+      expect(headers.fromLines).toBe("નામ- પો.કો. કિરપાલ રાજપૂત બ.નં- ૧૬");
+    });
+
+    it("converts Kirpalsinh dilipsinh to Gujarati કિરપાલસિંહ દિલીપસિંહ", () => {
+      const headers = getGujaratiReportHeaders({
+        reportType: "ta",
+        periodLabel: "સપ્ટેમ્બર 2026",
+        officer: {
+          name: "Kirpalsinh dilipsinh",
+          post: "Head Constable",
+          employeeCode: "16",
+        },
+        useGujaratiDigits: true,
+      });
+
+      expect(headers.fromLines).toBe("નામ- હે.કો. કિરપાલસિંહ દિલીપસિંહ બ.નં- ૧૬");
     });
   });
 
@@ -233,6 +298,36 @@ describe("gujaratiReportUtils", () => {
       expect(names[5]).toBe("Custom Special Duty");
       // Other at the very end
       expect(names[6]).toBe("Other");
+    });
+  });
+
+  describe("applicant line bold formatting (નામ and બ.નં bold in report)", () => {
+    it("formats applicant line with bold HTML tags on નામ and બ.નં", () => {
+      const line = "નામ- વુ. આ. લો . ર. કિ રપા લસિં હ સો લંકી બ.નં- ૦૭૮૩";
+      const formatted = formatApplicantLineBoldHtml(line);
+      expect(formatted).toBe(
+        '<strong class="font-bold text-black">નામ-</strong> વુ. આ. લો . ર. કિ રપા લસિં હ સો લંકી <strong class="font-bold text-black">બ.નં-</strong> ૦૭૮૩',
+      );
+    });
+
+    it("parses applicant line segments with isBold true for labels", () => {
+      const line = "નામ- વુ.આ. પો.કો. શ્રુતિ અજયસિંહ બ.નં- ૦૭૮૨";
+      const segments = parseApplicantLineSegments(line);
+      expect(segments).toEqual([
+        { text: "નામ-", isBold: true },
+        { text: " વુ.આ. પો.કો. શ્રુતિ અજયસિંહ ", isBold: false },
+        { text: "બ.નં-", isBold: true },
+        { text: " ૦૭૮૨", isBold: false },
+      ]);
+    });
+
+    it("handles applicant line with colon or no buckle gracefully", () => {
+      const line = "નામ: હે.કો. કિરપાલસિંહ દિલીપસિંહ";
+      const segments = parseApplicantLineSegments(line);
+      expect(segments).toEqual([
+        { text: "નામ:", isBold: true },
+        { text: " હે.કો. કિરપાલસિંહ દિલીપસિંહ", isBold: false },
+      ]);
     });
   });
 });

@@ -374,12 +374,12 @@ export default async function DutyListPage({
           <div className="w-full sm:w-36">
             <FilterSelect
               paramName="month"
-              placeholder="All months"
+              placeholder="Whole year"
               value={monthParam}
               icon="calendar"
-              clearable={false}
+              clearable={true}
               options={[
-                { value: "all", label: "All months" },
+                { value: "all", label: "Whole year" },
                 ...MONTH_NAMES.map((m, i) => ({ value: String(i + 1), label: m })),
               ]}
             />

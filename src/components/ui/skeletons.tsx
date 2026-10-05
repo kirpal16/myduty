@@ -115,7 +115,7 @@ export function PageHeaderSkeleton({
 export function StatCardsSkeleton({
   count = 4,
   cols = "grid-cols-2 sm:grid-cols-3 xl:grid-cols-5",
-  gap = "gap-3.5 sm:gap-4.5",
+  gap = "gap-3 sm:gap-4.5",
   iconLeft = false,
   lastSpansFull = false,
   trend = false,
@@ -138,25 +138,104 @@ export function StatCardsSkeleton({
       {Array.from({ length: count }).map((_, i) => {
         const last = i === count - 1;
         const withTrend = trend || trendOn?.includes(i);
-        const icon = <Skeleton className="size-11 shrink-0 rounded-xl sm:size-12 sm:rounded-2xl" />;
+        const icon = (
+          <Skeleton
+            className={
+              iconLeft
+                ? "size-11 shrink-0 rounded-xl sm:size-12 sm:rounded-2xl"
+                : "size-8 sm:size-10 shrink-0 rounded-xl"
+            }
+          />
+        );
+
+        if (iconLeft) {
+          return (
+            <Card
+              key={i}
+              className={`flex items-center gap-3 p-4 ${
+                lastSpansFull && last ? "col-span-2 sm:col-span-1" : ""
+              }`}
+            >
+              {icon}
+              <div className="min-w-0 flex-1 space-y-1.5">
+                <Skeleton className="h-3 w-20 rounded-md" />
+                <Skeleton className="h-6 w-14 rounded-lg sm:h-7" />
+                {withTrend && <Skeleton className="h-2.5 w-24 rounded-md" />}
+              </div>
+            </Card>
+          );
+        }
+
         return (
           <Card
             key={i}
-            className={`flex items-center gap-3 p-4 ${iconLeft ? "" : "justify-between"} ${
+            className={`flex flex-col justify-between gap-2.5 p-3.5 sm:p-4.5 ${
               lastSpansFull && last ? "col-span-2 sm:col-span-1" : ""
             }`}
           >
-            {iconLeft && icon}
-            <div className="min-w-0 flex-1 space-y-1.5">
-              <Skeleton className="h-3 w-20 rounded-md" />
-              <Skeleton className="h-6 w-14 rounded-lg sm:h-7" />
-              {withTrend && <Skeleton className="h-2.5 w-24 rounded-md" />}
+            <div className="flex items-start justify-between gap-1.5 w-full">
+              <Skeleton className="h-3.5 w-20 sm:w-24 rounded-md" />
+              {icon}
             </div>
-            {!iconLeft && icon}
+            <div className="space-y-1 min-w-0">
+              <Skeleton className="h-6 sm:h-7 w-16 rounded-lg" />
+              {withTrend && <Skeleton className="h-2.5 sm:h-3 w-24 rounded-md" />}
+            </div>
           </Card>
         );
       })}
     </div>
+  );
+}
+
+/** Mirrors the year-end leave expiry alert accordion (`LeaveYearAlerts`). */
+export function LeaveYearAlertSkeleton() {
+  return (
+    <Card className="p-4 sm:p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3 min-w-0 flex-1">
+          <Skeleton className="size-9 sm:size-10 shrink-0 rounded-xl" />
+          <div className="space-y-1.5 min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <Skeleton className="h-4 w-48 rounded-md" />
+              <Skeleton className="h-5 w-18 rounded-full" />
+              <Skeleton className="h-5 w-24 rounded-full" />
+            </div>
+            <Skeleton className="h-3 w-72 max-w-full rounded-md" />
+          </div>
+        </div>
+        <div className="flex items-center gap-2 self-start sm:self-auto shrink-0 pt-1 sm:pt-0">
+          <Skeleton className="h-8 w-20 rounded-xl" />
+          <Skeleton className="h-8 w-24 rounded-xl" />
+          <Skeleton className="size-8 rounded-xl" />
+        </div>
+      </div>
+      <div className="border-t border-border/60 px-0 pb-0 pt-3.5 mt-3.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {[0, 1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="flex flex-col justify-between rounded-xl border border-border/70 p-3.5 space-y-2.5"
+            >
+              <div className="flex items-center justify-between">
+                <Skeleton className="h-3.5 w-24 rounded-md" />
+                <Skeleton className="h-4 w-12 rounded-md" />
+              </div>
+              <div className="flex items-baseline justify-between">
+                <Skeleton className="h-6 w-14 rounded-md" />
+                <Skeleton className="h-3 w-16 rounded-md" />
+              </div>
+              <Skeleton className="h-1.5 w-full rounded-full" />
+              <Skeleton className="h-3 w-36 rounded-md" />
+              <div className="pt-2 border-t border-border/50 flex justify-between items-center">
+                <Skeleton className="h-3 w-20 rounded-md" />
+                <Skeleton className="size-3 rounded-full" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Card>
   );
 }
 
@@ -1021,8 +1100,11 @@ export function CalendarSkeleton() {
  * invisible.
  */
 export function DashboardBodySkeleton() {
+  const isQ4 = new Date().getMonth() >= 9;
+
   return (
     <>
+      {isQ4 && <LeaveYearAlertSkeleton />}
       <StatCardsSkeleton count={5} lastSpansFull trend />
       <ChartGridSkeleton />
 

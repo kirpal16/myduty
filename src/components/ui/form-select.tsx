@@ -118,11 +118,34 @@ export function FormSelect({
   // list before the click that selects it can land.
   const panelRef = useRef<HTMLDivElement>(null);
   const hiddenRef = useRef<HTMLInputElement>(null);
+  const optionsListRef = useRef<HTMLDivElement>(null);
+  const selectedItemRef = useRef<HTMLButtonElement>(null);
   const listboxId = useId();
   const mounted = useRef(false);
 
   const currentValue = value !== undefined ? value : internalValue;
   const selectedOption = options.find((opt) => opt.value === currentValue);
+
+  // Auto-scroll the dropdown list to center the selected option when opening
+  useEffect(() => {
+    if (isOpen && !searchQuery) {
+      const timer = setTimeout(() => {
+        if (selectedItemRef.current && optionsListRef.current) {
+          const container = optionsListRef.current;
+          const item = selectedItemRef.current;
+          const itemRect = item.getBoundingClientRect();
+          const containerRect = container.getBoundingClientRect();
+          const relativeTop = itemRect.top - containerRect.top + container.scrollTop;
+
+          container.scrollTop = Math.max(
+            0,
+            relativeTop - container.clientHeight / 2 + item.clientHeight / 2
+          );
+        }
+      }, 10);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, searchQuery, currentValue]);
 
   // Sync internal value if controlled
   useEffect(() => {
@@ -340,6 +363,7 @@ export function FormSelect({
 
           {/* Options List */}
           <div
+            ref={optionsListRef}
             id={listboxId}
             role="listbox"
             className="min-h-0 flex-1 overflow-y-auto space-y-0.5 custom-scrollbar pr-0.5"
@@ -349,6 +373,7 @@ export function FormSelect({
               return (
                 <button
                   key={opt.value}
+                  ref={isSelected ? selectedItemRef : undefined}
                   type="button"
                   onClick={() => handleSelect(opt.value)}
                   className={`w-full flex items-center justify-between gap-2 rounded-xl px-3 py-2 text-xs sm:text-sm transition-all cursor-pointer text-left ${
