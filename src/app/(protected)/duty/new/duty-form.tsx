@@ -16,6 +16,8 @@ import {
   Sparkles,
   Car,
   ShieldCheck,
+  ChevronDown,
+  Plus,
 } from "lucide-react";
 import { FormFileInput } from "@/components/ui/form-file-input";
 import { FormSelect } from "@/components/ui/form-select";
@@ -120,7 +122,7 @@ export function DutyForm({
       defaults?.taAmount != null,
   );
   const [taOpen, setTaOpen] = useState(hasTaDefaults);
-  const [vehicleType, setVehicleType] = useState<string>(defaults?.taVehicleType ?? "private");
+  const [vehicleType, setVehicleType] = useState<string>(defaults?.taVehicleType ?? "govt");
   const [taAmountVal, setTaAmountVal] = useState(defaults?.taAmount?.toString() ?? "");
   const [taKmVal, setTaKmVal] = useState(defaults?.taDistanceKm?.toString() ?? "");
 
@@ -155,7 +157,7 @@ export function DutyForm({
   // Classification of the start date. Derived, never a checkbox: an officer
   // cannot declare a plain Tuesday a holiday and pay themselves for it.
   const holidayInfo = startsAtVal
-    ? resolveHoliday(new Date(startsAtVal), holidays)
+    ? resolveHoliday(startsAtVal, holidays)
     : { isHoliday: false, qualifiesForHolidayAllowance: false };
 
   // A multi-day entry becomes one duty per day, each independently editable.
@@ -498,154 +500,185 @@ export function DutyForm({
           Hidden for a multi-day entry: the per-day rows above own TA there, so
           there is exactly one place to type each day's route and amount and no
           two fields can disagree. */}
-      <div className={`space-y-4 pt-4 border-t border-border/80 ${isMultiDay ? "hidden" : ""}`}>
-        {/* Collapsed until needed: most shifts claim no TA. Opens by itself
-            when editing a duty that has TA, or when a TA field is wrong. */}
-        <CollapsibleSection
-          title="Travelling Allowance (TA) Claim"
-          icon={Compass}
-          open={taVisible}
-          onToggle={() => setTaOpen(!taVisible)}
-          summary={
-            taAmountVal || taKmVal
-              ? [taAmountVal && `₹${taAmountVal}`, taKmVal && `${taKmVal} km`]
-                  .filter(Boolean)
-                  .join(" · ")
-              : "Not claimed"
-          }
+      <div className={`transition-all duration-200 ${isMultiDay ? "hidden" : ""}`}>
+        {/* Compact TA Claim Card container */}
+        <div
+          className={`rounded-xl border transition-all duration-150 overflow-hidden ${
+            taVisible
+              ? "border-sky-500/40 bg-sky-500/[0.03] dark:bg-sky-950/20 shadow-xs"
+              : "border-border/80 bg-card/60 hover:border-sky-500/30 hover:bg-muted/30 shadow-2xs"
+          }`}
         >
-        <div className="rounded-2xl border border-sky-500/20 bg-sky-500/5 p-4 sm:p-5 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="flex flex-col gap-1.5">
-              <label
-                htmlFor="taFromPlace"
-                className="text-xs font-semibold text-foreground flex items-center gap-1"
-              >
-                <Navigation className="size-3 text-sky-500" />
-                <span>Departure Place</span>
-              </label>
-              <input
-                id="taFromPlace"
-                name="taFromPlace"
-                placeholder="Origin base station"
-                defaultValue={defaults?.taFromPlace ?? ""}
-                className="w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-xs sm:text-sm shadow-xs hover:border-slate-400 dark:hover:border-slate-600 transition-colors focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20"
+          {/* Header toggle button: slim, compact single-line matching old height */}
+          <button
+            type="button"
+            onClick={() => setTaOpen(!taVisible)}
+            aria-expanded={taVisible}
+            className="flex w-full cursor-pointer items-center justify-between gap-2 px-3 py-2 sm:py-2.5 text-left group select-none transition-colors"
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <Compass
+                className={`size-4 shrink-0 transition-colors ${
+                  taVisible ? "text-sky-500" : "text-sky-500/80 group-hover:text-sky-500"
+                }`}
               />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <label
-                htmlFor="taToPlace"
-                className="text-xs font-semibold text-foreground flex items-center gap-1"
-              >
-                <MapPin className="size-3 text-sky-500" />
-                <span>Arrival Destination</span>
-              </label>
-              <input
-                id="taToPlace"
-                name="taToPlace"
-                placeholder="Field deployment site"
-                defaultValue={defaults?.taToPlace ?? ""}
-                className="w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-xs sm:text-sm shadow-xs hover:border-slate-400 dark:hover:border-slate-600 transition-colors focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20"
-              />
-            </div>
-          </div>
-
-          {/* Vehicle Type Selection (ખાનગી વાહન / સરકારી વાહન) */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-foreground flex items-center justify-between">
-              <span className="flex items-center gap-1">
-                <Car className="size-3 text-sky-500" />
-                <span>વાહનનો પ્રકાર (Vehicle Type)</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground group-hover:text-foreground truncate transition-colors">
+                Travelling Allowance (TA) Claim
               </span>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-sky-500/10 text-sky-700 dark:text-sky-300 border border-sky-500/20">
-                {vehicleType === "govt" ? "સરકારી વાહન (સ.વા.)" : "ખાનગી વાહન (ખ.વા.)"}
-              </span>
-            </label>
-            <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-muted/60 border border-border">
-              <button
-                type="button"
-                onClick={() => setVehicleType("private")}
-                className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  vehicleType === "private"
-                    ? "bg-card text-foreground shadow-xs border border-border"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <Car className="size-3.5 text-sky-500" />
-                <span>ખાનગી વાહન (ખ.વા.)</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setVehicleType("govt")}
-                className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  vehicleType === "govt"
-                    ? "bg-card text-foreground shadow-xs border border-border"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <ShieldCheck className="size-3.5 text-emerald-500" />
-                <span>સરકારી વાહન (સ.વા.)</span>
-              </button>
-            </div>
-            <input type="hidden" name="taVehicleType" value={vehicleType} />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="flex flex-col gap-1.5">
-              <label
-                htmlFor="taDistanceKm"
-                className="text-xs font-semibold text-foreground flex items-center gap-1"
-              >
-                <Compass className="size-3 text-slate-400" />
-                <span>Total Distance (km)</span>
-              </label>
-              <input
-                id="taDistanceKm"
-                {...fieldProps("taDistanceKm")}
-                type="number"
-                step="0.1"
-                min="0"
-                placeholder="24.5"
-                defaultValue={defaults?.taDistanceKm ?? ""}
-                onChange={(e) => setTaKmVal(e.target.value)}
-                className={`w-full rounded-xl border bg-card px-3.5 py-2.5 text-xs sm:text-sm shadow-xs transition-colors focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 ${
-                  errorProps("taDistanceKm").message
-                    ? "border-rose-500"
-                    : "border-border hover:border-slate-400 dark:hover:border-slate-600"
-                }`}
-              />
-              <FieldError {...errorProps("taDistanceKm")} />
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <label
-                htmlFor="taAmount"
-                className="text-xs font-semibold text-foreground flex items-center gap-1"
-              >
-                <IndianRupee className="size-3 text-emerald-500" />
-                <span>Claim Amount (₹)</span>
-              </label>
-              <input
-                id="taAmount"
-                {...fieldProps("taAmount")}
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="50.00"
-                defaultValue={defaults?.taAmount ?? ""}
-                onChange={(e) => setTaAmountVal(e.target.value)}
-                className={`w-full rounded-xl border bg-card px-3.5 py-2.5 text-xs sm:text-sm shadow-xs transition-colors focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 ${
-                  errorProps("taAmount").message
-                    ? "border-rose-500"
-                    : "border-border hover:border-slate-400 dark:hover:border-slate-600"
+            <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+              {taAmountVal || taKmVal ? (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/20">
+                  <span>₹{taAmountVal || "0"}</span>
+                  {taKmVal && <span>· {taKmVal} km</span>}
+                </span>
+              ) : (
+                <span className="text-[11px] font-medium text-muted-foreground group-hover:text-foreground transition-colors">
+                  Not claimed
+                </span>
+              )}
+              <ChevronDown
+                className={`size-4 text-muted-foreground group-hover:text-foreground transition-transform duration-150 shrink-0 ${
+                  taVisible ? "rotate-180 text-sky-500" : ""
                 }`}
               />
-              <FieldError {...errorProps("taAmount")} />
+            </div>
+          </button>
+
+          {/* Form fields body (mounted always, hidden when closed) */}
+          <div className={taVisible ? "p-3.5 sm:p-4 pt-3 border-t border-sky-500/20 space-y-3.5 animate-in fade-in-50 duration-150" : "hidden"}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label
+                  htmlFor="taFromPlace"
+                  className="text-xs font-semibold text-foreground flex items-center gap-1"
+                >
+                  <Navigation className="size-3 text-sky-500" />
+                  <span>Departure Place</span>
+                </label>
+                <input
+                  id="taFromPlace"
+                  name="taFromPlace"
+                  placeholder="Origin base station"
+                  defaultValue={defaults?.taFromPlace ?? ""}
+                  className="w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-xs sm:text-sm shadow-xs hover:border-slate-400 dark:hover:border-slate-600 transition-colors focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label
+                  htmlFor="taToPlace"
+                  className="text-xs font-semibold text-foreground flex items-center gap-1"
+                >
+                  <MapPin className="size-3 text-sky-500" />
+                  <span>Arrival Destination</span>
+                </label>
+                <input
+                  id="taToPlace"
+                  name="taToPlace"
+                  placeholder="Field deployment site"
+                  defaultValue={defaults?.taToPlace ?? ""}
+                  className="w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-xs sm:text-sm shadow-xs hover:border-slate-400 dark:hover:border-slate-600 transition-colors focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20"
+                />
+              </div>
+            </div>
+
+            {/* Vehicle Type Selection (ખાનગી વાહન / સરકારી વાહન) */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-semibold text-foreground flex items-center justify-between">
+                <span className="flex items-center gap-1">
+                  <Car className="size-3 text-sky-500" />
+                  <span>વાહનનો પ્રકાર (Vehicle Type)</span>
+                </span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-sky-500/10 text-sky-700 dark:text-sky-300 border border-sky-500/20">
+                  {vehicleType === "govt" ? "સરકારી વાહન (સ.વા.)" : "ખાનગી વાહન (ખ.વા.)"}
+                </span>
+              </label>
+              <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-muted/60 border border-border">
+                <button
+                  type="button"
+                  onClick={() => setVehicleType("private")}
+                  className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    vehicleType === "private"
+                      ? "bg-card text-foreground shadow-xs border border-border"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Car className="size-3.5 text-sky-500" />
+                  <span>ખાનગી વાહન (ખ.વા.)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setVehicleType("govt")}
+                  className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    vehicleType === "govt"
+                      ? "bg-card text-foreground shadow-xs border border-border"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <ShieldCheck className="size-3.5 text-emerald-500" />
+                  <span>સરકારી વાહન (સ.વા.)</span>
+                </button>
+              </div>
+              <input type="hidden" name="taVehicleType" value={vehicleType} />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label
+                  htmlFor="taDistanceKm"
+                  className="text-xs font-semibold text-foreground flex items-center gap-1"
+                >
+                  <Compass className="size-3 text-slate-400" />
+                  <span>Total Distance (km)</span>
+                </label>
+                <input
+                  id="taDistanceKm"
+                  {...fieldProps("taDistanceKm")}
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  placeholder="24.5"
+                  defaultValue={defaults?.taDistanceKm ?? ""}
+                  onChange={(e) => setTaKmVal(e.target.value)}
+                  className={`w-full rounded-xl border bg-card px-3.5 py-2.5 text-xs sm:text-sm shadow-xs transition-colors focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 ${
+                    errorProps("taDistanceKm").message
+                      ? "border-rose-500"
+                      : "border-border hover:border-slate-400 dark:hover:border-slate-600"
+                  }`}
+                />
+                <FieldError {...errorProps("taDistanceKm")} />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label
+                  htmlFor="taAmount"
+                  className="text-xs font-semibold text-foreground flex items-center gap-1"
+                >
+                  <IndianRupee className="size-3 text-emerald-500" />
+                  <span>Claim Amount (₹)</span>
+                </label>
+                <input
+                  id="taAmount"
+                  {...fieldProps("taAmount")}
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="50.00"
+                  defaultValue={defaults?.taAmount ?? ""}
+                  onChange={(e) => setTaAmountVal(e.target.value)}
+                  className={`w-full rounded-xl border bg-card px-3.5 py-2.5 text-xs sm:text-sm shadow-xs transition-colors focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 ${
+                    errorProps("taAmount").message
+                      ? "border-rose-500"
+                      : "border-border hover:border-slate-400 dark:hover:border-slate-600"
+                  }`}
+                />
+                <FieldError {...errorProps("taAmount")} />
+              </div>
             </div>
           </div>
         </div>
-        </CollapsibleSection>
       </div>
 
       {/* Attachment Upload for Duty (Tickets, Receipts, Photos) */}

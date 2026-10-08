@@ -10,6 +10,7 @@ import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { SearchInput } from "@/components/ui/search-input";
 import { FilterSelect } from "@/components/ui/filter-select";
 import { DateRangeFilter } from "@/components/ui/date-range-filter";
+import { CollapsibleFilterBar } from "@/components/ui/collapsible-filter-bar";
 import { DeleteLeaveButton } from "@/components/leave/delete-leave-button";
 import {
   CalendarOff,
@@ -468,99 +469,103 @@ export default async function LeavePage({
         </>
       ) : (
         <>
-          {/* Filter and Search Bar */}
-          <Card className="p-3.5 sm:p-4 space-y-3">
-            {/* Top Tier: Search Bar & Clear Filter Action */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-              <div className="w-full sm:max-w-md">
-                <SearchInput
-                  placeholder="Search by reason..."
-                  defaultValue={search}
+          {/* Filter and Search Bar with Collapsible Filter Options */}
+          <CollapsibleFilterBar
+            activeCount={
+              [
+                Boolean(leaveTypeId),
+                Boolean(userId),
+                Boolean(rawMonth && rawMonth !== "all"),
+                Boolean(year),
+                Boolean(rawFrom || rawTo),
+              ].filter(Boolean).length
+            }
+            searchSlot={
+              <SearchInput
+                placeholder="Search by reason..."
+                defaultValue={search}
+              />
+            }
+            resetSlot={
+              (search || leaveTypeId || userId || rawMonth || year || rawFrom || rawTo) ? (
+                <Link
+                  href="/leave"
+                  className="h-9 inline-flex items-center justify-center rounded-xl border border-rose-500/20 bg-rose-500/10 px-3 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 transition-colors shrink-0"
+                  title="Reset all filters"
+                >
+                  Reset Filters
+                </Link>
+              ) : null
+            }
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Officer Filter for Admins */}
+              {isSuperAdmin && (usersList ?? []).length > 0 && (
+                <div className="w-full sm:w-44">
+                  <FilterSelect
+                    paramName="userId"
+                    placeholder="All Officers"
+                    icon="user"
+                    options={(usersList ?? []).map((u) => ({
+                      value: u.id,
+                      label: u.full_name,
+                    }))}
+                  />
+                </div>
+              )}
+
+              {/* Leave Type Filter */}
+              {(leaveTypes ?? []).length > 0 && (
+                <div className="w-full sm:w-36">
+                  <FilterSelect
+                    paramName="leaveTypeId"
+                    placeholder="All Types"
+                    icon="calendar"
+                    options={(leaveTypes ?? []).map((lt) => ({
+                      value: lt.id,
+                      label: lt.name,
+                    }))}
+                  />
+                </div>
+              )}
+
+              {/* Month Filter - defaults to current month */}
+              <div className="w-full sm:w-36">
+                <FilterSelect
+                  paramName="month"
+                  placeholder="Whole year"
+                  value={monthParam}
+                  icon="calendar"
+                  clearable={true}
+                  options={[
+                    { value: "all", label: "Whole year" },
+                    ...MONTH_NAMES.map((m, i) => ({ value: String(i + 1), label: m })),
+                  ]}
                 />
               </div>
 
-          {(search || leaveTypeId || userId || rawMonth || year || rawFrom || rawTo) && (
-            <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
-              <Link
-                href="/leave"
-                className="h-9 inline-flex items-center justify-center rounded-xl border border-rose-500/20 bg-rose-500/10 px-3 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 transition-colors shrink-0"
-                title="Reset all filters"
-              >
-                Reset Filters
-              </Link>
+              {/* Year Filter */}
+              <div className="w-full sm:w-28">
+                <FilterSelect
+                  paramName="year"
+                  placeholder={String(selectedYear)}
+                  value={hasExplicitRange && !year ? undefined : String(selectedYear)}
+                  icon="calendar"
+                  clearable={false}
+                  options={yearOptions}
+                />
+              </div>
+
+              {/* Date Range Filter */}
+              <div className="w-full sm:w-44">
+                <DateRangeFilter
+                  fromParamName="from"
+                  toParamName="to"
+                  label="Date Range"
+                />
+              </div>
             </div>
-          )}
-        </div>
-
-        {/* Bottom Tier: Filter Dropdowns */}
-        <div className="flex flex-wrap items-center gap-2 pt-2.5 border-t border-border/50">
-          {/* Officer Filter for Admins */}
-          {isSuperAdmin && (usersList ?? []).length > 0 && (
-            <div className="w-full sm:w-44">
-              <FilterSelect
-                paramName="userId"
-                placeholder="All Officers"
-                icon="user"
-                options={(usersList ?? []).map((u) => ({
-                  value: u.id,
-                  label: u.full_name,
-                }))}
-              />
-            </div>
-          )}
-
-          {/* Leave Type Filter */}
-          {(leaveTypes ?? []).length > 0 && (
-            <div className="w-full sm:w-36">
-              <FilterSelect
-                paramName="leaveTypeId"
-                placeholder="All Types"
-                icon="calendar"
-                options={(leaveTypes ?? []).map((lt) => ({
-                  value: lt.id,
-                  label: lt.name,
-                }))}
-              />
-            </div>
-          )}
-
-          {/* Month Filter - defaults to current month */}
-          <div className="w-full sm:w-36">
-            <FilterSelect
-              paramName="month"
-              placeholder="Whole year"
-              value={monthParam}
-              icon="calendar"
-              clearable={true}
-              options={[
-                { value: "all", label: "Whole year" },
-                ...MONTH_NAMES.map((m, i) => ({ value: String(i + 1), label: m })),
-              ]}
-            />
-          </div>
-
-          {/* Year Filter */}
-          <div className="w-full sm:w-28">
-            <FilterSelect
-              paramName="year"
-              placeholder={String(selectedYear)}
-              value={hasExplicitRange && !year ? undefined : String(selectedYear)}
-              icon="calendar"
-              clearable={false}
-              options={yearOptions}
-            />
-          </div>
-
-          {/* Date Range Filter */}
-          <div className="w-full sm:w-44">
-            <DateRangeFilter
-              fromParamName="from"
-              toParamName="to"
-              label="Date Range"
-            />
-          </div>
-        </div>
-      </Card>
+          </CollapsibleFilterBar>
 
       {/* Container with Desktop Table AND Mobile Card View */}
       <Card className="p-0 overflow-hidden">
@@ -689,17 +694,17 @@ export default async function LeavePage({
             const isMultiType = breakdown && breakdown.length > 1;
 
             return (
-              <div key={l.id} className="p-4 space-y-3 bg-card hover:bg-muted/20 transition-colors">
+              <div key={l.id} className="p-3.5 space-y-2.5 bg-card hover:bg-muted/20 transition-colors">
                 <div className="flex items-start justify-between gap-2">
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <span className="text-sm font-bold text-foreground flex items-center gap-1.5">
-                      <User className="size-3.5 text-emerald-500" />
-                      <span>{officer?.full_name ?? "Officer"}</span>
+                      <User className="size-3.5 text-emerald-500 shrink-0" />
+                      <span className="truncate">{officer?.full_name ?? "Officer"}</span>
                     </span>
                     {isMultiType ? (
                       <span className="mt-0.5 inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400">
                         <Sparkles className="size-3 text-indigo-500 shrink-0" />
-                        <span>Multi-Type ({breakdown.map((b) => `${b.days} ${b.code}`).join(", ")})</span>
+                        <span className="truncate">Multi-Type ({breakdown.map((b) => `${b.days} ${b.code}`).join(", ")})</span>
                       </span>
                     ) : (
                       <span className="mt-0.5 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
@@ -717,37 +722,39 @@ export default async function LeavePage({
                     )}
                   </div>
                   {l.is_half_day ? (
-                    <Badge variant="warning">{l.half_day_session} Half-Day</Badge>
+                    <Badge variant="warning" className="shrink-0">{l.half_day_session} Half-Day</Badge>
                   ) : (
-                    <Badge variant="outline">Full Day</Badge>
+                    <Badge variant="outline" className="shrink-0">Full Day</Badge>
                   )}
                 </div>
 
-                <div className="flex items-center gap-2 text-xs font-medium text-foreground bg-muted/40 p-2.5 rounded-xl border border-border/60">
-                  <Calendar className="size-3.5 text-emerald-500 shrink-0" />
-                  <span className="flex-1">{formatDateRange(l.start_date, l.end_date)}</span>
-                  <Badge variant="info">
+                <div className="flex items-center justify-between gap-2 text-xs font-medium text-foreground bg-muted/40 px-3 py-1.5 rounded-lg border border-border/50">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <Calendar className="size-3.5 text-emerald-500 shrink-0" />
+                    <span className="truncate">{formatDateRange(l.start_date, l.end_date)}</span>
+                  </div>
+                  <Badge variant="info" className="text-[11px] font-semibold py-0.5 px-2 shrink-0">
                     {formatDays(leaveDayCount(l.start_date, l.end_date, l.is_half_day))}
                   </Badge>
                 </div>
                 <ChargedAs entries={breakdownFor(l.id)} label="Charged as" />
 
                 {l.reason && (
-                  <p className="text-xs text-muted-foreground bg-muted/20 p-2.5 rounded-xl border border-border/40">
+                  <p className="text-xs text-muted-foreground bg-muted/20 px-2.5 py-1.5 rounded-lg border border-border/40 italic">
                     &quot;{l.reason}&quot;
                   </p>
                 )}
 
                 {isOwn && (
-                  <div className="flex items-center gap-2 pt-2 border-t border-border/40">
+                  <div className="flex items-center gap-2 pt-1.5 border-t border-border/40">
                     <Link
                       href={`/leave/${l.id}/edit`}
-                      className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-border bg-card py-2 text-xs font-semibold text-foreground hover:bg-muted shadow-2xs transition-colors"
+                      className="flex-1 flex items-center justify-center gap-1.5 rounded-lg border border-border bg-card py-1.5 text-xs font-semibold text-foreground hover:bg-muted/70 shadow-2xs transition-colors"
                     >
                       <Edit2 className="size-3" />
                       <span>Edit</span>
                     </Link>
-                    <DeleteLeaveButton id={l.id} className="flex-1 py-2" />
+                    <DeleteLeaveButton id={l.id} size="sm" className="flex-1 py-1.5 rounded-lg" />
                   </div>
                 )}
               </div>

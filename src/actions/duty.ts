@@ -291,7 +291,7 @@ export async function updateDuty(
   // Editing can move the duty onto a day already taken as Holiday Leave, so
   // the same exclusion applies here as on create.
   const clash = await findHolidayLeaveClash(supabase, auth.user.id, [
-    { dateKey: toDateKey(startsAt), startsAt, endsAt },
+    { dateKey: toDateKey(d.startsAt), startsAt, endsAt },
   ]);
   if (clash) return { message: clash };
 
@@ -299,7 +299,7 @@ export async function updateDuty(
   const holidays = await loadHolidays(supabase, startsAt, endsAt);
 
   const status = existing.status as DutyStatus;
-  const resolution = resolveHoliday(startsAt, holidays);
+  const resolution = resolveHoliday(d.startsAt, holidays);
   const pay = resolveHolidayPay({
     resolution,
     status,
@@ -376,7 +376,7 @@ export async function setDutyStatus(dutyId: string, status: DutyStatus) {
   const startsAt = new Date(existing.starts_at);
   const holidays = await loadHolidays(supabase, startsAt, new Date(existing.ends_at));
   const pay = resolveHolidayPay({
-    resolution: resolveHoliday(startsAt, holidays),
+    resolution: resolveHoliday(existing.starts_at, holidays),
     status,
     holidayDayRate: settings.holidayDayRate,
     // Cancelling zeroes the allowance, so a re-instated duty has nothing to

@@ -44,7 +44,7 @@ export async function recomputeDutyPayForDates(
 
     for (const d of duties ?? []) {
       const pay = resolveHolidayPay({
-        resolution: resolveHoliday(new Date(d.starts_at), rows),
+        resolution: resolveHoliday(d.starts_at, rows),
         status: d.status,
         holidayDayRate: 0,
         submittedAllowance: Number(d.holiday_allowance) || undefined,

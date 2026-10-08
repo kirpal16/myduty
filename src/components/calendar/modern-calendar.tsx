@@ -358,7 +358,7 @@ export function ModernCalendar({
     const workedKeys = new Set(
       allEvents
         .filter((e) => e.type === "duty")
-        .map((e) => toDateKey(new Date(e.start))),
+        .map((e) => toDateKey(e.start)),
     );
 
     const out: AccordionDay[] = [];

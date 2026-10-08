@@ -497,9 +497,103 @@ export function SpecialLeaveManager({
             return (
               <Card
                 key={app.id}
-                className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-colors hover:border-slate-300 dark:hover:border-slate-700"
+                className="p-3.5 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-3.5 md:gap-6 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-700 shadow-2xs"
               >
-                <div className="space-y-2 flex-1 min-w-0">
+                {/* === MOBILE CONTENT (md:hidden) === */}
+                <div className="space-y-2.5 flex-1 min-w-0 md:hidden">
+                  {/* Top row: Badges and Expiry tag */}
+                  <div className="flex flex-wrap items-center justify-between gap-1.5">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {getStatusBadge(app.status)}
+                      {app.leave_type && (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded-md bg-muted text-foreground border border-border">
+                          {app.leave_type.color && (
+                            <span
+                              className="size-2 rounded-full shrink-0"
+                              style={{ backgroundColor: app.leave_type.color }}
+                            />
+                          )}
+                          <span>{app.leave_type.name}</span>
+                        </span>
+                      )}
+                      {app.order_no && (
+                        <span className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-muted text-muted-foreground border border-border">
+                          Order #{app.order_no}
+                        </span>
+                      )}
+                    </div>
+
+                    {app.status === "APPROVED" && (
+                      isExpired ? (
+                        <Badge variant="danger" dot className="text-[10px]">
+                          Expired on {expiryDate}
+                        </Badge>
+                      ) : (
+                        expiryDate && (
+                          <span className="inline-flex items-center text-[10px] font-medium px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                            Expires on {expiryDate}
+                          </span>
+                        )
+                      )
+                    )}
+                  </div>
+
+                  {/* Application Info: Applied Date & Validity */}
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+                    <span className="font-semibold text-foreground">
+                      Applied: <strong className="font-bold">{app.applied_days} day{app.applied_days === 1 ? "" : "s"}</strong> on {app.applied_date}
+                    </span>
+                    {app.valid_from && (
+                      <span className="text-[11px] px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 font-medium">
+                        Valid: {app.valid_from} {app.valid_to ? `to ${app.valid_to}` : "onwards"}
+                      </span>
+                    )}
+                  </div>
+
+                  {app.reason && (
+                    <p className="text-xs text-muted-foreground line-clamp-2 italic">
+                      &ldquo;{app.reason}&rdquo;
+                    </p>
+                  )}
+
+                  {/* Approved Details & Clean 3-part Stat Grid for Mobile */}
+                  {app.status === "APPROVED" && (
+                    <div className="space-y-2 pt-0.5">
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <UserCheck className="size-3.5 text-emerald-500 shrink-0" />
+                        <span className="truncate">
+                          Approved by: <strong className="text-foreground font-semibold">{app.approved_by}</strong> ({app.approved_date})
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-1.5 p-2 rounded-xl bg-muted/40 dark:bg-muted/20 border border-border/60 text-center">
+                        <div className="flex flex-col items-center justify-center">
+                          <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Approved</span>
+                          <span className="text-xs font-bold text-foreground">
+                            {app.approved_days} <span className="text-[10px] font-normal text-muted-foreground">days</span>
+                          </span>
+                        </div>
+                        <div className="flex flex-col items-center justify-center border-x border-border/50">
+                          <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Taken</span>
+                          <span className="text-xs font-bold text-foreground">
+                            {app.logged_days} <span className="text-[10px] font-normal text-muted-foreground">days</span>
+                          </span>
+                        </div>
+                        <div className="flex flex-col items-center justify-center">
+                          <span className="text-[10px] uppercase font-bold text-indigo-600 dark:text-indigo-400 tracking-wider">Remaining</span>
+                          <span className={`text-xs font-black ${isExpired ? "text-rose-500 line-through" : "text-indigo-600 dark:text-indigo-400"}`}>
+                            {remainingToTake} <span className="text-[10px] font-normal text-muted-foreground">days</span>
+                          </span>
+                          {isExpired && <span className="text-[9px] text-rose-500 font-bold leading-none mt-0.5">(lapsed)</span>}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* === DESKTOP CONTENT (hidden md:block) === */}
+                <div className="hidden md:block space-y-1.5 flex-1 min-w-0">
+                  {/* Row 1: Badges, Applied, Order, Validity, Expiry all inline */}
                   <div className="flex flex-wrap items-center gap-2">
                     {getStatusBadge(app.status)}
                     {app.leave_type && (
@@ -545,16 +639,17 @@ export function SpecialLeaveManager({
                     </p>
                   )}
 
+                  {/* Row 2: Approved by + Approved / Taken / Remaining inline */}
                   {app.status === "APPROVED" && (
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
-                        <UserCheck className="size-3.5 text-emerald-500" />
+                        <UserCheck className="size-3.5 text-emerald-500 shrink-0" />
                         <span>
                           Approved by: <strong className="text-foreground font-semibold">{app.approved_by}</strong> ({app.approved_date})
                         </span>
                       </span>
                       <span className="flex items-center gap-1">
-                        <CheckCircle2 className="size-3.5 text-indigo-500" />
+                        <CheckCircle2 className="size-3.5 text-indigo-500 shrink-0" />
                         <span>
                           Approved: <strong className="text-foreground font-semibold">{app.approved_days}</strong> days
                           {" • "}
@@ -571,32 +666,22 @@ export function SpecialLeaveManager({
                   )}
                 </div>
 
-                {/* Actions */}
-                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                {/* === ACTIONS CONTAINER (Responsive) === */}
+                <div className="flex flex-col md:flex-row md:items-center gap-2 pt-2 md:pt-0 border-t border-border/50 md:border-0 shrink-0">
+                  {/* Primary Actions */}
                   {app.status === "PENDING" && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => setApproveTarget(app)}
-                        className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500 transition-colors cursor-pointer"
-                      >
-                        <UserCheck className="size-3.5" />
-                        <span>Record Sanction</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setCancelTarget(app)}
-                        disabled={isPending}
-                        className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-rose-500 hover:border-rose-300 transition-colors cursor-pointer"
-                      >
-                        <Ban className="size-3.5" />
-                        <span>Cancel</span>
-                      </button>
-                    </>
+                    <button
+                      type="button"
+                      onClick={() => setApproveTarget(app)}
+                      className="w-full md:w-auto inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500 transition-colors cursor-pointer"
+                    >
+                      <UserCheck className="size-3.5" />
+                      <span>Record Sanction</span>
+                    </button>
                   )}
 
                   {app.status === "APPROVED" && isExpired && (
-                    <span className="text-xs font-semibold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/50 px-2.5 py-1 rounded-lg border border-rose-200 dark:border-rose-800">
+                    <span className="text-center text-xs font-semibold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/50 px-2.5 py-1.5 md:py-1 rounded-lg border border-rose-200 dark:border-rose-800">
                       Expired (6 Months Reached)
                     </span>
                   )}
@@ -604,75 +689,85 @@ export function SpecialLeaveManager({
                   {app.status === "APPROVED" && !isExpired && remainingToTake > 0 && targetTypeId && (
                     <Link
                       href={`/leave/new?leaveTypeId=${targetTypeId}&specialLeaveApplicationId=${app.id}`}
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 transition-colors cursor-pointer"
+                      className="w-full md:w-auto inline-flex items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 transition-colors cursor-pointer"
                     >
                       <span>Log Leave</span>
                       <ArrowRight className="size-3.5" />
                     </Link>
                   )}
 
-                  {app.status === "APPROVED" && app.logged_days === 0 && !isExpired && (
-                    <button
-                      type="button"
-                      onClick={() => setCancelTarget(app)}
-                      disabled={isPending}
-                      className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-rose-500 hover:border-rose-300 transition-colors cursor-pointer"
-                    >
-                      <Ban className="size-3.5" />
-                      <span>Cancel</span>
-                    </button>
-                  )}
-
                   {isFullyTaken && (
-                    <Badge variant="secondary">Fully Taken</Badge>
+                    <Badge variant="secondary" className="justify-center py-1">Fully Taken</Badge>
                   )}
 
-                  {/* A closed application cannot be revived -- it stays as
-                      history -- but its details can start a fresh one. */}
                   {(app.status === "REJECTED" || app.status === "CANCELLED") && (
                     <button
                       type="button"
                       onClick={() => openReapply(app)}
                       disabled={isPending}
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 transition-colors cursor-pointer"
+                      className="w-full md:w-auto inline-flex items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 transition-colors cursor-pointer"
                     >
                       <RotateCcw className="size-3.5" />
                       <span>Reapply</span>
                     </button>
                   )}
 
-                  {/* Edit corrects a mistyped order; delete removes an entry
-                      that should never have been recorded. Neither is offered
-                      once the application is closed. */}
-                  {(app.status === "PENDING" || app.status === "APPROVED") && (
+                  {/* Secondary Actions Row: Cancel, Edit, Delete */}
+                  <div className="flex items-center gap-1.5 w-full md:w-auto">
+                    {app.status === "PENDING" && (
+                      <button
+                        type="button"
+                        onClick={() => setCancelTarget(app)}
+                        disabled={isPending}
+                        className="flex-1 md:flex-initial inline-flex items-center justify-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-rose-500 hover:border-rose-300 transition-colors cursor-pointer"
+                      >
+                        <Ban className="size-3.5" />
+                        <span>Cancel</span>
+                      </button>
+                    )}
+
+                    {app.status === "APPROVED" && app.logged_days === 0 && !isExpired && (
+                      <button
+                        type="button"
+                        onClick={() => setCancelTarget(app)}
+                        disabled={isPending}
+                        className="flex-1 md:flex-initial inline-flex items-center justify-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-rose-500 hover:border-rose-300 transition-colors cursor-pointer"
+                      >
+                        <Ban className="size-3.5" />
+                        <span>Cancel</span>
+                      </button>
+                    )}
+
+                    {(app.status === "PENDING" || app.status === "APPROVED") && (
+                      <button
+                        type="button"
+                        onClick={() => setEditTarget(app)}
+                        disabled={isPending}
+                        aria-label="Edit this sanction"
+                        title="Edit"
+                        className="flex-1 md:flex-initial inline-flex items-center justify-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-indigo-600 hover:border-indigo-300 transition-colors cursor-pointer"
+                      >
+                        <Pencil className="size-3.5" />
+                        <span>Edit</span>
+                      </button>
+                    )}
+
                     <button
                       type="button"
-                      onClick={() => setEditTarget(app)}
-                      disabled={isPending}
-                      aria-label="Edit this sanction"
-                      title="Edit"
-                      className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-indigo-600 hover:border-indigo-300 transition-colors cursor-pointer"
+                      onClick={() => setDeleteTarget(app)}
+                      disabled={isPending || app.logged_days > 0}
+                      aria-label="Delete this sanction"
+                      title={
+                        app.logged_days > 0
+                          ? "Leave is already logged against this sanction"
+                          : "Delete"
+                      }
+                      className="flex-1 md:flex-initial inline-flex items-center justify-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-rose-600 hover:border-rose-300 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-muted-foreground disabled:hover:border-border"
                     >
-                      <Pencil className="size-3.5" />
-                      <span>Edit</span>
+                      <Trash2 className="size-3.5" />
+                      <span>Delete</span>
                     </button>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => setDeleteTarget(app)}
-                    disabled={isPending || app.logged_days > 0}
-                    aria-label="Delete this sanction"
-                    title={
-                      app.logged_days > 0
-                        ? "Leave is already logged against this sanction"
-                        : "Delete"
-                    }
-                    className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-rose-600 hover:border-rose-300 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-muted-foreground disabled:hover:border-border"
-                  >
-                    <Trash2 className="size-3.5" />
-                    <span>Delete</span>
-                  </button>
+                  </div>
                 </div>
               </Card>
             );

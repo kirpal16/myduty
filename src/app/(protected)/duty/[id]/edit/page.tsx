@@ -54,12 +54,13 @@ export default async function EditDutyPage({
 
   // Holidays around this entry, so moving the date re-classifies it live. The
   // server recomputes the classification on save regardless.
-  const at = new Date(duty.starts_at);
+  const atKey = toDateKey(duty.starts_at);
+  const [atYear, atMonth] = atKey.split("-").map(Number);
   const { data: holidays } = await supabase
     .from("holidays")
     .select("name, holiday_date, scope, is_government, is_optional")
-    .gte("holiday_date", toDateKey(new Date(at.getFullYear(), at.getMonth() - 2, 1)))
-    .lte("holiday_date", toDateKey(new Date(at.getFullYear(), at.getMonth() + 4, 0)));
+    .gte("holiday_date", toDateKey(new Date(atYear, atMonth - 1 - 2, 1)))
+    .lte("holiday_date", toDateKey(new Date(atYear, atMonth - 1 + 4, 0)));
 
   return (
     <main className="w-full px-4 sm:px-6 lg:px-8 py-6 max-w-7xl 2xl:max-w-full mx-auto space-y-6">

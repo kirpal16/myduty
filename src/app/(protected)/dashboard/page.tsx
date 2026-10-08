@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { TimeFormat } from "@/types/database";
 import { DashboardBodySkeleton } from "@/components/ui/skeletons";
 import { formatCurrency } from "@/lib/format/currency";
-import { toDateKey } from "@/lib/format/datetime";
+import { toDateKey, localDayStart, localDayEnd } from "@/lib/format/datetime";
 import { leaveDaysWithin, formatDays, summariseBreakdown } from "@/lib/leave/leaveDays";
 import {
   resolveHolidaysForRange,
@@ -131,8 +131,8 @@ async function DashboardBody({
       // Bounded to the selected year. Without this the "Recent" cards showed
       // the newest rows in the table regardless of the year above them —
       // viewing 2024 listed 2026 entries under a 2024 heading.
-      .gte("starts_at", startOfYear.toISOString())
-      .lte("starts_at", endOfYear.toISOString())
+      .gte("starts_at", localDayStart(toDateKey(startOfYear)))
+      .lte("starts_at", localDayEnd(toDateKey(endOfYear)))
       .order("starts_at", { ascending: false })
       .limit(RECENT_LIMIT),
     supabase
@@ -152,8 +152,8 @@ async function DashboardBody({
         "id, starts_at, ta_distance_km, ta_amount, is_holiday_duty, holiday_allowance, duty_types(name)",
       )
       .eq("user_id", userId)
-      .gte("starts_at", periodStart.toISOString())
-      .lte("starts_at", periodEnd.toISOString()),
+      .gte("starts_at", localDayStart(toDateKey(periodStart)))
+      .lte("starts_at", localDayEnd(toDateKey(periodEnd))),
     supabase
       .from("leave_logs")
       .select("id, start_date, end_date, is_half_day, leave_types(name, color)")
@@ -167,8 +167,8 @@ async function DashboardBody({
       .from("duties")
       .select("starts_at, ta_amount, is_holiday_duty")
       .eq("user_id", userId)
-      .gte("starts_at", startOfYear.toISOString())
-      .lte("starts_at", endOfYear.toISOString()),
+      .gte("starts_at", localDayStart(toDateKey(startOfYear)))
+      .lte("starts_at", localDayEnd(toDateKey(endOfYear))),
     supabase
       .from("leave_balance_view")
       .select(
@@ -320,7 +320,11 @@ async function DashboardBody({
 
   const monthlyTa = MONTH_NAMES.map((name) => ({ name, value: 0 }));
   for (const d of yearDuties ?? []) {
-    monthlyTa[new Date(d.starts_at).getMonth()].value += d.ta_amount ?? 0;
+    const m = /^(\d{4})-(\d{2})/.exec(d.starts_at);
+    const monthIdx = m ? Number(m[2]) - 1 : new Date(d.starts_at).getUTCMonth();
+    if (monthIdx >= 0 && monthIdx < 12) {
+      monthlyTa[monthIdx].value += d.ta_amount ?? 0;
+    }
   }
 
   const activeBalances = (balances ?? []).filter(

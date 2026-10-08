@@ -211,7 +211,7 @@ function DayTravel({ prefix, shared }: { prefix: string; shared: DayDefaults }) 
     shared.taFromPlace || shared.taToPlace || shared.taDistanceKm || shared.taAmount,
   );
   const [open, setOpen] = useState(hasShared);
-  const [vehicleType, setVehicleType] = useState<string>(shared.taVehicleType ?? "private");
+  const [vehicleType, setVehicleType] = useState<string>(shared.taVehicleType ?? "govt");
 
   return (
     <CollapsibleSection

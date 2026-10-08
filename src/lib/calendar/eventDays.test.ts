@@ -32,6 +32,19 @@ describe("eventCoversDay — item 1", () => {
     const e = { start: local("2026-09-08T10:00"), end: local("2026-09-08T18:00") };
     expect(eventCoversDay(e, day("2026-09-07"))).toBe(false);
   });
+
+  it("an evening duty stored with trailing Z (e.g. 06:00 to 23:00) does NOT bleed into the next day in IST", () => {
+    // 23:00 wall-clock instant stored as UTC (toWallClockISO)
+    const e = { start: "2026-10-06T06:00:00.000Z", end: "2026-10-06T23:00:00.000Z" };
+    expect(eventCoversDay(e, day("2026-10-06"))).toBe(true);
+    expect(eventCoversDay(e, day("2026-10-07"))).toBe(false);
+  });
+
+  it("an evening duty on the 7th (07:00 to 22:00) does NOT show on the 8th", () => {
+    const e = { start: "2026-10-07T07:00:00.000Z", end: "2026-10-07T22:00:00.000Z" };
+    expect(eventCoversDay(e, day("2026-10-07"))).toBe(true);
+    expect(eventCoversDay(e, day("2026-10-08"))).toBe(false);
+  });
 });
 
 describe("eventCoversDay — all-day events keep an inclusive end", () => {

@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { SearchInput } from "@/components/ui/search-input";
 import { FilterSelect } from "@/components/ui/filter-select";
 import { DateRangeFilter } from "@/components/ui/date-range-filter";
+import { CollapsibleFilterBar } from "@/components/ui/collapsible-filter-bar";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { NavLink as Link } from "@/components/ui/nav-link";
 import { getYearOptions } from "@/lib/format/year";
@@ -122,54 +123,60 @@ export default async function StoragePage({
           pushed below the fold. It is a dialog now, so the list gets the full
           width and is the first thing on screen. */}
       <div className="space-y-4">
-        <Card className="p-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="w-full sm:max-w-xs">
-              <SearchInput
-                placeholder="Search file name..."
-                defaultValue={search}
+        <CollapsibleFilterBar
+          activeCount={
+            [
+              Boolean(type),
+              Boolean(year),
+              Boolean(fromDate || toDate),
+            ].filter(Boolean).length
+          }
+          searchSlot={
+            <SearchInput
+              placeholder="Search file name..."
+              defaultValue={search}
+            />
+          }
+          resetSlot={
+            (search || year || fromDate || toDate || type) ? (
+              <Link
+                href="/storage"
+                className="h-9 inline-flex items-center justify-center rounded-xl border border-rose-500/20 bg-rose-500/10 px-3 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 transition-colors shrink-0"
+                title="Reset all filters"
+              >
+                Reset Filters
+              </Link>
+            ) : null
+          }
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="w-full sm:w-32">
+              <FilterSelect
+                paramName="type"
+                placeholder="All Types"
+                icon="tag"
+                options={typeOptions}
               />
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="w-32">
-                <FilterSelect
-                  paramName="type"
-                  placeholder="All Types"
-                  icon="tag"
-                  options={typeOptions}
-                />
-              </div>
+            <div className="w-full sm:w-28">
+              <FilterSelect
+                paramName="year"
+                placeholder="All years"
+                icon="calendar"
+                options={yearOptions}
+              />
+            </div>
 
-              <div className="w-28">
-                <FilterSelect
-                  paramName="year"
-                  placeholder="All years"
-                  icon="calendar"
-                  options={yearOptions}
-                />
-              </div>
-
-              <div className="w-44">
-                <DateRangeFilter
-                  fromParamName="from"
-                  toParamName="to"
-                  label="Date Range"
-                />
-              </div>
-
-              {(search || year || fromDate || toDate || type) && (
-                <Link
-                  href="/storage"
-                  className="rounded-xl border border-border bg-card px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                  title="Reset all filters"
-                >
-                  Reset
-                </Link>
-              )}
+            <div className="w-full sm:w-44">
+              <DateRangeFilter
+                fromParamName="from"
+                toParamName="to"
+                label="Date Range"
+              />
             </div>
           </div>
-        </Card>
+        </CollapsibleFilterBar>
 
         <Card className="p-0 overflow-hidden">
           <StorageFileTable files={files ?? []} />

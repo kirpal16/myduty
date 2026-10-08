@@ -8,11 +8,21 @@ export interface GujaratGovtHoliday {
   isOptional?: boolean;
 }
 
+function toLocalDate(dateInput: Date | string): Date {
+  if (typeof dateInput === "string") {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(dateInput);
+    if (m) {
+      return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    }
+  }
+  return dateInput instanceof Date ? dateInput : new Date(dateInput);
+}
+
 /**
  * Checks if a given date is Sunday (Official Weekly Holiday)
  */
 export function isSunday(dateInput: Date | string): boolean {
-  const d = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
+  const d = toLocalDate(dateInput);
   return d.getDay() === 0;
 }
 
@@ -21,7 +31,7 @@ export function isSunday(dateInput: Date | string): boolean {
  * (Government / Bank Public Holiday in Gujarat / India)
  */
 export function isSecondOrFourthSaturday(dateInput: Date | string): boolean {
-  const d = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
+  const d = toLocalDate(dateInput);
   if (d.getDay() !== 6) return false;
   const dayOfMonth = d.getDate();
   const weekNumber = Math.ceil(dayOfMonth / 7);
@@ -38,7 +48,7 @@ export function isWeekendHoliday(dateInput: Date | string): {
   type?: "sunday" | "second_saturday" | "fourth_saturday" | "government_holiday";
   holidayName?: string;
 } {
-  const d = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
+  const d = toLocalDate(dateInput);
   if (isNaN(d.getTime())) return { isHoliday: false };
 
   const pad = (n: number) => String(n).padStart(2, "0");

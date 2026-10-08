@@ -114,7 +114,7 @@ async function checkHolidayLeave(
   ]);
 
   const workedDates = new Set(
-    (duties ?? []).map((d) => toDateKey(new Date(d.starts_at))),
+    (duties ?? []).map((d) => toDateKey(d.starts_at)),
   );
 
   const violation = findHolidayLeaveViolation(
@@ -323,7 +323,7 @@ async function buildAllocation(
       ]);
 
     dbHolidays = (holidays ?? []) as HolidayRecord[];
-    workedDates = new Set((duties ?? []).map((d) => toDateKey(new Date(d.starts_at))));
+    workedDates = new Set((duties ?? []).map((d) => toDateKey(d.starts_at)));
     balanceRows = (balances ?? []).map((b) => ({
       leave_type_id: b.leave_type_id,
       year: Number(b.year),

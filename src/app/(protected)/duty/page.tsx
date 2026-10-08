@@ -21,12 +21,17 @@ import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { SearchInput } from "@/components/ui/search-input";
 import { FilterSelect } from "@/components/ui/filter-select";
 import { DateRangeFilter } from "@/components/ui/date-range-filter";
+import { CollapsibleFilterBar } from "@/components/ui/collapsible-filter-bar";
 import {
   DutySelectionProvider,
   DutyRowCheckbox,
   DutySelectAllCheckbox,
+  DutyTableSelectHeader,
+  DutyTableSelectCell,
   DutyBulkActionBar,
 } from "@/components/duty/duty-bulk-select";
+import { DutySelectModeToggle } from "@/components/duty/duty-select-mode-toggle";
+import { DutyRefreshButton } from "@/components/duty/duty-refresh-button";
 import {
   Briefcase,
   Plus,
@@ -37,6 +42,7 @@ import {
   User,
   Sparkles,
   Route,
+  Clock,
 } from "lucide-react";
 import { getYearOptions, clampYear } from "@/lib/format/year";
 import {
@@ -204,27 +210,31 @@ export default async function DutyListPage({
 
   return (
     <main className="w-full px-4 sm:px-6 lg:px-8 py-6 max-w-7xl 2xl:max-w-full mx-auto space-y-6">
-      {/* Page Header with distinct Indigo Glow Theme */}
-      <PageHeader
-        title="Duty Log Book"
-        subtitle="Manage and view all registered duty rosters, travel routes, and allowances."
-        badge={
-          <Badge variant="purple" dot>
-            {totalItems} Total Records
-          </Badge>
-        }
-        compactActions
-        actions={
-          <Link
-            href="/duty/new"
-            className="flex items-center gap-1.5 whitespace-nowrap rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 px-2.5 py-2 text-xs font-semibold text-white shadow-md shadow-indigo-600/30 transition-all hover:from-indigo-500 hover:to-indigo-600 sm:gap-2 sm:px-4 sm:py-2.5 sm:text-sm"
-          >
-            <Plus className="size-4 shrink-0" />
-            <span className="sm:hidden">Log Duty</span>
-            <span className="hidden sm:inline">Log New Duty</span>
-          </Link>
-        }
-      />
+      <DutySelectionProvider selectableIds={ownIds}>
+        {/* Page Header with distinct Indigo Glow Theme */}
+        <PageHeader
+          title="Duty Log Book"
+          subtitle="Manage and view all registered duty rosters, travel routes, and allowances."
+          badge={
+            <Badge variant="purple" dot>
+              {totalItems} Total Records
+            </Badge>
+          }
+          compactActions
+          actions={
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <DutyRefreshButton iconOnly />
+              <Link
+                href="/duty/new"
+                className="flex items-center gap-1.5 whitespace-nowrap rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 px-2.5 py-2 text-xs font-semibold text-white shadow-md shadow-indigo-600/30 transition-all hover:from-indigo-500 hover:to-indigo-600 sm:gap-2 sm:px-4 sm:py-2.5 sm:text-sm"
+              >
+                <Plus className="size-4 shrink-0" />
+                <span className="sm:hidden">Log Duty</span>
+                <span className="hidden sm:inline">Log New Duty</span>
+              </Link>
+            </div>
+          }
+        />
 
       {/* Summary KPI Strip */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
@@ -299,32 +309,43 @@ export default async function DutyListPage({
         </div>
       </div>
 
-      {/* Filter and Search Bar */}
-      <Card className="p-3.5 sm:p-4 space-y-3">
-        {/* Top Tier: Search Bar & Clear Filter Action */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          <div className="w-full sm:max-w-md">
-            <SearchInput
-              placeholder="Search location or route..."
-              defaultValue={search}
-            />
+      {/* Filter and Search Bar with Collapsible Filter Options */}
+      <CollapsibleFilterBar
+        activeCount={
+          [
+            Boolean(dayType),
+            Boolean(dutyTypeId),
+            Boolean(userId),
+            Boolean(monthParam && monthParam !== "all"),
+            Boolean(year),
+            Boolean(rawFrom || rawTo),
+          ].filter(Boolean).length
+        }
+        searchSlot={
+          <SearchInput
+            placeholder="Search location or route..."
+            defaultValue={search}
+          />
+        }
+        actionsSlot={
+          <div className="flex items-center gap-2">
+            <DutyRefreshButton key="action-duty-refresh" />
+            <DutySelectModeToggle key="action-duty-select" />
           </div>
-
-          {(search || dayType || dutyTypeId || userId || monthParam || year || rawFrom || rawTo) && (
-            <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
-              <Link
-                href="/duty"
-                className="h-9 inline-flex items-center justify-center rounded-xl border border-rose-500/20 bg-rose-500/10 px-3 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 transition-colors shrink-0"
-                title="Reset all filters"
-              >
-                Reset Filters
-              </Link>
-            </div>
-          )}
-        </div>
-
-        {/* Bottom Tier: All Filter Dropdowns in a single, comfortable, perfectly aligned row */}
-        <div className="flex flex-wrap items-center gap-2 pt-2.5 border-t border-border/50">
+        }
+        resetSlot={
+          (search || dayType || dutyTypeId || userId || monthParam || year || rawFrom || rawTo) ? (
+            <Link
+              href="/duty"
+              className="h-9 inline-flex items-center justify-center rounded-xl border border-rose-500/20 bg-rose-500/10 px-3 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 transition-colors shrink-0"
+              title="Reset all filters"
+            >
+              Reset Filters
+            </Link>
+          ) : null
+        }
+      >
+        <div className="flex flex-wrap items-center gap-2">
           {/* Officer Filter for Admins */}
           {isSuperAdmin && (usersList ?? []).length > 0 && (
             <div className="w-full sm:w-44">
@@ -406,10 +427,9 @@ export default async function DutyListPage({
             />
           </div>
         </div>
-      </Card>
+      </CollapsibleFilterBar>
 
       {/* Data Container with Desktop Table AND Mobile Card View */}
-      <DutySelectionProvider selectableIds={ownIds}>
       <Card className="p-0 overflow-visible md:overflow-hidden">
         <DutyBulkActionBar />
         {/* Desktop Table: Hidden on Mobile */}
@@ -417,9 +437,7 @@ export default async function DutyListPage({
           <table className="w-full text-left text-xs sm:text-sm">
             <thead className="bg-muted/50 border-b border-border text-muted-foreground uppercase text-[11px] font-semibold tracking-wider">
               <tr>
-                <th className="w-8 py-3.5 pl-4 sm:pl-6">
-                  <DutySelectAllCheckbox />
-                </th>
+                <DutyTableSelectHeader />
                 <th className="py-3.5 px-4 sm:px-6">Officer</th>
                 <th className="py-3.5 px-4">Duty Type</th>
                 <th className="py-3.5 px-4">Start Time</th>
@@ -445,9 +463,7 @@ export default async function DutyListPage({
                     key={d.id}
                     className="hover:bg-muted/30 transition-colors group"
                   >
-                    <td className="w-8 py-3.5 pl-4 sm:pl-6">
-                      <DutyRowCheckbox id={d.id} label={`${typeName} duty on ${formatDateTime(d.starts_at, timeFormat)}`} />
-                    </td>
+                    <DutyTableSelectCell id={d.id} label={`${typeName} duty on ${formatDateTime(d.starts_at, timeFormat)}`} />
                     <td className="py-3.5 px-4 sm:px-6 font-semibold text-foreground whitespace-nowrap">
                       <Link
                         href={`/duty/${d.id}`}
@@ -545,21 +561,14 @@ export default async function DutyListPage({
               (d.duty_types as unknown as { name: string } | null)?.name ?? "Duty";
 
             return (
-              <div key={d.id} className="p-4 space-y-3 bg-card hover:bg-muted/20 transition-colors">
-                {/* Badges pinned top-right, on the officer-name row. They used
-                    to wrap to a second line because nothing here could shrink:
-                    min-w-0 lets the name give way, shrink-0 keeps the badges
-                    whole, and the holiday one drops its label so both fit. */}
+              <div key={d.id} className="p-3.5 space-y-2.5 bg-card hover:bg-muted/20 transition-colors">
+                {/* Header row: Checkbox, Officer name, duty type, and badges */}
                 <div className="flex items-start justify-between gap-2">
-                  {ownIds.includes(d.id) && (
-                    <div className="pt-0.5 shrink-0">
-                      <DutyRowCheckbox id={d.id} label={`${typeName} duty on ${formatDateTime(d.starts_at, timeFormat)}`} />
-                    </div>
-                  )}
+                  <DutyRowCheckbox id={d.id} label={`${typeName} duty on ${formatDateTime(d.starts_at, timeFormat)}`} />
                   <div className="min-w-0 flex-1">
                     <Link
                       href={`/duty/${d.id}`}
-                      className="flex items-center gap-1.5 text-sm font-bold text-foreground hover:text-indigo-600"
+                      className="flex items-center gap-1.5 text-sm font-bold text-foreground hover:text-indigo-600 transition-colors"
                     >
                       <User className="size-3.5 shrink-0 text-indigo-500" />
                       <span className="truncate">{officerName}</span>
@@ -571,26 +580,21 @@ export default async function DutyListPage({
                   <div className="flex shrink-0 items-center gap-1.5">
                     <DutyStatusBadge status={d.status} />
                     <DutyHolidayBadge duty={d} iconOnly />
-                    {/* Icon only: the amount already has its own row below,
-                        and three text badges would not fit beside a name. */}
                     <DutyTaBadge duty={d} iconOnly />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground bg-muted/40 p-2.5 rounded-xl border border-border/60">
-                  <div>
-                    <span className="text-[10px] uppercase font-semibold text-slate-400 block">
-                      Starts
-                    </span>
-                    <span className="text-foreground font-medium">
+                {/* Sleek inline Time Strip */}
+                <div className="flex items-center justify-between gap-1.5 text-[11px] sm:text-xs text-muted-foreground bg-muted/40 px-2.5 py-1.5 rounded-lg border border-border/50">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <Clock className="size-3.5 text-indigo-500 shrink-0" />
+                    <span className="font-medium text-foreground truncate">
                       {formatDateTime(d.starts_at, timeFormat)}
                     </span>
                   </div>
-                  <div>
-                    <span className="text-[10px] uppercase font-semibold text-slate-400 block">
-                      Ends
-                    </span>
-                    <span className="text-foreground font-medium">
+                  <span className="text-muted-foreground/60 shrink-0">→</span>
+                  <div className="flex items-center gap-1.5 min-w-0 text-right">
+                    <span className="font-medium text-foreground truncate">
                       {formatDateTime(d.ends_at, timeFormat)}
                     </span>
                   </div>
@@ -598,24 +602,24 @@ export default async function DutyListPage({
 
                 {d.location && (
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <MapPin className="size-3.5 text-rose-500 shrink-0" />
+                    <MapPin className="size-3 text-rose-500 shrink-0" />
                     <span className="truncate">{d.location}</span>
                   </div>
                 )}
 
                 {(d.ta_from_place || d.ta_to_place || d.ta_amount) && (
-                  <div className="flex items-center justify-between text-xs pt-2 border-t border-border/40 gap-2">
+                  <div className="flex items-center justify-between text-xs pt-1.5 border-t border-border/40 gap-2">
                     <span className="text-muted-foreground flex items-center gap-1.5 flex-wrap">
                       <span>{d.ta_from_place ?? "?"} → {d.ta_to_place ?? "?"}</span>
                       {d.ta_distance_km ? (
-                        <Badge variant="info">
+                        <Badge variant="info" className="text-[10px] py-0 px-1.5">
                           <Compass className="size-3" />
                           {d.ta_distance_km} km
                         </Badge>
                       ) : null}
                     </span>
                     {d.ta_amount && (
-                      <Badge variant="success">
+                      <Badge variant="success" className="text-[10px] py-0 px-1.5">
                         <Route className="size-3" />
                         {formatCurrency(d.ta_amount)}
                       </Badge>
@@ -624,12 +628,12 @@ export default async function DutyListPage({
                 )}
 
                 {Number(d.holiday_allowance ?? 0) > 0 && (
-                  <div className="flex items-center justify-between text-xs pt-2 border-t border-border/40">
+                  <div className="flex items-center justify-between text-xs pt-1.5 border-t border-border/40">
                     <span className="text-muted-foreground flex items-center gap-1">
                       <Sparkles className="size-3 text-amber-500 shrink-0" />
                       Holiday Pay
                     </span>
-                    <Badge variant="warning">
+                    <Badge variant="warning" className="text-[10px] py-0 px-1.5">
                       <Sparkles className="size-3" />
                       {formatCurrency(Number(d.holiday_allowance))}
                     </Badge>
@@ -638,10 +642,10 @@ export default async function DutyListPage({
 
                 <Link
                   href={`/duty/${d.id}`}
-                  className="w-full flex items-center justify-center gap-1.5 rounded-xl border border-border bg-card py-2 text-xs font-semibold text-foreground hover:bg-muted shadow-2xs transition-colors"
+                  className="w-full flex items-center justify-center gap-1.5 rounded-lg border border-border bg-card py-1.5 text-xs font-semibold text-foreground hover:bg-muted/70 shadow-2xs transition-colors"
                 >
                   <span>View Details</span>
-                  <ArrowRight className="size-3.5" />
+                  <ArrowRight className="size-3 text-muted-foreground" />
                 </Link>
               </div>
             );

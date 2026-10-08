@@ -1,99 +1,56 @@
 "use client";
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useRef,
-  useState,
-  useTransition,
-  type ReactNode,
-} from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2, X } from "lucide-react";
 import { deleteDuties } from "@/actions/duty";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ConfirmDeleteModal } from "@/components/ui/confirm-delete-modal";
 import { useToast } from "@/components/ui/toast";
+import {
+  useDutySelection,
+  DutySelectionProvider,
+  type SelectionCtx,
+} from "./duty-selection-context";
+
+export { DutySelectionProvider, useDutySelection, type SelectionCtx };
+export { DutySelectModeToggle } from "./duty-select-mode-toggle";
 
 /**
- * Multi-select for the duty log. The table itself stays a server component;
- * only these checkboxes and the action bar are client-side, sharing the
- * selection through context.
+ * Checkbox for mobile cards or individual records.
+ * Renders NOTHING when selectMode is false.
  */
-type SelectionCtx = {
-  selectableIds: readonly string[];
-  selected: ReadonlySet<string>;
-  toggle: (id: string) => void;
-  setAll: (on: boolean) => void;
-  clear: () => void;
-};
-
-const Ctx = createContext<SelectionCtx | null>(null);
-
-function useSelection(): SelectionCtx {
-  const ctx = useContext(Ctx);
-  if (!ctx) throw new Error("Duty selection controls must sit inside DutySelectionProvider");
-  return ctx;
-}
-
-export function DutySelectionProvider({
-  selectableIds,
-  children,
+export function DutyRowCheckbox({
+  id,
+  label,
+  className = "",
 }: {
-  /** The caller's own duties on this page — the only ones they may delete. */
-  selectableIds: string[];
-  children: ReactNode;
+  id: string;
+  label: string;
+  className?: string;
 }) {
-  const [picked, setPicked] = useState<Set<string>>(() => new Set());
+  const { selected, toggle, selectableIds, selectMode } = useDutySelection();
+  if (!selectMode || !selectableIds.includes(id)) return null;
 
-  // Ids that left the page (deleted, filtered out, paged away) drop out of
-  // the selection by derivation, not by an effect.
-  const selected = useMemo(() => {
-    const allowed = new Set(selectableIds);
-    return new Set([...picked].filter((id) => allowed.has(id)));
-  }, [picked, selectableIds]);
-
-  const toggle = useCallback((id: string) => {
-    setPicked((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }, []);
-
-  const setAll = useCallback(
-    (on: boolean) => setPicked(on ? new Set(selectableIds) : new Set()),
-    [selectableIds],
-  );
-
-  const clear = useCallback(() => setPicked(new Set()), []);
-
-  const value = useMemo(
-    () => ({ selectableIds, selected, toggle, setAll, clear }),
-    [selectableIds, selected, toggle, setAll, clear],
-  );
-
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
-}
-
-export function DutyRowCheckbox({ id, label }: { id: string; label: string }) {
-  const { selected, toggle, selectableIds } = useSelection();
-  if (!selectableIds.includes(id)) return null;
   return (
-    <Checkbox
-      checked={selected.has(id)}
-      onChange={() => toggle(id)}
-      aria-label={`Select ${label}`}
-    />
+    <div className={`pt-0.5 shrink-0 animate-in fade-in zoom-in-95 duration-150 ${className}`}>
+      <Checkbox
+        checked={selected.has(id)}
+        onChange={() => toggle(id)}
+        aria-label={`Select ${label}`}
+      />
+    </div>
   );
 }
 
+/**
+ * Select-all checkbox for header.
+ * Renders NOTHING when selectMode is false.
+ */
 export function DutySelectAllCheckbox() {
-  const { selected, selectableIds, setAll } = useSelection();
-  if (selectableIds.length === 0) return null;
+  const { selected, selectableIds, setAll, selectMode } = useDutySelection();
+  if (!selectMode || selectableIds.length === 0) return null;
+
   const all = selected.size === selectableIds.length;
   return (
     <Checkbox
@@ -105,8 +62,40 @@ export function DutySelectAllCheckbox() {
   );
 }
 
+/**
+ * Desktop table column header for multi-select.
+ * Hidden when selectMode is false.
+ */
+export function DutyTableSelectHeader() {
+  const { selectMode } = useDutySelection();
+  if (!selectMode) return null;
+
+  return (
+    <th className="w-8 py-3.5 pl-4 sm:pl-6 animate-in fade-in duration-150">
+      <DutySelectAllCheckbox />
+    </th>
+  );
+}
+
+/**
+ * Desktop table cell for row checkbox.
+ * Hidden when selectMode is false.
+ */
+export function DutyTableSelectCell({ id, label }: { id: string; label: string }) {
+  const { selectMode, selectableIds } = useDutySelection();
+  if (!selectMode) return null;
+
+  return (
+    <td className="w-8 py-3.5 pl-4 sm:pl-6 animate-in fade-in duration-150">
+      {selectableIds.includes(id) && (
+        <DutyRowCheckbox id={id} label={label} />
+      )}
+    </td>
+  );
+}
+
 export function DutyBulkActionBar() {
-  const { selected, clear, selectableIds, setAll } = useSelection();
+  const { selected, clear, selectableIds, setAll, setSelectMode } = useDutySelection();
   const router = useRouter();
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
@@ -126,6 +115,7 @@ export function DutyBulkActionBar() {
         const { deleted } = await deleteDuties(ids);
         setIsOpen(false);
         clear();
+        setSelectMode(false);
         router.refresh();
         toast(`${deleted} ${deleted === 1 ? "duty" : "duties"} deleted.`);
       } catch (error) {
@@ -145,7 +135,7 @@ export function DutyBulkActionBar() {
     <>
       <div className="sticky top-16 md:top-0 z-20 flex items-center justify-between gap-2 border-b border-indigo-500/30 bg-card/95 backdrop-blur-md px-3.5 py-2.5 sm:px-6 rounded-t-2xl shadow-xs">
         <div className="flex items-center gap-2 sm:gap-3 text-xs font-semibold text-foreground min-w-0">
-          <span className="whitespace-nowrap">
+          <span className="whitespace-nowrap font-bold text-indigo-600 dark:text-indigo-400">
             {count} selected
           </span>
           {count < selectableIds.length && (

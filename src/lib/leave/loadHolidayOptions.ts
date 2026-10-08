@@ -64,7 +64,7 @@ export async function loadHolidayOptions(
     ]);
 
   const workedDates = new Set(
-    (duties ?? []).map((d) => toDateKey(new Date(d.starts_at))),
+    (duties ?? []).map((d) => toDateKey(d.starts_at)),
   );
 
   const takenDates = new Set<string>();

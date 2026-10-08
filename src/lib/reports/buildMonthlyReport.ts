@@ -1,6 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
-import { toDateKey } from "@/lib/format/datetime";
+import { toDateKey, localDayStart, localDayEnd } from "@/lib/format/datetime";
 import { leaveDaysWithin, summariseBreakdown } from "@/lib/leave/leaveDays";
 import type { ColumnDef } from "./reportCells";
 
@@ -102,6 +102,7 @@ const DUTY_COLUMNS: ColumnDef[] = [
 const TA_COLUMNS: ColumnDef[] = [
   { key: "officer", label: "Officer" },
   { key: "date", label: "Date" },
+  { key: "shift_time", label: "Time", badge: "time" },
   { key: "ta_from", label: "From" },
   { key: "ta_to", label: "To" },
   { key: "ta_distance_km", label: "Distance", numeric: true, badge: "distance" },
@@ -261,8 +262,8 @@ export async function buildMonthlyReport(p: ReportParams): Promise<ReportResult>
     .select(
       "id, user_id, starts_at, ends_at, status, location, notes, ta_from_place, ta_to_place, ta_vehicle_type, ta_distance_km, ta_amount, is_holiday, is_holiday_duty, manual_holiday_claim, holiday_allowance, duty_types(name), users!duties_user_id_fkey(full_name)",
     )
-    .gte("starts_at", start.toISOString())
-    .lte("starts_at", end.toISOString())
+    .gte("starts_at", localDayStart(toDateKey(start)))
+    .lte("starts_at", localDayEnd(toDateKey(end)))
     .order("starts_at", { ascending: false });
 
   if (p.userId) q = q.eq("user_id", p.userId);
@@ -299,7 +300,7 @@ export async function buildMonthlyReport(p: ReportParams): Promise<ReportResult>
   }
 
   const dayTypeOf = (startsAt: string) => {
-    const r = resolved.get(toDateKey(new Date(startsAt)));
+    const r = resolved.get(toDateKey(startsAt));
     // An Optional Holiday is a working day for pay — say so, rather than
     // labelling it like a holiday that earns extra.
     if (r?.kind === "optional_holiday") return "Working Day (Optional Holiday)";
@@ -307,8 +308,8 @@ export async function buildMonthlyReport(p: ReportParams): Promise<ReportResult>
   };
 
   const rows: ReportRow[] = duties.map((d) => {
-    const startDateKey = toDateKey(new Date(d.starts_at));
-    const endDateKey = toDateKey(new Date(d.ends_at));
+    const startDateKey = toDateKey(d.starts_at);
+    const endDateKey = toDateKey(d.ends_at);
     const startTime = hhmm(d.starts_at);
     const endTime = hhmm(d.ends_at);
     const isNextDay = startDateKey !== endDateKey;
@@ -317,7 +318,9 @@ export async function buildMonthlyReport(p: ReportParams): Promise<ReportResult>
         ? isNextDay
           ? `${startTime} - ${endTime} (Next Day)`
           : `${startTime} - ${endTime}`
-        : startTime || endTime || "";
+        : isNextDay
+          ? (startTime ? `${startTime} (Next Day)` : endTime ? `${endTime} (Next Day)` : "(Next Day)")
+          : startTime || endTime || "";
     const dateDisplay = isNextDay ? `${startDateKey} to ${endDateKey}` : startDateKey;
 
     return {
@@ -334,7 +337,7 @@ export async function buildMonthlyReport(p: ReportParams): Promise<ReportResult>
       location: d.location,
       day_type: dayTypeOf(d.starts_at),
       // The holiday's own name ("Diwali", "Sunday"), for the printed report.
-      holiday_name: resolved.get(toDateKey(new Date(d.starts_at)))?.name ?? null,
+      holiday_name: resolved.get(toDateKey(d.starts_at))?.name ?? null,
       status: d.status,
       ta_from: d.ta_from_place,
       ta_to: d.ta_to_place,
@@ -346,7 +349,7 @@ export async function buildMonthlyReport(p: ReportParams): Promise<ReportResult>
   });
 
   const workedKeys = new Set(
-    duties.filter((d) => d.is_holiday_duty).map((d) => toDateKey(new Date(d.starts_at))),
+    duties.filter((d) => d.is_holiday_duty).map((d) => toDateKey(d.starts_at)),
   );
 
   /**

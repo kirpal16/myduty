@@ -215,9 +215,21 @@ describe("helpers", () => {
       useGujaratiDigits: false,
     });
 
-    // Start date must be 01/09/2026 and End date must be 02/09/2026 (NOT same date 01/09/2026!)
+    // Start date must be 01/09/2026 and End date must be 02/09/2026 with (બીજે દિવસે)
     expect(gujReport.rows[0].startDate).toBe("01/09/2026 11/00");
-    expect(gujReport.rows[0].endDate).toBe("02/09/2026 03/00");
+    expect(gujReport.rows[0].endDate).toBe("02/09/2026 03/00 (બીજે દિવસે)");
+    expect(gujReport.rows[0].time).toBe("11/00 થી 03/00 (બીજે દિવસે)");
+
+    // Test with Gujarati digits
+    const gujReportDigits = buildPrintReport({
+      type: "ta",
+      rows: [overnightRow],
+      periodLabel: "September 2026",
+      includeOfficer: false,
+      language: "gu",
+      useGujaratiDigits: true,
+    });
+    expect(gujReportDigits.rows[0].endDate).toBe("૦૨/૦૯/૨૦૨૬ ૦૩/૦૦ (બીજે દિવસે)");
 
     const engReport = buildPrintReport({
       type: "ta",
@@ -229,6 +241,7 @@ describe("helpers", () => {
 
     expect(engReport.rows[0].date).toBe("Sep 1, 2026 → Sep 2, 2026");
     expect(engReport.rows[0].day).toBe("Tue → Wed");
+    expect(engReport.rows[0].time).toBe("11:00 - 03:00 (Next Day)");
   });
 
   it("consolidates multi-day identical duties (e.g. 25 days in Ahmedabad) into a single concise row for print", () => {

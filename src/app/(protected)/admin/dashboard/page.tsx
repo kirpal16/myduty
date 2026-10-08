@@ -19,15 +19,13 @@ import {
   ShieldAlert,
 } from "lucide-react";
 
+import { toDateKey, localDayStart } from "@/lib/format/datetime";
+
 export default async function AdminDashboardPage() {
   const supabase = await createClient();
   const now = new Date();
-  const startOfMonth = new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    1,
-  ).toISOString();
-  const startOfYear = new Date(now.getFullYear(), 0, 1).toISOString();
+  const startOfMonth = localDayStart(toDateKey(new Date(now.getFullYear(), now.getMonth(), 1)));
+  const startOfYear = localDayStart(toDateKey(new Date(now.getFullYear(), 0, 1)));
 
   const [
     { count: pendingCount },

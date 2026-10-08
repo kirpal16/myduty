@@ -559,6 +559,12 @@ export function buildPrintReport(input: {
         rows: rows.map((r) => {
           const startDateKey = r.start_date ? String(r.start_date) : r.date ? String(r.date).split(" to ")[0] : null;
           const endDateKey = r.end_date ? String(r.end_date) : r.date && String(r.date).includes(" to ") ? String(r.date).split(" to ")[1] : startDateKey;
+          const isNextDay =
+            Number(r.is_next_day) === 1 ||
+            Boolean(r.shift_time && /\(next\s*day\)|બીજે\s*દિવસે/i.test(String(r.shift_time))) ||
+            (Boolean(startDateKey && endDateKey) &&
+              nextDayKey(String(startDateKey)) === String(endDateKey) &&
+              !String(r.notes ?? "").includes("દિવસ"));
           const startDateStr = formatGujaratiDate(startDateKey, { useGujaratiDigits });
           const endDateStr = formatGujaratiDate(endDateKey, { useGujaratiDigits });
           const startT = r.starts_at ? formatGujaratiShiftTime(String(r.starts_at), useGujaratiDigits) : "";
@@ -568,10 +574,15 @@ export function buildPrintReport(input: {
             r.notes ? String(r.notes) : null,
           );
 
+          const nextDayTag = isNextDay ? " (બીજે દિવસે)" : "";
+          const endDateFormatted = endT
+            ? `${endDateStr} ${endT}${nextDayTag}`
+            : (isNextDay ? `${endDateStr}${nextDayTag}` : endDateStr);
+
           return {
             ...(includeOfficer ? { officer: text(r.officer) } : {}),
             startDate: startT ? `${startDateStr} ${startT}` : startDateStr,
-            endDate: endT ? `${endDateStr} ${endT}` : endDateStr,
+            endDate: endDateFormatted,
             route: formatGujaratiRoute(r.ta_from ? String(r.ta_from) : null, r.ta_to ? String(r.ta_to) : null),
             reason: combinedReason,
             vehicle: formatVehicleAcronym(r.ta_vehicle_type ? String(r.ta_vehicle_type) : null),
@@ -580,7 +591,7 @@ export function buildPrintReport(input: {
             date: startDateStr !== endDateStr ? `${startDateStr} થી ${endDateStr}` : startDateStr,
             day: formatSafeWeekdayShort(noon(startDateKey)) || DASH,
             duty: combinedReason,
-            time: text(r.shift_time),
+            time: formatGujaratiShiftTime(r.shift_time ? String(r.shift_time) : null, useGujaratiDigits),
             station: text(r.location),
           };
         }),
@@ -682,7 +693,12 @@ export function buildPrintReport(input: {
       rows: rows.map((r) => {
         const startDateKey = r.start_date ? String(r.start_date) : r.date ? String(r.date).split(" to ")[0] : null;
         const endDateKey = r.end_date ? String(r.end_date) : r.date && String(r.date).includes(" to ") ? String(r.date).split(" to ")[1] : startDateKey;
-        const isNextDay = startDateKey && endDateKey && startDateKey !== endDateKey;
+        const isNextDay =
+          Number(r.is_next_day) === 1 ||
+          Boolean(r.shift_time && /\(next\s*day\)|બીજે\s*દિવસે/i.test(String(r.shift_time))) ||
+          (Boolean(startDateKey && endDateKey) &&
+            nextDayKey(String(startDateKey)) === String(endDateKey) &&
+            !String(r.notes ?? "").includes("day"));
         const dateDisplay = isNextDay
           ? `${formatSafeDateMonthYear(noon(startDateKey))} → ${formatSafeDateMonthYear(noon(endDateKey))}`
           : formatSafeDateMonthYear(noon(startDateKey)) || text(startDateKey);
@@ -690,12 +706,17 @@ export function buildPrintReport(input: {
           ? `${formatSafeWeekdayShort(noon(startDateKey))} → ${formatSafeWeekdayShort(noon(endDateKey))}`
           : formatSafeWeekdayShort(noon(startDateKey)) || DASH;
 
+        let timeStr = text(r.shift_time);
+        if (isNextDay && timeStr && !/\(next\s*day\)/i.test(timeStr)) {
+          timeStr = `${timeStr} (Next Day)`;
+        }
+
         return {
           ...(includeOfficer ? { officer: text(r.officer) } : {}),
           date: dateDisplay,
           day: dayDisplay,
           duty: formatDutyReasonWithNotes(r.duty_type ? String(r.duty_type) : null, r.notes ? String(r.notes) : null),
-          time: text(r.shift_time),
+          time: timeStr,
           station: text(r.location),
           route: route(r.ta_from, r.ta_to),
           distance: km(r.ta_distance_km),

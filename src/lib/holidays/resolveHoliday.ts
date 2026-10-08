@@ -82,10 +82,12 @@ export function resolveHoliday(
   date: Date | string,
   dbHolidays: readonly HolidayRecord[] = [],
 ): HolidayResolution {
-  const d = typeof date === "string" ? new Date(date) : date;
+  const key = toDateKey(date);
+  const [y, m, dayNum] = key.split("-").map(Number);
+  const d = !Number.isNaN(y) && !Number.isNaN(m) && !Number.isNaN(dayNum)
+    ? new Date(y, m - 1, dayNum)
+    : (typeof date === "string" ? new Date(date) : date);
   if (Number.isNaN(d.getTime())) return NOT_A_HOLIDAY;
-
-  const key = toDateKey(d);
 
   // 1. Explicit database rows.
   // A real holiday row wins over an optional one on the same date, whatever
