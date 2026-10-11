@@ -12,6 +12,7 @@ import {
   Clock,
   Tag,
   FolderOpen,
+  Upload,
 } from "lucide-react";
 import { FilePreviewModal } from "./file-preview-modal";
 import { ConfirmDeleteModal } from "./confirm-delete-modal";
@@ -161,13 +162,13 @@ export function FormFileInput({
       <input type="hidden" name="documentDescription" value={documentDescription} />
 
       <div className="flex items-center justify-between text-xs font-semibold text-foreground">
-        <span className="flex items-center gap-1.5">
-          <ImageIcon className="size-3.5 text-indigo-500" />
+        <span className="flex items-center gap-1.5 font-bold">
+          <ImageIcon className="size-4 text-indigo-600 dark:text-indigo-400" />
           <span>{label}</span>
         </span>
         {optional && (
-          <span className="text-[11px] font-normal text-muted-foreground">
-            (Optional)
+          <span className="text-[10px] font-semibold text-muted-foreground bg-muted/80 px-2 py-0.5 rounded-full border border-border/50">
+            Optional
           </span>
         )}
       </div>
@@ -353,20 +354,42 @@ export function FormFileInput({
         </div>
       ) : (
         /* Empty State with Responsive Touch Choices: Camera vs Browse File */
-        <div className="flex flex-col rounded-2xl border-2 border-dashed border-border bg-muted/20 p-4 sm:p-5 text-center transition-all hover:border-indigo-500/50 hover:bg-muted/30">
-          <p className="text-xs sm:text-sm font-semibold text-foreground mb-1">
+        <div className="relative overflow-hidden flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-indigo-200/90 dark:border-indigo-800/80 bg-gradient-to-br from-indigo-50/40 via-card to-purple-50/20 dark:from-indigo-950/25 dark:via-background dark:to-purple-950/15 p-5 sm:p-6 text-center transition-all hover:border-indigo-500/80 hover:bg-indigo-50/60 dark:hover:bg-indigo-950/30 group">
+          {/* Decorative glowing gradient ring & icon badge */}
+          <div className="flex size-12 items-center justify-center rounded-2xl bg-indigo-600/10 dark:bg-indigo-400/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 shadow-xs mb-3 group-hover:scale-105 transition-transform">
+            <Upload className="size-6 text-indigo-600 dark:text-indigo-400" />
+          </div>
+
+          <h4 className="text-xs sm:text-sm font-bold text-foreground mb-1">
             Choose how to attach proof or document
-          </p>
-          <p className="text-[11px] text-muted-foreground mb-4">
+          </h4>
+          <p className="text-[11px] text-muted-foreground max-w-sm mb-3">
             {helperText}
           </p>
 
+          {/* Supported Format Badges */}
+          <div className="flex flex-wrap items-center justify-center gap-1.5 mb-4">
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-muted/80 text-muted-foreground border border-border/70">
+              JPG
+            </span>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-muted/80 text-muted-foreground border border-border/70">
+              PNG
+            </span>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-muted/80 text-muted-foreground border border-border/70">
+              PDF
+            </span>
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+              Max 10MB
+            </span>
+          </div>
+
+          {/* Action Buttons: Camera & Browse Files */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full max-w-sm mx-auto">
             {/* 1. Take Photo / Camera Button */}
             <button
               type="button"
               onClick={() => setIsCameraModalOpen(true)}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-98 text-white text-xs font-bold shadow-md shadow-indigo-600/25 transition-all cursor-pointer w-full"
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-600 active:scale-[0.98] text-white text-xs font-bold shadow-md shadow-indigo-600/25 transition-all cursor-pointer w-full"
             >
               <Camera className="size-4 shrink-0" />
               <span>Take Photo (Camera)</span>
@@ -376,9 +399,9 @@ export function FormFileInput({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-card hover:bg-muted hover:border-indigo-500/50 active:scale-98 text-foreground text-xs font-semibold shadow-2xs transition-all cursor-pointer w-full"
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-indigo-200/90 dark:border-indigo-800 bg-card hover:bg-indigo-50/60 dark:hover:bg-indigo-950/30 hover:border-indigo-400 active:scale-[0.98] text-foreground text-xs font-semibold shadow-2xs transition-all cursor-pointer w-full"
             >
-              <FolderOpen className="size-4 text-indigo-500 shrink-0" />
+              <FolderOpen className="size-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
               <span>Browse Files</span>
             </button>
           </div>

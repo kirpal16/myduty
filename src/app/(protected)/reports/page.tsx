@@ -34,6 +34,7 @@ import { formatDays } from "@/lib/leave/leaveDays";
 import { getUserSettings } from "@/lib/settings/getUserSettings";
 import { ReportPrintView } from "@/components/reports/report-print-view";
 import { PrintReportButton } from "@/components/reports/print-report-button";
+import { CreateReportButton } from "@/components/reports/create-report-button";
 import {
   buildPrintReport,
   isPrintableReport,
@@ -265,9 +266,16 @@ export default async function ReportsPage({
   );
 
   const supabase = await createClient();
-  const { data: usersList } = canViewAll
-    ? await supabase.from("users").select("id, full_name").order("full_name")
-    : { data: [] };
+  const [{ data: usersList }, { data: dbLeaveTypes }] = await Promise.all([
+    canViewAll
+      ? supabase.from("users").select("id, full_name").order("full_name")
+      : Promise.resolve({ data: [] }),
+    supabase
+      .from("leave_types")
+      .select("id, name, code, color, is_system")
+      .eq("is_active", true)
+      .order("name"),
+  ]);
 
   const exportQuery = new URLSearchParams({
     type,
@@ -282,9 +290,10 @@ export default async function ReportsPage({
   // Print: every report type (TA, Holiday Worked, Duty, Leave), with every
   // row and no amounts. The letter names the officer and their post; an admin
   // viewing "All Officers" gets an Officer column instead.
-  const printUserId = userId || null;
+  // Print & Letter Officer details
+  const printUserId = userId || user?.id || null;
   let printOfficer: PrintOfficer | null = null;
-  if (isPrintableReport(type) && printUserId) {
+  if (printUserId) {
     const { data: officerRow } = await supabase
       .from("users")
       .select("full_name, designation, employee_code, current_posting, departments(name), signature_url")
@@ -352,25 +361,36 @@ export default async function ReportsPage({
         title="Monthly Reports"
         subtitle="Duty, travelling allowance, holiday and leave records for any month or year."
         badge={<Badge variant="purple" dot>{report.periodLabel}</Badge>}
-        compactActions
         actions={
-          canExport || printReport ? (
-            <div className="flex items-center gap-2">
-              {printReport && (
-                <PrintReportButton report={printReport} officer={printOfficer} />
-              )}
-              {canExport && (
-                <a
-                  href={`/api/reports/export?${exportQuery}`}
-                  className="flex items-center gap-1.5 whitespace-nowrap rounded-xl bg-indigo-600 px-2.5 py-2 text-xs font-semibold text-white shadow-md shadow-indigo-600/30 transition-colors hover:bg-indigo-500 sm:gap-2 sm:px-4 sm:py-2.5 sm:text-sm"
-                >
-                  <Download className="size-4 shrink-0" />
-                  <span className="sm:hidden">CSV</span>
-                  <span className="hidden sm:inline">Export CSV</span>
-                </a>
-              )}
+          <div className="flex items-center gap-2 w-full sm:w-auto pt-2 lg:pt-0">
+            <div className="flex-1 sm:flex-none">
+              <CreateReportButton
+                officer={printOfficer}
+                leaveTypes={dbLeaveTypes ?? []}
+                className="w-full sm:w-auto justify-center"
+              />
             </div>
-          ) : undefined
+            {printReport && (
+              <div className="flex-1 sm:flex-none">
+                <PrintReportButton
+                  report={printReport}
+                  officer={printOfficer}
+                  className="w-full sm:w-auto justify-center"
+                />
+              </div>
+            )}
+            {canExport && (
+              <a
+                href={`/api/reports/export?${exportQuery}`}
+                className="flex-none flex items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-border bg-card px-3 py-2.5 text-xs sm:text-sm font-semibold text-foreground shadow-2xs transition-colors hover:bg-muted active:scale-[0.98]"
+                title="Export CSV"
+              >
+                <Download className="size-4 shrink-0 text-muted-foreground" />
+                <span className="hidden sm:inline">Export CSV</span>
+                <span className="sm:hidden">CSV</span>
+              </a>
+            )}
+          </div>
         }
       />
 

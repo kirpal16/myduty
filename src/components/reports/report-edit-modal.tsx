@@ -359,7 +359,7 @@ type SavedPrintConfig = {
               <td class="rp-body">
                 <div class="rp-gujarati-layout font-sans text-black">
                   <div class="flex items-center justify-between border-b-2 border-black pb-3 mb-4">
-                    <img src="/Gujarat-police.png" alt="Gujarat Police" class="rp-logo h-16 w-16 object-contain" />
+                    <img src="/Gujarat-police.png" alt="Gujarat Police" class="rp-logo" width="40" height="52" style="width: 40px; height: 52px; object-fit: contain; aspect-ratio: 1542/2000; display: block;" />
                     <div class="text-center flex-1 mx-4">
                       <h2 class="text-xl font-bold tracking-wide">${esc(header1)}</h2>
                       <p class="text-sm font-semibold text-gray-800">${esc(header2)}</p>
@@ -561,7 +561,7 @@ type SavedPrintConfig = {
             <div className="text-center pb-4 border-b border-border/80 space-y-1">
               <div className="flex items-center justify-center gap-3">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/Gujarat-police.png" alt="Gujarat Police" className="h-14 w-14 object-contain shrink-0" />
+                <img src="/Gujarat-police.png" alt="Gujarat Police" width={40} height={52} className="h-12 w-auto object-contain shrink-0" style={{ aspectRatio: "1542/2000" }} />
                 <div className="text-left flex-1 max-w-md">
                   <input
                     type="text"

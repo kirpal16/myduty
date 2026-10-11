@@ -1,0 +1,1284 @@
+"use client";
+
+import { useState, useEffect, useMemo, useRef } from "react";
+import {
+  Printer,
+  X,
+  CalendarDays,
+  FileSpreadsheet,
+  FileText,
+  ShieldAlert,
+  Award,
+  PlusSquare,
+  Check,
+  RotateCcw,
+  Copy,
+  ChevronLeft,
+  FileCheck,
+  Eye,
+  Edit3,
+  Calendar,
+  EyeOff,
+  SlidersHorizontal,
+  Shield,
+  Layers,
+  FileEdit,
+  Building,
+  User,
+  Clock,
+} from "lucide-react";
+import {
+  type CustomReportData,
+  type ReportTemplateMeta,
+  type DbLeaveTypeItem,
+  REPORT_TEMPLATES,
+  formatSegmentDateRange,
+  formatSegmentsAsNarrativeParagraph,
+} from "@/lib/reports/reportTemplates";
+import { LeaveSegmentBuilder } from "./leave-segment-builder";
+import type { PrintOfficer } from "@/lib/reports/printReport";
+import { useToast } from "@/components/ui/toast";
+import { useBodyScrollLock } from "@/lib/hooks/useBodyScrollLock";
+import { useModalBackClose } from "@/lib/hooks/useModalBackClose";
+import { toGujaratiNumerals, toAsciiNumerals } from "@/lib/reports/gujaratiReportUtils";
+
+/** Escapes text written into the print HTML. */
+const esc = (s: string) =>
+  s ? s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;") : "";
+
+interface CreateReportModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  officer: PrintOfficer | null;
+  leaveTypes?: DbLeaveTypeItem[];
+}
+
+export function CreateReportModal({
+  isOpen,
+  onClose,
+  officer,
+  leaveTypes,
+}: CreateReportModalProps) {
+  const { toast } = useToast();
+  useBodyScrollLock(isOpen);
+  useModalBackClose(isOpen, onClose);
+
+  // Screen Step: 1 = Template Selector, 2 = Editor & Live Preview
+  const [step, setStep] = useState<1 | 2>(1);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("merged_leave");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+
+  // Mobile view tab in Step 2: "edit" or "preview"
+  const [mobileTab, setMobileTab] = useState<"edit" | "preview">("edit");
+
+  // Sub-section filter in Editor: "leave" | "content" | "header" | "all"
+  const [activeSection, setActiveSection] = useState<"leave" | "content" | "header" | "all">("leave");
+
+  // Form State
+  const [reportData, setReportData] = useState<CustomReportData>(() => {
+    const t = REPORT_TEMPLATES[0];
+    const d = t.buildDefaults(officer, true);
+    d.showLogo = true;
+    return d;
+  });
+
+  // Toggles
+  const [useGujaratiDigits, setUseGujaratiDigits] = useState<boolean>(true);
+  const [includeSignature, setIncludeSignature] = useState<boolean>(false);
+
+  // Number converter helper based on current toggle
+  const numFn = (val: number | string) =>
+    useGujaratiDigits ? toGujaratiNumerals(val) : toAsciiNumerals(val);
+
+  // Initialize or reset ONLY when modal opens (not when digits or settings toggle)
+  useEffect(() => {
+    if (!isOpen) return;
+    const defaultTpl = REPORT_TEMPLATES[0];
+    setSelectedTemplateId(defaultTpl.id);
+    const initial = defaultTpl.buildDefaults(officer, useGujaratiDigits);
+    initial.showHeader = true;
+    initial.showLogo = true;
+    initial.leaveDisplayFormat = "table";
+    setReportData(initial);
+    setStep(1);
+    setMobileTab("edit");
+    setActiveSection("leave");
+    setIncludeSignature(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+
+  // Load a chosen template
+  const handleSelectTemplate = (tpl: ReportTemplateMeta) => {
+    setSelectedTemplateId(tpl.id);
+    const initialData = tpl.buildDefaults(officer, useGujaratiDigits);
+    initialData.includeSignature = includeSignature;
+    initialData.showLogo = reportData.showLogo !== false;
+    initialData.showHeader = reportData.showHeader !== false;
+    setReportData(initialData);
+    setStep(2);
+    setMobileTab("edit");
+    setActiveSection(initialData.leaveSegments && initialData.leaveSegments.length > 0 ? "leave" : "content");
+  };
+
+  // Helper to update specific reportData field
+  const updateField = <K extends keyof CustomReportData>(
+    field: K,
+    val: CustomReportData[K],
+  ) => {
+    setReportData((prev) => ({ ...prev, [field]: val }));
+  };
+
+  // Digits toggle handler
+  const handleToggleDigits = () => {
+    const nextVal = !useGujaratiDigits;
+    setUseGujaratiDigits(nextVal);
+    updateField("useGujaratiDigits", nextVal);
+
+    // Convert digits in buckle, date, and subject if present
+    setReportData((prev) => ({
+      ...prev,
+      useGujaratiDigits: nextVal,
+      signatoryBuckle: nextVal
+        ? toGujaratiNumerals(prev.signatoryBuckle)
+        : toAsciiNumerals(prev.signatoryBuckle),
+    }));
+  };
+
+  // Reset to default for current template
+  const handleResetToDefault = () => {
+    const tpl = REPORT_TEMPLATES.find((t) => t.id === selectedTemplateId) || REPORT_TEMPLATES[0];
+    const fresh = tpl.buildDefaults(officer, useGujaratiDigits);
+    fresh.includeSignature = includeSignature;
+    fresh.showLogo = true;
+    fresh.showHeader = true;
+    setReportData(fresh);
+    toast("ટેમ્પ્લેટ રીસેટ થઈ ગયું (Reset to defaults)");
+  };
+
+  // Copy entire text to clipboard
+  const handleCopyText = async () => {
+    try {
+      const parts: string[] = [];
+      if (reportData.showHeader) {
+        parts.push(reportData.headerLine1);
+        if (reportData.headerLine2) parts.push(reportData.headerLine2);
+      }
+      parts.push("\n" + reportData.toLines);
+      if (reportData.applicantLine) parts.push("\n" + reportData.applicantLine);
+      parts.push("\n" + reportData.subject);
+      if (reportData.reference) parts.push(reportData.reference);
+      parts.push("\n" + reportData.salutation);
+      parts.push(reportData.paragraph1);
+
+      if (
+        reportData.leaveDisplayFormat !== "paragraph" &&
+        reportData.leaveSegments &&
+        reportData.leaveSegments.length > 0
+      ) {
+        parts.push("\n[રજા વિગત]:");
+        reportData.leaveSegments.forEach((seg, i) => {
+          const dateStr = formatSegmentDateRange(seg.startDate, seg.endDate, useGujaratiDigits);
+          parts.push(`${numFn(i + 1)}. ${dateStr} - ${seg.shortLabel} (${numFn(seg.days)} દિવસ)`);
+        });
+      }
+
+      if (reportData.paragraph2) parts.push("\n" + reportData.paragraph2);
+      if (reportData.paragraph3) parts.push("\n" + reportData.paragraph3);
+
+      parts.push(`\nતારીખ: ${reportData.reportDate}`);
+      parts.push(`સ્થળ: ${reportData.place}`);
+      parts.push(`\nલિ. આપનો વિશ્વાસુ,\n${reportData.signatoryName}`);
+      parts.push(`${reportData.signatoryRank} ${reportData.signatoryBuckle}`);
+      if (reportData.signatoryStation) parts.push(reportData.signatoryStation);
+
+      const fullText = parts.join("\n");
+      await navigator.clipboard.writeText(fullText);
+      toast("અરજીનું લખાણ કોપી થઈ ગયું! (Copied to clipboard)");
+    } catch {
+      toast("લખાણ કોપી કરવામાં ક્ષતિ (Copy failed)", "error");
+    }
+  };
+
+  // Native Print Execution
+  const handlePrint = () => {
+    const origTitle = document.title;
+    const cleanTitle = `${reportData.templateTitle}_${reportData.signatoryName || "Officer"}`
+      .replace(/\s+/g, "_")
+      .replace(/[^\w\u0A80-\u0AFF_-]/g, "");
+
+    document.title = cleanTitle;
+
+    const cleanup = () => {
+      document.title = origTitle;
+      window.removeEventListener("afterprint", cleanup);
+    };
+    window.addEventListener("afterprint", cleanup);
+
+    // Injected printable layout
+    let mount = document.getElementById("custom-report-print-mount");
+    if (!mount) {
+      mount = document.createElement("div");
+      mount.id = "custom-report-print-mount";
+      document.body.appendChild(mount);
+    }
+
+    const segmentsHtml =
+      reportData.leaveDisplayFormat !== "paragraph" &&
+      reportData.leaveSegments &&
+      reportData.leaveSegments.length > 0
+        ? `
+        <div style="margin: 8px 0;">
+          <table class="w-full border-collapse border border-gray-400" style="font-size: 11.5pt; line-height: 1.35;">
+            <thead>
+              <tr class="bg-gray-100 text-gray-900 border-b border-gray-400">
+                <th class="p-1.5 text-center w-8 border-r border-gray-400">અ.નં.</th>
+                <th class="p-1.5 text-left border-r border-gray-400">તારીખ (ગાળો)</th>
+                <th class="p-1.5 text-left border-r border-gray-400">રજાનો પ્રકાર</th>
+                <th class="p-1.5 text-center w-16 border-r border-gray-400">દિવસ</th>
+                <th class="p-1.5 text-left">કારણ / શેરો</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${reportData.leaveSegments
+                .map((seg, idx) => {
+                  const range = formatSegmentDateRange(seg.startDate, seg.endDate, useGujaratiDigits);
+                  return `
+                  <tr class="border-b border-gray-300">
+                    <td class="p-1.5 text-center font-bold border-r border-gray-300">${numFn(idx + 1)}</td>
+                    <td class="p-1.5 border-r border-gray-300 font-semibold">${esc(range)}</td>
+                    <td class="p-1.5 border-r border-gray-300 font-semibold">${esc(seg.shortLabel || seg.leaveTypeName)}</td>
+                    <td class="p-1.5 text-center font-bold border-r border-gray-300">${numFn(seg.days)}</td>
+                    <td class="p-1.5">${esc(seg.reason || "—")}</td>
+                  </tr>
+                `;
+                })
+                .join("")}
+              <tr class="bg-gray-50 font-bold border-t border-gray-400">
+                <td colspan="3" class="p-1.5 text-right border-r border-gray-300">કુલ રજા દિવસ:</td>
+                <td class="p-1.5 text-center border-r border-gray-300 font-bold">${numFn(
+                  reportData.leaveSegments.reduce((sum, s) => sum + (Number(s.days) || 0), 0),
+                )}</td>
+                <td class="p-1.5"></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      `
+        : "";
+
+    mount.innerHTML = `
+      <style>
+        @page {
+          size: A4 portrait;
+          margin: 0 !important;
+        }
+        @media screen {
+          #custom-report-print-mount { display: none !important; }
+        }
+        @media print {
+          body > *:not(#custom-report-print-mount) {
+            display: none !important;
+          }
+          #custom-report-print-mount {
+            display: block !important;
+            background: white !important;
+            color: black !important;
+            font-family: 'Shruti', 'Gujarati MT', 'Noto Sans Gujarati', 'Noto Serif Gujarati', serif !important;
+            font-size: 13.5pt !important;
+            line-height: 1.5 !important;
+            width: 100% !important;
+          }
+          .custom-rp-a4 {
+            width: 100% !important;
+            padding: ${reportData.showHeader ? "16mm 18mm 14mm 18mm" : "28mm 18mm 14mm 18mm"} !important;
+            box-sizing: border-box !important;
+          }
+        }
+      </style>
+      <div class="custom-rp-a4">
+        <!-- Header: Hidden if showHeader is false -->
+        ${
+          reportData.showHeader
+            ? `
+          <div class="flex items-center justify-between border-b-2 border-black pb-2 mb-3">
+            ${
+              reportData.showLogo !== false
+                ? `
+              <div style="width: 46px; flex-shrink: 0; display: flex; align-items: center; justify-content: flex-start;">
+                <img src="/Gujarat-police.png" alt="Gujarat Police Logo" width="44" height="57" style="width: 44px; height: 57px; object-fit: contain; aspect-ratio: 1542/2000; display: block;" />
+              </div>
+            `
+                : `<div style="width: 8px; flex-shrink: 0;"></div>`
+            }
+            <div class="text-center flex-1 mx-2">
+              <h1 style="font-size: 17pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; line-height: 1.2; margin: 0;">${esc(reportData.headerLine1)}</h1>
+              ${reportData.headerLine2 ? `<p style="font-size: 11.5pt; font-weight: 600; margin: 2px 0 0 0; color: #1f2937;">${esc(reportData.headerLine2)}</p>` : ""}
+            </div>
+            <div style="width: ${reportData.showLogo !== false ? "46px" : "8px"}; flex-shrink: 0;"></div>
+          </div>
+        `
+            : `<!-- Header suppressed for pre-printed letterhead -->`
+        }
+
+        <!-- To -->
+        <div class="whitespace-pre-line" style="font-size: 13.5pt; line-height: 1.45; margin-bottom: 10px;">
+          ${esc(reportData.toLines)}
+        </div>
+
+        <!-- Applicant Line (clean without start line) -->
+        ${
+          reportData.applicantLine
+            ? `<div style="font-size: 13.5pt; font-weight: 700; color: #111827; margin-bottom: 10px; line-height: 1.45;">${esc(reportData.applicantLine)}</div>`
+            : ""
+        }
+
+        <!-- Subject (clean, bold, big font size, centered with compact spacing) -->
+        <div style="font-size: 15pt; font-weight: 800; text-align: center; color: #030712; margin: 10px 0; line-height: 1.4;">
+          ${esc(reportData.subject)}
+        </div>
+
+        <!-- Reference -->
+        ${
+          reportData.reference
+            ? `<div style="font-size: 12pt; font-weight: 600; text-align: center; color: #374151; margin-bottom: 8px;">${esc(reportData.reference)}</div>`
+            : ""
+        }
+
+        <!-- Salutation & Body -->
+        <div style="font-size: 13.5pt; font-weight: 700; margin-top: 8px; margin-bottom: 2px;">${esc(reportData.salutation)}</div>
+        <p style="font-size: 13.5pt; line-height: 1.5; text-align: justify; margin: 0 0 8px 0; text-indent: 2em;">${esc(reportData.paragraph1)}</p>
+
+        <!-- Leave Breakdown Table if exists & mode is table or both -->
+        ${segmentsHtml}
+
+        <!-- Paragraph 2 -->
+        ${
+          reportData.paragraph2
+            ? `<p style="font-size: 13.5pt; line-height: 1.5; text-align: justify; margin: 0 0 8px 0; text-indent: 2em;">${esc(reportData.paragraph2)}</p>`
+            : ""
+        }
+
+        <!-- Paragraph 3 -->
+        ${
+          reportData.paragraph3
+            ? `<p style="font-size: 13.5pt; line-height: 1.5; text-align: justify; margin: 0 0 8px 0; text-indent: 2em;">${esc(reportData.paragraph3)}</p>`
+            : ""
+        }
+
+        <!-- Footer -->
+        <div class="break-inside-avoid" style="margin-top: 22px; padding-top: 10px; display: flex; justify-content: space-between; align-items: flex-end; font-size: 12.5pt;">
+          <div style="line-height: 1.4;">
+            <p style="margin: 0 0 2px 0;"><strong>તારીખ:</strong> ${esc(reportData.reportDate)}</p>
+            <p style="margin: 0;"><strong>સ્થળ:</strong> ${esc(reportData.place)}</p>
+          </div>
+
+          <div style="text-align: right;">
+            <p style="font-weight: 700; font-size: 13pt; margin: 0 0 2px 0;">લિ. આપનો વિશ્વાસુ,</p>
+            ${
+              includeSignature && officer?.signatureUrl
+                ? `
+              <div style="height: 36px; margin: 2px 0; display: flex; justify-content: flex-end; align-items: center;">
+                <img src="${officer.signatureUrl}" alt="Signature" style="height: 36px; width: auto; max-width: 140px; object-fit: contain; mix-blend-mode: multiply;" />
+              </div>
+            `
+                : `<div style="height: 18px;"></div>`
+            }
+            <p style="font-weight: 800; font-size: 14pt; line-height: 1.25; margin: 0 0 2px 0;">${esc(reportData.signatoryName)}</p>
+            <p style="font-weight: 600; font-size: 12.5pt; margin: 0; color: #1f2937;">${esc(reportData.signatoryRank)} ${esc(reportData.signatoryBuckle)}</p>
+          </div>
+        </div>
+      </div>
+    `;
+
+    try {
+      window.print();
+    } catch {
+      toast("પ્રિન્ટ ઉપલબ્ધ નથી (Print failed)", "error");
+    } finally {
+      setTimeout(() => {
+        document.title = origTitle;
+      }, 1500);
+    }
+  };
+
+  // Filter templates list by category
+  const filteredTemplates = useMemo(() => {
+    if (categoryFilter === "all") return REPORT_TEMPLATES;
+    return REPORT_TEMPLATES.filter((t) => t.category === categoryFilter);
+  }, [categoryFilter]);
+
+  const hasLeaveSegments = Boolean(reportData.leaveSegments && reportData.leaveSegments.length > 0);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-2 sm:p-4 backdrop-blur-xs print:hidden animate-in fade-in duration-150">
+      <div className="flex h-[95vh] w-full max-w-6xl flex-col rounded-2xl bg-card border border-border shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
+        {/* Top Navbar */}
+        <div className="flex items-center justify-between border-b border-border px-3 py-2.5 bg-muted/40 sm:px-6 sm:py-3 shrink-0 gap-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            {step === 2 && (
+              <button
+                type="button"
+                onClick={() => setStep(1)}
+                className="flex size-8 shrink-0 items-center justify-center rounded-xl border border-border bg-card hover:bg-muted text-foreground transition-colors cursor-pointer"
+                title="બીજું ટેમ્પ્લેટ પસંદ કરો (Back to templates)"
+              >
+                <ChevronLeft className="size-4.5" />
+              </button>
+            )}
+
+            <div className="flex size-8 sm:size-9 shrink-0 items-center justify-center rounded-xl bg-indigo-600/10 text-indigo-600 dark:text-indigo-400">
+              <FileCheck className="size-4 sm:size-5" />
+            </div>
+
+            <div className="min-w-0">
+              <h2 className="text-xs sm:text-base font-bold text-foreground flex items-center gap-1.5 truncate">
+                {step === 1 ? (
+                  <span>નવો રિપોર્ટ / લેટર બનાવો (Create Official Letter)</span>
+                ) : (
+                  <>
+                    <span className="truncate">{reportData.templateTitle}</span>
+                    <span className="text-[10px] bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 px-1.5 py-0.5 rounded-full font-semibold shrink-0">
+                      સંપાદન &amp; પ્રિન્ટ
+                    </span>
+                  </>
+                )}
+              </h2>
+              <p className="text-[11px] text-muted-foreground hidden sm:block">
+                {step === 1
+                  ? "ગુજરાત પોલીસ અધિકૃત પત્ર વ્યવહાર અને રજા ટેમ્પ્લેટ પસંદ કરો."
+                  : "તમામ વિગતો સરળતાથી એડિટ કરી શકાય છે અને લાઈવ પ્રિવ્યુ જોઈ શકાય છે."}
+              </p>
+            </div>
+          </div>
+
+          {/* Top Actions */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {step === 2 && (
+              <button
+                type="button"
+                onClick={handlePrint}
+                className="flex items-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 px-3 py-1.5 text-xs font-bold text-white shadow-md shadow-indigo-600/30 transition-all cursor-pointer"
+              >
+                <Printer className="size-3.5 shrink-0" />
+                <span className="hidden sm:inline">પ્રિન્ટ / PDF</span>
+                <span className="sm:hidden">પ્રિન્ટ</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex size-8 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
+              title="બંધ કરો (Close)"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Dedicated Mobile View Switcher Sub-Bar (Step 2) */}
+        {step === 2 && (
+          <div className="flex lg:hidden items-center border-b border-border bg-card px-3 py-1.5 shrink-0 shadow-2xs">
+            <div className="grid grid-cols-2 w-full rounded-xl bg-muted p-1 border border-border/80 text-xs">
+              <button
+                type="button"
+                onClick={() => setMobileTab("edit")}
+                className={`flex items-center justify-center gap-1.5 rounded-lg py-1.5 font-bold transition-all cursor-pointer ${
+                  mobileTab === "edit"
+                    ? "bg-indigo-600 text-white shadow-2xs"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Edit3 className="size-3.5" />
+                <span>એડિટ કરો (Edit)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setMobileTab("preview")}
+                className={`flex items-center justify-center gap-1.5 rounded-lg py-1.5 font-bold transition-all cursor-pointer ${
+                  mobileTab === "preview"
+                    ? "bg-indigo-600 text-white shadow-2xs"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Eye className="size-3.5" />
+                <span>લાઈવ પ્રિવ્યુ (Preview)</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 1: Template Selection Screen */}
+        {step === 1 && (
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 bg-background">
+            {/* Category Filter Pills */}
+            <div className="flex flex-wrap items-center gap-1.5 border-b border-border pb-3">
+              {[
+                { id: "all", label: "તમામ ફોર્મેટ (All)" },
+                { id: "leave", label: "રજા અરજી (Leaves)" },
+                { id: "duty", label: "કામગીરી અહેવાલ (Duty)" },
+                { id: "official", label: "સત્તાવાર પત્રો (Official)" },
+                { id: "custom", label: "કોરો લેટર (Blank)" },
+              ].map((cat) => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setCategoryFilter(cat.id)}
+                  className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                    categoryFilter === cat.id
+                      ? "bg-indigo-600 text-white shadow-xs"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Templates Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              {filteredTemplates.map((tpl) => {
+                const isSelected = selectedTemplateId === tpl.id;
+                return (
+                  <div
+                    key={tpl.id}
+                    onClick={() => handleSelectTemplate(tpl)}
+                    className={`group relative flex flex-col justify-between rounded-2xl border p-4 sm:p-5 transition-all duration-150 cursor-pointer ${
+                      isSelected
+                        ? "border-indigo-600 bg-indigo-50/40 dark:bg-indigo-950/20 shadow-md ring-2 ring-indigo-500/20"
+                        : "border-border bg-card hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-sm"
+                    }`}
+                  >
+                    <div className="space-y-2.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex size-10 items-center justify-center rounded-xl bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 group-hover:scale-105 transition-transform">
+                          {tpl.iconName === "CalendarDays" && <CalendarDays className="size-5" />}
+                          {tpl.iconName === "FileSpreadsheet" && <FileSpreadsheet className="size-5" />}
+                          {tpl.iconName === "Award" && <Award className="size-5" />}
+                          {tpl.iconName === "ShieldAlert" && <ShieldAlert className="size-5" />}
+                          {tpl.iconName === "FileText" && <FileText className="size-5" />}
+                          {tpl.iconName === "PlusSquare" && <PlusSquare className="size-5" />}
+                        </div>
+
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                            tpl.id === "merged_leave"
+                              ? "bg-indigo-600 text-white shadow-xs"
+                              : tpl.id === "holiday_leave"
+                                ? "bg-amber-500 text-white shadow-xs"
+                                : "bg-muted text-muted-foreground"
+                          }`}
+                        >
+                          {tpl.badge}
+                        </span>
+                      </div>
+
+                      <div>
+                        <h3 className="text-sm sm:text-base font-bold text-foreground group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                          {tpl.titleGu}
+                        </h3>
+                        <p className="text-[11px] font-medium text-muted-foreground">{tpl.titleEn}</p>
+                      </div>
+
+                      <p className="text-xs text-muted-foreground/90 leading-relaxed line-clamp-3">
+                        {tpl.description}
+                      </p>
+                    </div>
+
+                    <div className="mt-4 pt-3 border-t border-border/60 flex items-center justify-between text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+                      <span>આ ફોર્મેટ પસંદ કરો</span>
+                      <span className="transition-transform group-hover:translate-x-1">→</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* STEP 2: Dual Editor & Live A4 Preview */}
+        {step === 2 && (
+          <div className="flex-1 flex flex-col lg:flex-row overflow-hidden bg-background">
+            {/* LEFT PANE: Form Inputs */}
+            <div
+              className={`w-full lg:w-1/2 flex flex-col border-r border-border overflow-y-auto p-4 sm:p-5 space-y-4 ${
+                mobileTab === "preview" ? "hidden lg:flex" : "flex"
+              }`}
+            >
+              {/* Quick Controls Deck */}
+              <div className="rounded-2xl border border-border/80 bg-gradient-to-r from-muted/40 via-card to-muted/40 p-2.5 sm:p-3 shadow-xs text-xs backdrop-blur-xs space-y-2">
+                <div className="flex items-center justify-between border-b border-border/50 pb-1.5">
+                  <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                    <SlidersHorizontal className="size-3 text-indigo-500" />
+                    <span>કંટ્રોલ પેનલ (Settings)</span>
+                  </span>
+                  {/* Reset button */}
+                  <button
+                    type="button"
+                    onClick={handleResetToDefault}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-border/70 hover:bg-muted text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-all cursor-pointer shadow-2xs"
+                    title="ટેમ્પ્લેટ રીસેટ કરો"
+                  >
+                    <RotateCcw className="size-3" />
+                    <span>રીસેટ (Reset)</span>
+                  </button>
+                </div>
+
+                {/* Symmetrical 2x2 on Mobile, Flex on Desktop */}
+                <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-1.5 sm:gap-2">
+                  {/* Police Logo Toggle */}
+                  <button
+                    type="button"
+                    onClick={() => updateField("showLogo", reportData.showLogo === false ? true : false)}
+                    className={`flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer shadow-2xs ${
+                      reportData.showLogo !== false
+                        ? "bg-indigo-600 text-white border-indigo-600 shadow-indigo-600/25"
+                        : "bg-card text-muted-foreground border-border hover:bg-muted hover:text-foreground"
+                    }`}
+                    title="ગુજરાત પોલીસ લોગો ચાલુ / બંધ કરો"
+                  >
+                    <Shield className="size-3.5 shrink-0" />
+                    <span>લોગો</span>
+                    <span
+                      className={`text-[10px] font-bold px-1.5 py-0.2 rounded-md ${
+                        reportData.showLogo !== false
+                          ? "bg-white/20 text-white"
+                          : "bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {reportData.showLogo !== false ? "ON" : "OFF"}
+                    </span>
+                  </button>
+
+                  {/* Hide Header Toggle */}
+                  <button
+                    type="button"
+                    onClick={() => updateField("showHeader", !reportData.showHeader)}
+                    className={`flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer shadow-2xs ${
+                      !reportData.showHeader
+                        ? "bg-amber-600 text-white border-amber-600 shadow-amber-600/25"
+                        : "bg-card text-foreground border-border hover:bg-muted"
+                    }`}
+                    title="પહેલેથી છપાયેલ કાગળ માટે હેડર છુપાવો"
+                  >
+                    {reportData.showHeader ? (
+                      <Eye className="size-3.5 text-indigo-500 shrink-0" />
+                    ) : (
+                      <EyeOff className="size-3.5 shrink-0" />
+                    )}
+                    <span>હેડર</span>
+                    <span
+                      className={`text-[10px] font-bold px-1.5 py-0.2 rounded-md ${
+                        !reportData.showHeader
+                          ? "bg-white/20 text-white"
+                          : "bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400"
+                      }`}
+                    >
+                      {!reportData.showHeader ? "છુપાવેલ" : "સામાન્ય"}
+                    </span>
+                  </button>
+
+                  {/* Signature Toggle */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = !includeSignature;
+                      setIncludeSignature(next);
+                      updateField("includeSignature", next);
+                    }}
+                    className={`flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer shadow-2xs ${
+                      includeSignature
+                        ? "bg-emerald-600 text-white border-emerald-600 shadow-emerald-600/25"
+                        : "bg-card text-foreground border-border hover:bg-muted"
+                    }`}
+                    title={
+                      officer?.signatureUrl
+                        ? "રિપોર્ટમાં તમારી ડિજિટલ સહી ઉમેરો"
+                        : "પ્રોફાઈલમાં સહી અપલોડ થયેલ નથી"
+                    }
+                  >
+                    <Check
+                      className={`size-3.5 shrink-0 ${
+                        includeSignature ? "text-white" : "text-muted-foreground"
+                      }`}
+                    />
+                    <span>સહી</span>
+                    <span
+                      className={`text-[10px] font-bold px-1.5 py-0.2 rounded-md ${
+                        includeSignature
+                          ? "bg-white/20 text-white"
+                          : "bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {includeSignature ? "ON" : "OFF"}
+                    </span>
+                  </button>
+
+                  {/* Gujarati Digits Toggle */}
+                  <button
+                    type="button"
+                    onClick={handleToggleDigits}
+                    className={`flex items-center justify-center gap-1 px-2.5 py-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer shadow-2xs ${
+                      useGujaratiDigits
+                        ? "bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border-indigo-400/50"
+                        : "bg-card text-foreground border-border hover:bg-muted"
+                    }`}
+                    title="ગુજરાતી કે અંગ્રેજી અંકો"
+                  >
+                    <span>{useGujaratiDigits ? "અંકો: ૧ ૨ ૩" : "Digits: 1 2 3"}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* ALWAYS VISIBLE 1: Executive Subject (વિષય) */}
+              <div className="rounded-2xl border border-indigo-500/30 bg-gradient-to-r from-indigo-50/70 via-purple-50/30 to-background dark:from-indigo-950/35 dark:via-background dark:to-purple-950/20 p-3 sm:p-3.5 space-y-2 shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-indigo-950 dark:text-indigo-200 flex items-center gap-1.5">
+                    <span className="flex size-2 rounded-full bg-indigo-600 animate-pulse" />
+                    <span>વિષય (Subject)</span>
+                  </label>
+                  <span className="text-[10px] bg-indigo-600/10 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded-md font-bold border border-indigo-500/20">
+                    અધિકૃત વિષય લાઇન
+                  </span>
+                </div>
+                <input
+                  type="text"
+                  value={reportData.subject}
+                  onChange={(e) => updateField("subject", e.target.value)}
+                  className="w-full rounded-xl border border-indigo-300/80 dark:border-indigo-700/70 bg-card p-2.5 text-xs font-bold text-foreground focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none shadow-2xs leading-relaxed"
+                  placeholder="વિષય: રજા મંજૂર કરવા બાબત."
+                />
+              </div>
+
+              {/* ALWAYS VISIBLE 2: To (પ્રતિ) & From (અરજદાર) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* To (પ્રતિ) */}
+                <div className="rounded-xl border border-border/80 bg-card p-3 space-y-1.5 shadow-2xs">
+                  <label className="text-xs font-bold text-foreground flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <Building className="size-3.5 text-indigo-500" />
+                      <span>પ્રતિ (To / Recipient)</span>
+                    </span>
+                    <span className="text-[10px] text-muted-foreground font-normal">હોદ્દો / કચેરી</span>
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={reportData.toLines}
+                    onChange={(e) => updateField("toLines", e.target.value)}
+                    className="w-full rounded-lg border border-input bg-background/50 p-2 text-xs font-medium focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 leading-relaxed shadow-2xs"
+                    placeholder="પ્રતિ,&#10;પોલીસ સબ ઇન્સપેક્ટરશ્રી..."
+                  />
+                </div>
+
+                {/* From / Applicant (અરજદાર) */}
+                <div className="rounded-xl border border-border/80 bg-card p-3 space-y-1.5 shadow-2xs">
+                  <label className="text-xs font-bold text-foreground flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <User className="size-3.5 text-purple-500" />
+                      <span>અરજદાર (From / Applicant)</span>
+                    </span>
+                    <span className="text-[10px] text-muted-foreground font-normal">પોલીસ કોન્સ્ટેબલ / અરજદાર</span>
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={reportData.applicantLine}
+                    onChange={(e) => updateField("applicantLine", e.target.value)}
+                    className="w-full rounded-lg border border-input bg-background/50 p-2 text-xs font-medium focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 leading-relaxed shadow-2xs"
+                    placeholder="અરજદાર: પો.કો. રમેશભાઈ..."
+                  />
+                </div>
+              </div>
+
+              {/* CONDITIONAL SUB-SECTION SELECTOR PILLS */}
+              <div className="flex items-center gap-1.5 overflow-x-auto p-1 pr-3 no-scrollbar border-b border-border/80 text-xs shrink-0">
+                <span className="text-[11px] font-semibold text-muted-foreground mr-1 flex items-center gap-1 shrink-0">
+                  <Layers className="size-3.5 text-indigo-500" />
+                  <span>વિભાગ:</span>
+                </span>
+
+                {hasLeaveSegments && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveSection("leave")}
+                    className={`shrink-0 rounded-xl px-2.5 sm:px-3 py-1.5 text-xs font-bold transition-all cursor-pointer whitespace-nowrap shadow-2xs ${
+                      activeSection === "leave"
+                        ? "bg-indigo-600 text-white shadow-indigo-600/20"
+                        : "bg-muted/70 text-muted-foreground hover:text-foreground hover:bg-muted"
+                    }`}
+                  >
+                    📅 રજા વિગત
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setActiveSection("content")}
+                  className={`shrink-0 rounded-xl px-2.5 sm:px-3 py-1.5 text-xs font-bold transition-all cursor-pointer whitespace-nowrap shadow-2xs ${
+                    activeSection === "content"
+                      ? "bg-indigo-600 text-white shadow-indigo-600/20"
+                      : "bg-muted/70 text-muted-foreground hover:text-foreground hover:bg-muted"
+                  }`}
+                >
+                  ✍️ પત્ર ફકરા
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveSection("header")}
+                  className={`shrink-0 rounded-xl px-2.5 sm:px-3 py-1.5 text-xs font-bold transition-all cursor-pointer whitespace-nowrap shadow-2xs ${
+                    activeSection === "header"
+                      ? "bg-indigo-600 text-white shadow-indigo-600/20"
+                      : "bg-muted/70 text-muted-foreground hover:text-foreground hover:bg-muted"
+                  }`}
+                >
+                  🏛️ હેડર
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveSection("all")}
+                  className={`shrink-0 rounded-xl px-2.5 sm:px-3 py-1.5 text-xs font-bold transition-all cursor-pointer whitespace-nowrap shadow-2xs ${
+                    activeSection === "all"
+                      ? "bg-indigo-600 text-white shadow-indigo-600/20"
+                      : "bg-muted/70 text-muted-foreground hover:text-foreground hover:bg-muted"
+                  }`}
+                >
+                  📋 તમામ
+                </button>
+              </div>
+
+              {/* SECTION A: Leave Segment Builder (Shown when 'leave' or 'all') */}
+              {hasLeaveSegments && (activeSection === "leave" || activeSection === "all") && (
+                <div className="animate-in fade-in duration-150">
+                  <LeaveSegmentBuilder
+                    segments={reportData.leaveSegments!}
+                    useGujaratiDigits={useGujaratiDigits}
+                    displayFormat={reportData.leaveDisplayFormat || "table"}
+                    dbLeaveTypes={leaveTypes}
+                    onFormatChange={(fmt) => updateField("leaveDisplayFormat", fmt)}
+                    onChange={(updated, newSubject, narrative) => {
+                      updateField("leaveSegments", updated);
+                      if (newSubject) {
+                        updateField("subject", newSubject);
+                      }
+                      if (reportData.leaveDisplayFormat === "paragraph" && narrative) {
+                        updateField("paragraph1", narrative);
+                      }
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* SECTION B: Body Content / Paragraphs (Shown when 'content' or 'all') */}
+              {(activeSection === "content" || activeSection === "all") && (
+                <div className="space-y-3 rounded-xl border border-border p-3 bg-muted/15 animate-in fade-in duration-150">
+                  <div className="flex items-center justify-between border-b border-border/50 pb-1.5">
+                    <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                      <FileEdit className="size-3.5 text-indigo-600 dark:text-indigo-400" />
+                      <span>પત્ર લખાણ અને ફકરાઓ (Letter Body Paragraphs)</span>
+                    </span>
+                  </div>
+
+                  {/* Reference (સંદર્ભ) */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-muted-foreground">સંદર્ભ (Reference - વૈકલ્પિક)</label>
+                    <input
+                      type="text"
+                      value={reportData.reference || ""}
+                      onChange={(e) => updateField("reference", e.target.value)}
+                      className="w-full rounded-xl border border-input bg-background p-2 text-xs font-medium focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
+                      placeholder="સંદર્ભ: આપશ્રીના જા.નં. / ઓર્ડર..."
+                    />
+                  </div>
+
+                  {/* Paragraph 1 (પ્રથમ ફકરો) */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-foreground">પ્રથમ ફકરો (Opening Context / Reason)</label>
+                    <textarea
+                      rows={3}
+                      value={reportData.paragraph1}
+                      onChange={(e) => updateField("paragraph1", e.target.value)}
+                      className="w-full rounded-xl border border-input bg-background p-2.5 text-xs font-medium focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none leading-relaxed"
+                    />
+                  </div>
+
+                  {/* Paragraph 2 (બીજો ફકરો) */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-foreground">
+                      બીજો ફકરો (Specific Request / Headquarter Permission)
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={reportData.paragraph2}
+                      onChange={(e) => updateField("paragraph2", e.target.value)}
+                      className="w-full rounded-xl border border-input bg-background p-2.5 text-xs font-medium focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none leading-relaxed"
+                    />
+                  </div>
+
+                  {/* Paragraph 3 (ત્રીજો ફકરો - Optional) */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-muted-foreground">
+                      વધુમાં / ત્રીજો ફકરો (Additional Note - વૈકલ્પિક)
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={reportData.paragraph3 || ""}
+                      onChange={(e) => updateField("paragraph3", e.target.value)}
+                      className="w-full rounded-xl border border-input bg-background p-2 text-xs font-medium focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none leading-relaxed"
+                      placeholder="રજા પૂર્ણ થયે સમયસર હાજર થઈશ..."
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* SECTION C: Header Settings (Shown when 'header' or 'all') */}
+              {(activeSection === "header" || activeSection === "all") && (
+                <div className="rounded-xl border border-indigo-500/30 bg-indigo-50/30 dark:bg-indigo-950/20 p-3 space-y-3 animate-in fade-in duration-150">
+                  <div className="flex items-center justify-between border-b border-indigo-200/50 dark:border-indigo-800/40 pb-2">
+                    <span className="text-xs font-bold text-indigo-950 dark:text-indigo-200 flex items-center gap-1.5">
+                      <SlidersHorizontal className="size-3.5 text-indigo-600 dark:text-indigo-400" />
+                      <span>લેટરહેડ હેડર લાઇન (Letterhead Headers)</span>
+                    </span>
+
+                    {/* Status Badge reflecting top Quick Controls toggle */}
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
+                        reportData.showHeader
+                          ? "bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border-indigo-300/50"
+                          : "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-300/50"
+                      }`}
+                    >
+                      {reportData.showHeader ? "સામાન્ય (Visible)" : "છુપાવેલ (Hidden)"}
+                    </span>
+                  </div>
+
+                  {reportData.showHeader ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs pt-1">
+                      <div>
+                        <label className="text-[10px] text-muted-foreground block mb-0.5">
+                          હેડર લાઇન ૧ (રાજ્ય / સંસ્થા)
+                        </label>
+                        <input
+                          type="text"
+                          value={reportData.headerLine1}
+                          onChange={(e) => updateField("headerLine1", e.target.value)}
+                          className="w-full rounded-lg border border-input bg-background p-2 text-xs font-bold"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-muted-foreground block mb-0.5">
+                          હેડર લાઇન ૨ (સ્ટેશન / કચેરી)
+                        </label>
+                        <input
+                          type="text"
+                          value={reportData.headerLine2}
+                          onChange={(e) => updateField("headerLine2", e.target.value)}
+                          className="w-full rounded-lg border border-input bg-background p-2 text-xs font-medium"
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-700 dark:text-amber-300">
+                      <EyeOff className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                      <span>
+                        પહેલેથી છપાયેલ કાગળ (Pre-printed letterhead) માટે હેડર છુપાવેલ છે. ઉપર કંટ્રોલ પેનલમાંથી &quot;હેડર&quot; બટન દબાવીને ચાલુ કરી શકો છો.
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ALWAYS VISIBLE 3: Footer Section (Date & Place on Left, Signatory on Right) */}
+              <div className="rounded-xl border border-border p-3 space-y-2.5 bg-muted/20">
+                <h5 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                  નીચેનો ભાગ (Footer Settings)
+                </h5>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  {/* Left Side: Date & Place */}
+                  <div className="space-y-2 border-r border-border/50 pr-0 sm:pr-2">
+                    <span className="text-[11px] font-bold text-foreground">ડાબી બાજુ (Left Side)</span>
+                    <div>
+                      <label className="text-[10px] text-muted-foreground block mb-0.5">તારીખ (Date)</label>
+                      <input
+                        type="text"
+                        value={reportData.reportDate}
+                        onChange={(e) => updateField("reportDate", e.target.value)}
+                        className="w-full rounded-lg border border-input bg-background p-1.5 text-xs font-medium"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-muted-foreground block mb-0.5">સ્થળ (Place)</label>
+                      <input
+                        type="text"
+                        value={reportData.place}
+                        onChange={(e) => updateField("place", e.target.value)}
+                        className="w-full rounded-lg border border-input bg-background p-1.5 text-xs font-medium"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Right Side: Signatory */}
+                  <div className="space-y-2 pl-0 sm:pl-1">
+                    <span className="text-[11px] font-bold text-foreground">જમણી બાજુ (Signatory)</span>
+                    <div>
+                      <label className="text-[10px] text-muted-foreground block mb-0.5">નામ (Name)</label>
+                      <input
+                        type="text"
+                        value={reportData.signatoryName}
+                        onChange={(e) => updateField("signatoryName", e.target.value)}
+                        className="w-full rounded-lg border border-input bg-background p-1.5 text-xs font-bold"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <div>
+                        <label className="text-[10px] text-muted-foreground block mb-0.5">હોદ્દો (Rank)</label>
+                        <input
+                          type="text"
+                          value={reportData.signatoryRank}
+                          onChange={(e) => updateField("signatoryRank", e.target.value)}
+                          className="w-full rounded-lg border border-input bg-background p-1.5 text-xs font-medium"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-muted-foreground block mb-0.5">બ.નં. (Buckle)</label>
+                        <input
+                          type="text"
+                          value={reportData.signatoryBuckle}
+                          onChange={(e) => updateField("signatoryBuckle", e.target.value)}
+                          className="w-full rounded-lg border border-input bg-background p-1.5 text-xs font-medium"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* RIGHT PANE: Live A4 Paper Preview */}
+            <div
+              className={`w-full lg:w-1/2 flex flex-col bg-muted/40 p-3 sm:p-6 overflow-y-auto ${
+                mobileTab === "edit" ? "hidden lg:flex" : "flex"
+              }`}
+            >
+              {/* Top Banner on Preview Pane */}
+              <div className="flex items-center justify-between mb-3">
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-muted-foreground">
+                  <Eye className="size-3.5" />
+                  <span>લાઈવ A4 પ્રિવ્યુ (Live Letterhead Preview)</span>
+                </span>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleCopyText}
+                    className="inline-flex items-center gap-1 rounded-lg border border-border bg-card px-2.5 py-1 text-xs font-semibold text-foreground hover:bg-muted transition-colors cursor-pointer"
+                    title="લખાણ કોપી કરો"
+                  >
+                    <Copy className="size-3" />
+                    <span>કોપી લખાણ</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handlePrint}
+                    className="inline-flex items-center gap-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 px-3 py-1 text-xs font-bold text-white shadow-xs transition-colors cursor-pointer"
+                  >
+                    <Printer className="size-3" />
+                    <span>પ્રિન્ટ</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Realistic A4 Sheet Card */}
+              <div className="w-full max-w-[700px] mx-auto rounded-lg border border-gray-300 dark:border-gray-700 bg-white text-gray-900 shadow-2xl shadow-indigo-950/15 p-3.5 sm:p-7 md:p-10 font-sans text-xs leading-relaxed space-y-3.5 sm:space-y-4 ring-1 ring-black/5">
+                {/* Header: Rendered only if showHeader is TRUE */}
+                {reportData.showHeader ? (
+                  <div className="border-b-2 border-black pb-2 sm:pb-3 mb-3 sm:mb-4">
+                    <div className="flex items-center justify-between gap-1 sm:gap-2">
+                      {reportData.showLogo !== false ? (
+                        <div className="w-10 sm:w-11 flex justify-start items-center shrink-0">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src="/Gujarat-police.png"
+                            alt="Gujarat Police Logo"
+                            width={40}
+                            height={52}
+                            className="h-10 sm:h-12 w-auto object-contain drop-shadow-xs"
+                            style={{ aspectRatio: "1542/2000" }}
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-1 shrink-0"></div>
+                      )}
+
+                      <div className="text-center flex-1 min-w-0 px-1">
+                        <h1 className="text-sm sm:text-lg font-extrabold tracking-wide text-gray-950 uppercase font-serif whitespace-nowrap leading-tight">
+                          {reportData.headerLine1}
+                        </h1>
+                        {reportData.headerLine2 && (
+                          <p className="text-xs sm:text-sm font-semibold text-gray-700 mt-0.5 tracking-wide leading-tight truncate">
+                            {reportData.headerLine2}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className={reportData.showLogo !== false ? "w-10 sm:w-11 shrink-0" : "w-1 shrink-0"}></div>
+                    </div>
+                    {/* Double hairline rule for official government documents */}
+                    <div className="border-t border-black/40 mt-1.5 sm:mt-2"></div>
+                  </div>
+                ) : (
+                  <div className="text-center py-2 mb-2 bg-amber-500/10 border border-amber-500/30 rounded-lg text-[10px] text-amber-800 font-semibold print:hidden flex items-center justify-center gap-1.5 shadow-2xs">
+                    <EyeOff className="size-3.5 text-amber-600" />
+                    <span>લેટરહેડ હેડર છુપાવેલ છે (પહેલેથી છપાયેલ સરકારી કાગળ માટે)</span>
+                  </div>
+                )}
+
+                {/* To */}
+                <div className="whitespace-pre-line text-xs sm:text-sm leading-snug text-gray-900 font-medium">
+                  {reportData.toLines}
+                </div>
+
+                {/* Applicant (clean without start line) */}
+                {reportData.applicantLine && (
+                  <div className="text-xs sm:text-sm font-bold text-gray-900">
+                    {reportData.applicantLine}
+                  </div>
+                )}
+
+                {/* Subject (clean, bold and centered with prominent font size) */}
+                <div className="font-extrabold text-sm sm:text-base text-center tracking-wide leading-snug text-gray-950 my-2">
+                  {reportData.subject}
+                </div>
+
+                {/* Reference */}
+                {reportData.reference && (
+                  <div className="text-xs sm:text-sm font-semibold text-center text-gray-800">{reportData.reference}</div>
+                )}
+
+                {/* Salutation */}
+                <div className="font-bold text-xs sm:text-sm pt-0.5">{reportData.salutation}</div>
+
+                {/* Paragraph 1 */}
+                <p className="text-xs sm:text-sm leading-normal text-justify indent-6 text-gray-900">
+                  {reportData.paragraph1}
+                </p>
+
+                {/* Leave Breakdown Table if Multiple Leave & mode is table or both */}
+                {reportData.leaveDisplayFormat !== "paragraph" &&
+                  reportData.leaveSegments &&
+                  reportData.leaveSegments.length > 0 && (
+                    <div className="my-3 overflow-x-auto">
+                      <table className="w-full border-collapse text-xs border border-gray-400">
+                        <thead>
+                          <tr className="bg-gray-100 font-bold border-b border-gray-400 text-gray-900">
+                            <th className="p-1.5 text-center w-8 border-r border-gray-400">અ.નં.</th>
+                            <th className="p-1.5 text-left border-r border-gray-400">તારીખ (ગાળો)</th>
+                            <th className="p-1.5 text-left border-r border-gray-400">રજાનો પ્રકાર</th>
+                            <th className="p-1.5 text-center w-14 border-r border-gray-400">દિવસ</th>
+                            <th className="p-1.5 text-left">કારણ / શેરો</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {reportData.leaveSegments.map((seg, idx) => {
+                            const range = formatSegmentDateRange(
+                              seg.startDate,
+                              seg.endDate,
+                              useGujaratiDigits,
+                            );
+                            return (
+                              <tr key={seg.id || idx} className="border-b border-gray-300">
+                                <td className="p-1.5 text-center font-bold border-r border-gray-300">
+                                  {numFn(idx + 1)}
+                                </td>
+                                <td className="p-1.5 border-r border-gray-300 font-semibold">{range}</td>
+                                <td className="p-1.5 border-r border-gray-300 font-semibold">
+                                  {seg.shortLabel || seg.leaveTypeName}
+                                </td>
+                                <td className="p-1.5 text-center font-bold border-r border-gray-300">
+                                  {numFn(seg.days)}
+                                </td>
+                                <td className="p-1.5">{seg.reason || "—"}</td>
+                              </tr>
+                            );
+                          })}
+                          <tr className="bg-gray-50 font-bold border-t border-gray-400">
+                            <td colSpan={3} className="p-1.5 text-right border-r border-gray-300">
+                              કુલ રજા દિવસ:
+                            </td>
+                            <td className="p-1.5 text-center border-r border-gray-300 text-indigo-700">
+                              {numFn(
+                                reportData.leaveSegments.reduce(
+                                  (sum, s) => sum + (Number(s.days) || 0),
+                                  0,
+                                ),
+                              )}
+                            </td>
+                            <td className="p-1.5"></td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
+                {/* Paragraph 2 */}
+                {reportData.paragraph2 && (
+                  <p className="text-xs sm:text-sm leading-normal text-justify indent-6 text-gray-900">
+                    {reportData.paragraph2}
+                  </p>
+                )}
+
+                {/* Paragraph 3 */}
+                {reportData.paragraph3 && (
+                  <p className="text-xs sm:text-sm leading-normal text-justify indent-6 text-gray-900">
+                    {reportData.paragraph3}
+                  </p>
+                )}
+
+                {/* Footer Section */}
+                <div className="pt-4 mt-3 flex justify-between items-end border-t border-gray-200">
+                  <div className="space-y-0.5 text-xs sm:text-sm">
+                    <p>
+                      <strong>તારીખ:</strong> {reportData.reportDate}
+                    </p>
+                    <p>
+                      <strong>સ્થળ:</strong> {reportData.place}
+                    </p>
+                  </div>
+
+                  <div className="text-right">
+                    <p className="font-bold text-xs sm:text-sm mb-1">લિ. આપનો વિશ્વાસુ,</p>
+
+                    {/* Signature Preview */}
+                    {includeSignature && officer?.signatureUrl ? (
+                      <div className="h-8 max-h-8 my-1 flex justify-end items-center">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={officer.signatureUrl}
+                          alt="Signature"
+                          className="h-8 max-h-8 w-auto max-w-[130px] object-contain mix-blend-multiply"
+                        />
+                      </div>
+                    ) : (
+                      <div className="h-5"></div>
+                    )}
+
+                    <p className="font-bold text-xs sm:text-sm leading-tight text-gray-950">
+                      {reportData.signatoryName}
+                    </p>
+                    <p className="text-[11px] sm:text-xs font-semibold text-gray-700">
+                      {reportData.signatoryRank} {reportData.signatoryBuckle}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

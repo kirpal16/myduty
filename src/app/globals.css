@@ -409,14 +409,15 @@
    paper version plain: white page, black text whatever theme the app is in,
    the column headings repeated on every page, and no row split across two.
    --------------------------------------------------------------------------- */
+/* No page margin at top-level: instructs all browsers (Chrome, Edge, Safari, Android)
+   to completely omit their own date, page title, URL, and page number headers/footers.
+   Reports provide their own proper padding. */
+@page {
+  size: A4 portrait;
+  margin: 0;
+}
+
 @media print {
-  /* No page margin: that is what makes browsers (and Android) stop stamping
-     their own date / title / URL header and footer on the sheet. The report
-     supplies its own margins (.rp-space rows and .rp-body padding). */
-  @page {
-    size: A4 portrait;
-    margin: 0;
-  }
 
   /* Paper is white whatever theme the app is in: strip every app background
      and shadow, then let the report's own shading back in below. */
@@ -506,8 +507,10 @@
 }
 
 .report-print .rp-logo {
-  width: 17mm;
+  width: auto;
+  max-width: 17mm;
   height: 17mm;
+  aspect-ratio: 1542 / 2000;
   object-fit: contain;
 }
 

@@ -112,7 +112,7 @@ export function ReportPrintView({
                   {/* Gujarat Police Official Header */}
                   <div className="flex items-center justify-between border-b-2 border-black pb-3 mb-4">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src="/Gujarat-police.png" alt="Gujarat Police" className="rp-logo h-16 w-16 object-contain" />
+                    <img src="/Gujarat-police.png" alt="Gujarat Police" width={40} height={52} className="rp-logo object-contain" style={{ width: "40px", height: "52px", aspectRatio: "1542/2000" }} />
                     <div className="text-center flex-1 mx-4">
                       <h2 className="text-xl font-bold tracking-wide">{header1}</h2>
                       <p className="text-sm font-semibold text-gray-800">

@@ -27,9 +27,11 @@ import { ReportEditModal } from "./report-edit-modal";
 export function PrintReportButton({
   report,
   officer,
+  className = "",
 }: {
   report: PrintReport;
   officer: PrintOfficer | null;
+  className?: string;
 }) {
   const { toast } = useToast();
   const [busy, setBusy] = useState(false);
@@ -72,11 +74,16 @@ export function PrintReportButton({
         type="button"
         onClick={handleOpenEditModal}
         disabled={busy}
-        className="flex items-center gap-1.5 whitespace-nowrap rounded-xl border border-border bg-card px-2.5 py-2 text-xs font-semibold text-foreground shadow-2xs transition-colors hover:bg-muted disabled:opacity-60 cursor-pointer sm:gap-2 sm:px-4 sm:py-2.5 sm:text-sm"
+        className={`flex items-center gap-2 whitespace-nowrap rounded-xl border border-border bg-card px-3.5 py-2.5 text-xs sm:text-sm font-semibold text-foreground shadow-2xs transition-all hover:bg-muted active:scale-[0.98] disabled:opacity-60 cursor-pointer ${className}`}
         title="પ્રિન્ટ અને એડિટ કરો (Review & Print official letterhead)"
       >
-        {busy ? <Loader2 className="size-4 shrink-0 animate-spin" /> : <Printer className="size-4 shrink-0" />}
-        <span>પ્રિન્ટ / એડિટ (Print)</span>
+        {busy ? (
+          <Loader2 className="size-4 shrink-0 animate-spin" />
+        ) : (
+          <Printer className="size-4 shrink-0 text-indigo-500" />
+        )}
+        <span className="sm:hidden">પ્રિન્ટ / એડિટ</span>
+        <span className="hidden sm:inline">પ્રિન્ટ / એડિટ (Print)</span>
       </button>
 
       <ReportEditModal
