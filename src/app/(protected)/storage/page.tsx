@@ -61,13 +61,13 @@ export default async function StoragePage({
 
   let query = supabase
     .from("file_attachments")
-    .select("id, original_filename, mime_type, size_bytes, created_at", {
+    .select("id, original_filename, mime_type, size_bytes, created_at, description", {
       count: "exact",
     })
     .order("created_at", { ascending: false });
 
   if (search) {
-    query = query.ilike("original_filename", `%${search}%`);
+    query = query.or(`original_filename.ilike.%${search}%,description.ilike.%${search}%`);
   }
 
   if (year) {
@@ -133,7 +133,7 @@ export default async function StoragePage({
           }
           searchSlot={
             <SearchInput
-              placeholder="Search file name..."
+              placeholder="Search name or description..."
               defaultValue={search}
             />
           }

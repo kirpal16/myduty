@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth/getCurrentUser";
-import { updateOwnProfile } from "@/actions/settings";
 import {
   setOwnLeaveAllowance,
   createMyLeaveType,
@@ -26,8 +25,6 @@ import {
 } from "@/lib/format/year";
 import { isHolidayLeaveType } from "@/lib/leave/holidayLeaveRules";
 import {
-  Settings as SettingsIcon,
-  User,
   Clock,
   Scale,
   Sparkles,
@@ -49,11 +46,12 @@ import {
 import { DeleteLeaveButton } from "@/components/leave/delete-leave-button";
 import { formatDateRange } from "@/lib/format/datetime";
 import { leaveDayCount, formatDays, summariseBreakdown } from "@/lib/leave/leaveDays";
-import { CalendarOff, Trash2 } from "lucide-react";
+import { CalendarOff } from "lucide-react";
 import { Tabs } from "@/components/ui/tabs";
 import { resolveTab, type TabDef } from "@/lib/ui/tabs";
 import { ActionForm } from "@/components/ui/action-form";
 import { CompactSettingsProfile } from "@/components/settings/compact-settings-profile";
+import { OfficerSignatureEditor } from "@/components/profile/officer-signature-editor";
 import { PrintConfigPanel } from "@/components/settings/print-config-panel";
 import type { OfficerProfileData } from "@/components/profile/officer-profile-container";
 
@@ -170,7 +168,7 @@ export default async function SettingsPage({
     supabase
       .from("users")
       .select(
-        "id, full_name, avatar_url, employee_code, phone, role, status, designation, joining_date, joining_place, current_posting, date_of_birth, blood_group, emergency_contact, home_district, bio, department_id, departments(name)"
+        "id, full_name, avatar_url, signature_url, employee_code, phone, role, status, designation, joining_date, joining_place, current_posting, date_of_birth, blood_group, emergency_contact, home_district, bio, department_id, departments(name)"
       )
       .eq("id", user?.id ?? "")
       .maybeSingle(),
@@ -206,6 +204,7 @@ export default async function SettingsPage({
     id: user?.id ?? "",
     fullName: userRow?.full_name ?? user?.fullName ?? "",
     avatarUrl: userRow?.avatar_url ?? null,
+    signatureUrl: userRow?.signature_url ?? null,
     phone: userRow?.phone,
     email: user?.email,
     departmentId: userRow?.department_id ?? user?.departmentId,
@@ -265,6 +264,9 @@ export default async function SettingsPage({
               officer={officerData}
               departments={departments ?? []}
             />
+
+            {/* Official Signature Card */}
+            <OfficerSignatureEditor initialSignatureUrl={officerData.signatureUrl} />
 
             {/* Time Format Preferences Card */}
             <Card className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-border/80 shadow-xs">

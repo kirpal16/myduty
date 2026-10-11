@@ -121,10 +121,22 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const documentTitle = (formData.get("documentTitle") as string | null)?.trim();
+  const documentDate = formData.get("documentDate") as string | null;
+  const description =
+    (formData.get("documentDescription") as string | null)?.trim() ||
+    (formData.get("description") as string | null)?.trim() ||
+    null;
+
   // Storage key is always server-generated — the client-supplied filename
   // is stored only in original_filename for display, never used to build
   // a path (closes path-traversal/collision risk).
   const ext = extensionForMime(file.type);
+  const cleanTitle = documentTitle?.trim();
+  const filename = cleanTitle
+    ? (cleanTitle.toLowerCase().endsWith(`.${ext}`) ? cleanTitle : `${cleanTitle}.${ext}`)
+    : file.name;
+
   const storageKey = `${relatedEntityType}/${relatedEntityId ?? "unfiled"}/${randomUUID()}.${ext}`;
 
   const admin = createAdminClient();
@@ -141,6 +153,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: uploadError.message }, { status: 500 });
   }
 
+  let insertCreatedAt: string | undefined = undefined;
+  if (documentDate) {
+    const parsedDate = new Date(documentDate);
+    if (!Number.isNaN(parsedDate.getTime())) {
+      insertCreatedAt = parsedDate.toISOString();
+    }
+  }
+
   const { data: row, error: insertError } = await supabase
     .from("file_attachments")
     .insert({
@@ -148,9 +168,11 @@ export async function POST(request: NextRequest) {
       related_entity_type: relatedEntityType,
       related_entity_id: relatedEntityId as string | null,
       uploaded_by: auth.user.id,
-      original_filename: file.name,
+      original_filename: filename,
       mime_type: file.type,
       size_bytes: file.size,
+      description: description || null,
+      ...(insertCreatedAt ? { created_at: insertCreatedAt } : {}),
     })
     .select()
     .single();

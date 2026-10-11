@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Download, Eye, FileText, Image as ImageIcon } from "lucide-react";
+import { Download, Eye, FileText } from "lucide-react";
 import { FilePreviewModal } from "./file-preview-modal";
 import { DeleteFileButton } from "@/components/storage/delete-file-button";
 
@@ -10,6 +10,22 @@ export interface AttachmentCardItem {
   original_filename: string;
   mime_type: string;
   size_bytes: number;
+  created_at?: string;
+  description?: string | null;
+}
+
+function formatAttachmentDate(dateStr?: string) {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("en-US", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
 }
 
 export function AttachmentCardList({
@@ -36,6 +52,7 @@ export function AttachmentCardList({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {attachments.map((file) => {
           const isImage = file.mime_type.startsWith("image/");
+          const formattedDate = formatAttachmentDate(file.created_at);
           return (
             <div
               key={file.id}
@@ -46,7 +63,8 @@ export function AttachmentCardList({
                 className="flex items-center gap-3 truncate flex-1 cursor-pointer group"
               >
                 {isImage ? (
-                  <div className="relative size-11 rounded-xl overflow-hidden border border-border shrink-0">
+                  <div className="relative size-12 rounded-xl overflow-hidden border border-border shrink-0 shadow-2xs">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={`/api/storage/${file.id}`}
                       alt={file.original_filename}
@@ -54,17 +72,34 @@ export function AttachmentCardList({
                     />
                   </div>
                 ) : (
-                  <div className="flex size-11 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 shrink-0">
-                    <FileText className="size-5" />
+                  <div className="flex size-12 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 shrink-0 border border-indigo-500/20">
+                    <FileText className="size-5.5" />
                   </div>
                 )}
-                <div className="flex flex-col truncate">
-                  <span className="text-xs font-semibold text-foreground truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                <div className="flex flex-col truncate min-w-0">
+                  <span
+                    className="text-xs font-semibold text-foreground truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors"
+                    title={file.original_filename}
+                  >
                     {file.original_filename}
                   </span>
-                  <span className="text-[11px] text-muted-foreground">
-                    {formatSize(file.size_bytes)}
-                  </span>
+                  <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] text-muted-foreground truncate mt-0.5">
+                    <span>{formatSize(file.size_bytes)}</span>
+                    {formattedDate && (
+                      <>
+                        <span>•</span>
+                        <span className="truncate">{formattedDate}</span>
+                      </>
+                    )}
+                  </div>
+                  {file.description && (
+                    <span
+                      className="text-[10px] text-muted-foreground/80 truncate mt-0.5 italic"
+                      title={file.description}
+                    >
+                      {file.description}
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -102,6 +137,7 @@ export function AttachmentCardList({
           fileUrl={`/api/storage/${previewFile.id}`}
           mimeType={previewFile.mime_type}
           fileSize={previewFile.size_bytes}
+          description={previewFile.description || undefined}
         />
       )}
     </>

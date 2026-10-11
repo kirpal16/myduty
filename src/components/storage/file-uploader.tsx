@@ -5,15 +5,33 @@ import { useState, useTransition, useRef, useEffect } from "react";
 import { AutoDismissBanner } from "@/components/ui/auto-dismiss-banner";
 import {
   UploadCloud,
-  File,
+  Camera,
   Loader2,
   AlertCircle,
   Eye,
   Pencil,
   Trash2,
   FileText,
+  Clock,
+  Tag,
+  FolderOpen,
 } from "lucide-react";
 import { FilePreviewModal } from "@/components/ui/file-preview-modal";
+import { CameraCaptureModal } from "@/components/ui/camera-capture-modal";
+
+function getLocalDateTimeString(date: Date = new Date()) {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const yyyy = date.getFullYear();
+  const mm = pad(date.getMonth() + 1);
+  const dd = pad(date.getDate());
+  const hh = pad(date.getHours());
+  const min = pad(date.getMinutes());
+  return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+}
+
+function stripExtension(filename: string): string {
+  return filename.replace(/\.[^/.]+$/, "");
+}
 
 export function FileUploader({
   relatedEntityType = "general",
@@ -23,7 +41,7 @@ export function FileUploader({
   relatedEntityType?: string;
   relatedEntityId?: string;
   /**
-   * Fired only after a upload actually succeeds -- never on submit. The
+   * Fired only after an upload actually succeeds -- never on submit. The
    * dialog that hosts this uses it to close itself; closing any earlier
    * would hide the error banner below on a failed upload.
    */
@@ -34,19 +52,17 @@ export function FileUploader({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
-  /**
-   * Separate from `isPending`, and that separation is the bug fix.
-   *
-   * The transition used to start only AFTER `await fetch(...)` resolved, so
-   * `isPending` covered the router.refresh() and not the upload itself: during
-   * the actual transfer the button stayed enabled reading "Upload Now", and by
-   * the time a spinner could appear, handleClear() had unmounted the card
-   * containing it. Double submits were possible for the whole upload.
-   */
+
+  const [documentTitle, setDocumentTitle] = useState("");
+  const [documentDate, setDocumentDate] = useState(() => getLocalDateTimeString());
+  const [documentDescription, setDocumentDescription] = useState("");
+
   const [isUploading, setIsUploading] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const nativeCameraInputRef = useRef<HTMLInputElement | null>(null);
 
   // Auto-dismiss error after 4 seconds
   useEffect(() => {
@@ -59,8 +75,16 @@ export function FileUploader({
 
   const handleFileSelection = (f: File | null) => {
     setSelectedFile(f);
-    if (f && f.type.startsWith("image/")) {
-      setPreviewUrl(URL.createObjectURL(f));
+    if (f) {
+      if (!documentTitle.trim()) {
+        const clean = stripExtension(f.name);
+        setDocumentTitle(clean.startsWith("camera_capture") ? "Camera Photo" : clean);
+      }
+      if (f.type.startsWith("image/")) {
+        setPreviewUrl(URL.createObjectURL(f));
+      } else {
+        setPreviewUrl(null);
+      }
     } else {
       setPreviewUrl(null);
     }
@@ -70,16 +94,17 @@ export function FileUploader({
     e?.stopPropagation();
     setSelectedFile(null);
     setPreviewUrl(null);
+    setDocumentTitle("");
+    setDocumentDescription("");
     if (fileInputRef.current) fileInputRef.current.value = "";
+    if (nativeCameraInputRef.current) nativeCameraInputRef.current.value = "";
   };
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (busy) return;
     if (!selectedFile) {
-      // Previously a silent return: pressing Upload with nothing chosen did
-      // nothing at all and said nothing, which reads as a broken button.
-      setError("Choose a file to upload first.");
+      setError("Choose a file or take a photo first.");
       return;
     }
 
@@ -87,11 +112,14 @@ export function FileUploader({
     setNotice(null);
     setIsUploading(true);
 
-    const name = selectedFile.name;
+    const name = documentTitle.trim() || selectedFile.name;
     const formData = new FormData();
     formData.append("file", selectedFile);
     formData.set("relatedEntityType", relatedEntityType);
     if (relatedEntityId) formData.set("relatedEntityId", relatedEntityId);
+    if (documentTitle.trim()) formData.set("documentTitle", documentTitle.trim());
+    if (documentDate) formData.set("documentDate", documentDate);
+    if (documentDescription.trim()) formData.set("documentDescription", documentDescription.trim());
 
     try {
       const res = await fetch("/api/storage/upload", {
@@ -105,10 +133,8 @@ export function FileUploader({
         return;
       }
 
-      // Only clear once the upload has actually succeeded, so the card — and
-      // the button inside it — stays on screen for the whole request.
       handleClear();
-      setNotice(`${name} uploaded.`);
+      setNotice(`${name} uploaded successfully.`);
       startTransition(() => router.refresh());
       onUploaded?.();
     } catch {
@@ -140,23 +166,38 @@ export function FileUploader({
         className="hidden"
       />
 
+      <input
+        ref={nativeCameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={(e) => {
+          if (e.target.files?.[0]) handleFileSelection(e.target.files[0]);
+        }}
+        className="hidden"
+      />
+
       {selectedFile ? (
-        <div className="flex flex-col gap-3 p-4 rounded-2xl border border-indigo-500/30 bg-indigo-500/5 dark:bg-indigo-950/20">
-          <div className="flex items-center gap-3 min-w-0">
+        <div className="flex flex-col gap-3.5 p-4 rounded-2xl border border-indigo-500/30 bg-indigo-500/5 dark:bg-indigo-950/20">
+          <div className="flex items-start gap-3 min-w-0">
             {previewUrl ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
               <img
                 src={previewUrl}
-                alt="Selected"
+                alt={documentTitle || selectedFile.name}
                 onClick={() => setIsPreviewOpen(true)}
-                className="size-12 object-cover rounded-xl border border-border shrink-0 cursor-pointer hover:opacity-90 transition-opacity"
+                className="size-14 object-cover rounded-xl border border-border shrink-0 cursor-pointer hover:opacity-90 transition-opacity shadow-2xs"
               />
             ) : (
-              <div className="flex size-12 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 shrink-0">
-                <FileText className="size-6" />
+              <div className="flex size-14 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 shrink-0 border border-indigo-500/20">
+                <FileText className="size-7" />
               </div>
             )}
             <div className="flex flex-col min-w-0 flex-1">
-              <span className="text-xs sm:text-sm font-semibold text-foreground truncate">
+              <span className="text-xs sm:text-sm font-bold text-foreground truncate">
+                {documentTitle || selectedFile.name}
+              </span>
+              <span className="text-[11px] text-muted-foreground truncate font-mono">
                 {selectedFile.name}
               </span>
               <span className="text-[11px] text-muted-foreground mt-0.5">
@@ -165,7 +206,66 @@ export function FileUploader({
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-2 gap-y-2 pt-2 border-t border-border/50">
+          {/* Document Title, Upload Date/Time & Description Input fields */}
+          <div className="flex flex-col gap-3 pt-3 border-t border-border/50">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1">
+                <label
+                  htmlFor="upload-doc-title"
+                  className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1"
+                >
+                  <Tag className="size-3 text-indigo-500" />
+                  <span>Document / Report Name</span>
+                </label>
+                <input
+                  id="upload-doc-title"
+                  type="text"
+                  value={documentTitle}
+                  onChange={(e) => setDocumentTitle(e.target.value)}
+                  placeholder="e.g. Duty Shift Report, Travel Bill"
+                  className="w-full rounded-xl border border-border bg-card px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/60 shadow-2xs hover:border-indigo-500/40 focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label
+                  htmlFor="upload-doc-date"
+                  className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1"
+                >
+                  <Clock className="size-3 text-sky-500" />
+                  <span>Document / Upload Date & Time</span>
+                </label>
+                <input
+                  id="upload-doc-date"
+                  type="datetime-local"
+                  value={documentDate}
+                  onChange={(e) => setDocumentDate(e.target.value)}
+                  className="w-full rounded-xl border border-border bg-card px-3 py-1.5 text-xs text-foreground shadow-2xs hover:border-sky-500/40 focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label
+                htmlFor="upload-doc-desc"
+                className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1"
+              >
+                <FileText className="size-3 text-emerald-500" />
+                <span>Description / Remarks</span>
+                <span className="text-[10px] font-normal text-muted-foreground/80">(Optional)</span>
+              </label>
+              <textarea
+                id="upload-doc-desc"
+                rows={2}
+                value={documentDescription}
+                onChange={(e) => setDocumentDescription(e.target.value)}
+                placeholder="Add brief description, remarks, or notes..."
+                className="w-full rounded-xl border border-border bg-card px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/60 shadow-2xs hover:border-emerald-500/40 focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 transition-all resize-none"
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border/50">
             <div className="flex items-center gap-1.5">
               {previewUrl && (
                 <button
@@ -180,11 +280,20 @@ export function FileUploader({
               )}
               <button
                 type="button"
+                onClick={() => setIsCameraModalOpen(true)}
+                className="flex items-center gap-1 p-2 sm:px-2.5 sm:py-1.5 rounded-xl border border-border bg-card text-xs font-semibold text-foreground hover:bg-muted transition-colors shadow-2xs cursor-pointer"
+                title="Retake with Camera"
+              >
+                <Camera className="size-3.5 text-indigo-500" />
+                <span className="hidden sm:inline">Camera</span>
+              </button>
+              <button
+                type="button"
                 onClick={() => fileInputRef.current?.click()}
                 className="flex items-center gap-1 p-2 sm:px-2.5 sm:py-1.5 rounded-xl border border-border bg-card text-xs font-semibold text-foreground hover:bg-muted transition-colors shadow-2xs cursor-pointer"
                 title="Change File"
               >
-                <Pencil className="size-3.5 text-indigo-500" />
+                <Pencil className="size-3.5 text-slate-500" />
                 <span className="hidden sm:inline">Change</span>
               </button>
               <button
@@ -218,30 +327,53 @@ export function FileUploader({
           </div>
         </div>
       ) : (
-        <div
-          onClick={() => fileInputRef.current?.click()}
-          className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-border hover:border-indigo-500/60 rounded-2xl bg-muted/20 hover:bg-muted/40 transition-colors cursor-pointer text-center group"
-        >
-          <div className="flex size-12 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 group-hover:scale-105 transition-transform mb-3">
-            <UploadCloud className="size-6" />
+        <div className="flex flex-col items-center justify-center p-5 sm:p-6 border-2 border-dashed border-border hover:border-indigo-500/60 rounded-2xl bg-muted/20 hover:bg-muted/30 transition-all text-center">
+          <p className="text-xs sm:text-sm font-semibold text-foreground mb-1">
+            Attach document or proof
+          </p>
+          <p className="text-[11px] text-muted-foreground mb-4">
+            Take a photo with your camera or browse files (PDF, JPG, PNG, DOCX, max 20MB)
+          </p>
+
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => setIsCameraModalOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-98 text-white text-xs font-bold shadow-md shadow-indigo-600/25 transition-all cursor-pointer"
+            >
+              <Camera className="size-4" />
+              <span>Take Photo (Camera)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-card hover:bg-muted hover:border-indigo-500/50 active:scale-98 text-foreground text-xs font-semibold shadow-2xs transition-all cursor-pointer"
+            >
+              <FolderOpen className="size-4 text-indigo-500" />
+              <span>Browse Files</span>
+            </button>
           </div>
-          <p className="text-xs sm:text-sm font-semibold text-foreground">
-            Click to browse or drop files here
-          </p>
-          <p className="text-[11px] text-muted-foreground mt-1">
-            Supports PDF, JPG, PNG, DOCX (Max 20MB)
-          </p>
         </div>
       )}
+
+      {/* Camera Capture Modal */}
+      <CameraCaptureModal
+        isOpen={isCameraModalOpen}
+        onClose={() => setIsCameraModalOpen(false)}
+        onCapture={(file) => handleFileSelection(file)}
+        onTriggerNativeCamera={() => nativeCameraInputRef.current?.click()}
+      />
 
       {selectedFile && previewUrl && (
         <FilePreviewModal
           isOpen={isPreviewOpen}
           onClose={() => setIsPreviewOpen(false)}
-          fileName={selectedFile.name}
+          fileName={documentTitle || selectedFile.name}
           fileUrl={previewUrl}
           mimeType={selectedFile.type}
           fileSize={selectedFile.size}
+          description={documentDescription || undefined}
         />
       )}
     </form>

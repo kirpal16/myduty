@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useId, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Printer,
   X,
@@ -8,11 +8,9 @@ import {
   Trash2,
   RotateCcw,
   Check,
-  Sparkles,
-  FileText,
-  Clock,
   Car,
   Loader2,
+  FileSignature,
 } from "lucide-react";
 import {
   buildPrintReport,
@@ -60,6 +58,7 @@ export function ReportEditModal({
   const [useGujaratiDigits, setUseGujaratiDigits] = useState<boolean>(
     initialReport.useGujaratiDigits ?? true,
   );
+  const [includeSignature, setIncludeSignature] = useState<boolean>(false);
 
   // Letter text for whichever report this is (TA, holiday, duty or leave).
   const defaultHeaders = (digits: boolean) =>
@@ -80,7 +79,22 @@ export function ReportEditModal({
       ? translateEnglishMonthsInText(initialReport.salutation, digits)
       : defaultHeaders(digits).salutation;
 
-  const getSavedConfig = (): Record<string, any> => {
+type SavedPrintConfig = {
+  headerLine1?: string;
+  headerLine2?: string;
+  headerLine1En?: string;
+  headerLine2En?: string;
+  recipientTitle?: string;
+  stationName?: string;
+  signatoryName?: string;
+  footerPlace?: string;
+  footerNote?: string;
+  defaultVehicle?: string;
+  useGujaratiDigits?: boolean;
+  toLines?: string;
+};
+
+  const getSavedConfig = (): SavedPrintConfig => {
     try {
       if (typeof window !== "undefined") {
         const raw = localStorage.getItem("duty_print_config");
@@ -212,6 +226,7 @@ export function ReportEditModal({
   useEffect(() => {
     if (!isOpen) return;
     const saved = getSavedConfig();
+    /* eslint-disable react-hooks/set-state-in-effect */
     setHeader1(getInitialHeader1(saved));
     setHeader2(getInitialHeader2(saved));
     setToLines(getInitialToLines(saved));
@@ -226,6 +241,7 @@ export function ReportEditModal({
     setSubject(getSubjectText(useGujaratiDigits));
     setSalutation(getSalutationText(useGujaratiDigits));
     setApplicantLine(getApplicantText(useGujaratiDigits));
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [isOpen, initialReport, officer, useGujaratiDigits]);
 
   if (!isOpen) return null;
@@ -266,6 +282,7 @@ export function ReportEditModal({
     setConsolidatedMode(false);
     setIsSwitchingMode(false);
     setHiddenColumnKeys([]);
+    setIncludeSignature(false);
     toast("ઓરિજિનલ ડેટા રીસેટ કર્યો. (Reset to template)");
   };
 
@@ -404,9 +421,14 @@ export function ReportEditModal({
                       <p>તારીખ: ${esc(reportDate)}</p>
                       <p>સ્થળ: ${esc(place)}</p>
                     </div>
-                    <div class="text-right">
-                      <p class="font-bold">લિ. સહી</p>
-                      <div class="pt-0.5 whitespace-pre-line font-semibold">
+                    <div class="text-right inline-block">
+                      <p class="font-bold text-xs leading-none mb-1">લિ. સહી</p>
+                      ${includeSignature && officer?.signatureUrl ? `
+                        <div class="h-7 max-h-7 my-0.5 flex justify-end items-center">
+                          <img src="${officer.signatureUrl}" alt="Signature" class="h-7 max-h-7 w-auto max-w-[130px] object-contain mix-blend-multiply" />
+                        </div>
+                      ` : ""}
+                      <div class="pt-0.5 whitespace-pre-line font-semibold text-xs leading-tight">
                         ${esc(useGujaratiDigits ? toGujaratiNumerals(signatory.trim()) : signatory.trim())}
                       </div>
                     </div>
@@ -474,6 +496,25 @@ export function ReportEditModal({
           </div>
 
           <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                if (!includeSignature && !officer?.signatureUrl) {
+                  toast("કોઈ સહી અપલોડ થયેલ નથી. પ્રોફાઇલ સેટિંગ્સમાંથી સહી ઉમેરો.", "info");
+                }
+                setIncludeSignature((prev) => !prev);
+              }}
+              className={`px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 select-none ${
+                includeSignature
+                  ? "border-indigo-500 bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 font-bold"
+                  : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+              title="રિપોર્ટમાં સહી સામેલ કરવી કે નહીં (Toggle Signature)"
+            >
+              <FileSignature className="size-3.5" />
+              <span className="sm:hidden">સહી: {includeSignature ? "હા" : "ના"}</span>
+              <span className="hidden sm:inline">સહી: {includeSignature ? "હા (Yes)" : "ના (No)"}</span>
+            </button>
             <button
               type="button"
               onClick={toggleGujaratiDigits}
@@ -902,10 +943,51 @@ export function ReportEditModal({
                 </div>
               </div>
 
-              <div className="sm:text-right flex-1 sm:max-w-xs">
-                <label className="block text-xs font-bold text-foreground mb-1">
-                  લિ. સહી કરનાર વિગત (Signature):
-                </label>
+              <div className="sm:text-right flex-1 sm:max-w-xs space-y-2">
+                <div className="flex items-center justify-between sm:justify-end gap-2 mb-1">
+                  <label className="block text-xs font-bold text-foreground">
+                    લિ. સહી કરનાર વિગત (Signature):
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!includeSignature && !officer?.signatureUrl) {
+                        toast("કોઈ સહી અપલોડ થયેલ નથી. પ્રોફાઇલ સેટિંગ્સમાંથી સહી ઉમેરો.", "info");
+                      }
+                      setIncludeSignature((prev) => !prev);
+                    }}
+                    className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold border transition-colors cursor-pointer select-none ${
+                      includeSignature
+                        ? "bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/30"
+                        : "bg-muted text-muted-foreground border-border hover:text-foreground"
+                    }`}
+                    title="સહી ચાલુ / બંધ કરો"
+                  >
+                    <span className={`size-1.5 rounded-full ${includeSignature ? "bg-indigo-600 dark:bg-indigo-400" : "bg-muted-foreground"}`} />
+                    <span>સહી: {includeSignature ? "હા (Yes)" : "ના (No)"}</span>
+                  </button>
+                </div>
+
+                {/* Live Signature Preview if toggle is ON */}
+                {includeSignature && (
+                  <div className="flex sm:justify-end my-0.5">
+                    {officer?.signatureUrl ? (
+                      <div className="rounded border border-border/80 bg-white px-2 py-0.5 shadow-2xs">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={officer.signatureUrl}
+                          alt="Signature Preview"
+                          className="h-7 max-h-7 w-auto max-w-[120px] object-contain mix-blend-multiply"
+                        />
+                      </div>
+                    ) : (
+                      <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-2 text-left sm:text-right text-[11px] text-amber-700 dark:text-amber-300">
+                        ⚠️ સહી અપલોડ કરેલ નથી (પ્રોફાઇલ સેટિંગ્સમાંથી ઉમેરો)
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <textarea
                   rows={4}
                   value={signatory}

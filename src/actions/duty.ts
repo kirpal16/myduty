@@ -223,6 +223,9 @@ export async function createDuty(
 
   // The attachment belongs to the entry as a whole; it hangs off the first day.
   const file = formData.get("file");
+  const documentTitle = formData.get("documentTitle") as string | null;
+  const documentDate = formData.get("documentDate") as string | null;
+  const documentDescription = formData.get("documentDescription") as string | null;
   const firstId = createdDuties?.[0]?.id;
   if (file instanceof File && file.size > 0 && firstId) {
     try {
@@ -231,6 +234,9 @@ export async function createDuty(
         relatedEntityType: "duties",
         relatedEntityId: firstId,
         userId: auth.user.id,
+        documentTitle,
+        documentDate,
+        description: documentDescription,
       });
     } catch (err: unknown) {
       return { message: (err as Error).message };
@@ -335,6 +341,9 @@ export async function updateDuty(
   }
 
   const file = formData.get("file");
+  const documentTitle = formData.get("documentTitle") as string | null;
+  const documentDate = formData.get("documentDate") as string | null;
+  const documentDescription = formData.get("documentDescription") as string | null;
   if (file instanceof File && file.size > 0) {
     try {
       await saveFormAttachment({
@@ -342,6 +351,9 @@ export async function updateDuty(
         relatedEntityType: "duties",
         relatedEntityId: dutyId,
         userId: auth.user.id,
+        documentTitle,
+        documentDate,
+        description: documentDescription,
       });
     } catch (err: unknown) {
       return { message: (err as Error).message };

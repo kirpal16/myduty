@@ -335,3 +335,35 @@ export async function updateOfficerAvatarAction(
   revalidatePath("/settings");
   return { success: true };
 }
+
+export async function updateOfficerSignatureAction(
+  signatureUrl: string | null
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { success: false, error: "Not authenticated" };
+
+  const { error: rpcError } = await supabase.rpc("update_own_signature", {
+    p_signature_url: signatureUrl,
+  });
+
+  if (rpcError) {
+    const admin = createAdminClient();
+    const { error: updateError } = await admin
+      .from("users")
+      .update({ signature_url: signatureUrl })
+      .eq("id", user.id);
+
+    if (updateError) {
+      console.error("Failed to update signature:", updateError);
+      return { success: false, error: updateError.message };
+    }
+  }
+
+  revalidatePath("/profile");
+  revalidatePath("/settings");
+  revalidatePath("/reports");
+  return { success: true };
+}

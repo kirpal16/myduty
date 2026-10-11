@@ -131,6 +131,8 @@ export function LeaveForm({
     url: string;
     size?: number;
     mimeType?: string;
+    createdAt?: string;
+    description?: string | null;
   } | null;
   canUploadFiles?: boolean;
   /**

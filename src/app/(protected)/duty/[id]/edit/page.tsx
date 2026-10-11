@@ -39,7 +39,7 @@ export default async function EditDutyPage({
       .order("name"),
     supabase
       .from("file_attachments")
-      .select("id, original_filename, mime_type, size_bytes")
+      .select("id, original_filename, mime_type, size_bytes, created_at, description")
       .eq("related_entity_type", "duties")
       .eq("related_entity_id", id)
       .order("created_at", { ascending: false })
@@ -95,6 +95,8 @@ export default async function EditDutyPage({
                       url: `/api/storage/${attachment.id}`,
                       size: attachment.size_bytes,
                       mimeType: attachment.mime_type,
+                      createdAt: attachment.created_at,
+                      description: attachment.description,
                     }
                   : null
               }

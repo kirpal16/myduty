@@ -27,7 +27,7 @@ export default async function ProfilePage() {
     supabase
       .from("users")
       .select(
-        "id, full_name, avatar_url, employee_code, phone, role, status, designation, joining_date, joining_place, current_posting, date_of_birth, blood_group, emergency_contact, home_district, bio, department_id, departments(name)"
+        "id, full_name, avatar_url, signature_url, employee_code, phone, role, status, designation, joining_date, joining_place, current_posting, date_of_birth, blood_group, emergency_contact, home_district, bio, department_id, departments(name)"
       )
       .eq("id", currentUser.id)
       .maybeSingle(),
@@ -49,6 +49,7 @@ export default async function ProfilePage() {
     id: currentUser.id,
     fullName: userRow?.full_name ?? currentUser.fullName,
     avatarUrl: userRow?.avatar_url ?? null,
+    signatureUrl: userRow?.signature_url ?? null,
     phone: userRow?.phone,
     email: currentUser.email,
     departmentId: userRow?.department_id ?? currentUser.departmentId,

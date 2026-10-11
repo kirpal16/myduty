@@ -656,6 +656,9 @@ export async function logLeave(
   }
 
   const file = formData.get("file");
+  const documentTitle = formData.get("documentTitle") as string | null;
+  const documentDate = formData.get("documentDate") as string | null;
+  const documentDescription = formData.get("documentDescription") as string | null;
   if (file instanceof File && file.size > 0 && createdLog?.id) {
     try {
       await saveFormAttachment({
@@ -663,6 +666,9 @@ export async function logLeave(
         relatedEntityType: "leave_logs",
         relatedEntityId: createdLog.id,
         userId: auth.user.id,
+        documentTitle,
+        documentDate,
+        description: documentDescription,
       });
     } catch (err: unknown) {
       return { message: (err as Error).message };
@@ -830,6 +836,9 @@ export async function updateLeaveLog(
   if (daysError) return { message: daysError.message };
 
   const file = formData.get("file");
+  const documentTitle = formData.get("documentTitle") as string | null;
+  const documentDate = formData.get("documentDate") as string | null;
+  const documentDescription = formData.get("documentDescription") as string | null;
   if (file instanceof File && file.size > 0) {
     try {
       await saveFormAttachment({
@@ -837,6 +846,9 @@ export async function updateLeaveLog(
         relatedEntityType: "leave_logs",
         relatedEntityId: logId,
         userId: auth.user.id,
+        documentTitle,
+        documentDate,
+        description: documentDescription,
       });
     } catch (err: unknown) {
       return { message: (err as Error).message };

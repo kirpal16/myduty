@@ -43,7 +43,7 @@ export default async function DutyDetailPage({
       .maybeSingle(),
     supabase
       .from("file_attachments")
-      .select("id, original_filename, mime_type, size_bytes, created_at")
+      .select("id, original_filename, mime_type, size_bytes, created_at, description")
       .eq("related_entity_type", "duties")
       .eq("related_entity_id", id),
   ]);

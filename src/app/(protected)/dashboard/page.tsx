@@ -371,6 +371,7 @@ async function DashboardBody({
         types={activeLeaveTypes.map((t) => ({
           id: t.id,
           name: t.name,
+          code: t.code,
           color: t.color,
           isSystem: isHolidayLeaveType(t),
         }))}

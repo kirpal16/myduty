@@ -19,7 +19,6 @@ import {
   Sparkles,
   CalendarOff,
   Route,
-  CalendarDays,
   Clock,
 } from "lucide-react";
 import {
@@ -288,7 +287,7 @@ export default async function ReportsPage({
   if (isPrintableReport(type) && printUserId) {
     const { data: officerRow } = await supabase
       .from("users")
-      .select("full_name, designation, employee_code, current_posting, departments(name)")
+      .select("full_name, designation, employee_code, current_posting, departments(name), signature_url")
       .eq("id", printUserId)
       .maybeSingle();
     printOfficer = officerRow
@@ -299,6 +298,7 @@ export default async function ReportsPage({
           posting: officerRow.current_posting ?? null,
           department:
             (officerRow.departments as unknown as { name: string } | null)?.name ?? null,
+          signatureUrl: officerRow.signature_url ?? null,
         }
       : {
           name:

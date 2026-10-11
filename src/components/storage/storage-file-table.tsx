@@ -19,6 +19,7 @@ export interface FileAttachmentItem {
   mime_type: string;
   size_bytes: number;
   created_at: string;
+  description?: string | null;
 }
 
 export function StorageFileTable({
@@ -50,6 +51,7 @@ export function StorageFileTable({
           <thead className="bg-muted/50 border-b border-border text-muted-foreground uppercase text-[11px] font-semibold tracking-wider">
             <tr>
               <th className="py-3.5 px-4 sm:px-6">Document Name</th>
+              <th className="py-3.5 px-4">Description</th>
               <th className="py-3.5 px-4">Size</th>
               <th className="py-3.5 px-4">Uploaded</th>
               <th className="py-3.5 px-4 sm:px-6 text-right">Actions</th>
@@ -79,10 +81,19 @@ export function StorageFileTable({
                       ) : (
                         getFileIcon(f.mime_type)
                       )}
-                      <span className="truncate max-w-[200px] sm:max-w-xs">
+                      <span className="truncate max-w-[180px] lg:max-w-xs">
                         {f.original_filename}
                       </span>
                     </div>
+                  </td>
+                  <td className="py-3.5 px-4 max-w-[200px] text-xs text-muted-foreground">
+                    {f.description ? (
+                      <span className="truncate block" title={f.description}>
+                        {f.description}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground/40 italic">—</span>
+                    )}
                   </td>
                   <td className="py-3.5 px-4 text-muted-foreground font-medium whitespace-nowrap">
                     {formatFileSize(f.size_bytes)}
@@ -155,6 +166,11 @@ export function StorageFileTable({
                   <span className="text-sm font-bold text-foreground truncate block">
                     {f.original_filename}
                   </span>
+                  {f.description && (
+                    <p className="text-xs text-muted-foreground/90 italic truncate mt-0.5" title={f.description}>
+                      {f.description}
+                    </p>
+                  )}
                   <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                     <span>{formatFileSize(f.size_bytes)}</span>
                     <span>•</span>
@@ -212,6 +228,7 @@ export function StorageFileTable({
           fileUrl={`/api/storage/${previewFile.id}`}
           mimeType={previewFile.mime_type}
           fileSize={previewFile.size_bytes}
+          description={previewFile.description || undefined}
         />
       )}
     </>

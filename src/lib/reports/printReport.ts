@@ -70,6 +70,7 @@ export type PrintOfficer = {
   employeeCode?: string | null;
   posting?: string | null;
   department?: string | null;
+  signatureUrl?: string | null;
 };
 
 const DASH = "—";

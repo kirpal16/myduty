@@ -109,6 +109,7 @@ export type Database = {
           time_format: TimeFormat;
           designation: string | null;
           avatar_url: string | null;
+          signature_url: string | null;
           joining_date: string | null;
           joining_place: string | null;
           current_posting: string | null;
@@ -136,6 +137,7 @@ export type Database = {
           time_format: TimeFormat;
           designation: string | null;
           avatar_url: string | null;
+          signature_url: string | null;
           employee_code: string | null;
           joining_date: string | null;
           joining_place: string | null;
@@ -510,6 +512,7 @@ export type Database = {
           mime_type: string;
           size_bytes: number;
           created_at: string;
+          description: string | null;
         };
         Insert: {
           id?: string;
@@ -521,6 +524,7 @@ export type Database = {
           mime_type: string;
           size_bytes: number;
           created_at?: string;
+          description?: string | null;
         };
         Update: Partial<
           Database["public"]["Tables"]["file_attachments"]["Insert"]
@@ -695,6 +699,12 @@ export type Database = {
       update_own_avatar: {
         Args: {
           p_avatar_url: string | null;
+        };
+        Returns: Database["public"]["Tables"]["users"]["Row"];
+      };
+      update_own_signature: {
+        Args: {
+          p_signature_url: string | null;
         };
         Returns: Database["public"]["Tables"]["users"]["Row"];
       };

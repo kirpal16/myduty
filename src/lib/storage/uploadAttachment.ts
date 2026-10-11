@@ -13,11 +13,17 @@ export async function saveFormAttachment({
   relatedEntityType,
   relatedEntityId,
   userId,
+  documentTitle,
+  documentDate,
+  description,
 }: {
   file: File;
   relatedEntityType: string;
   relatedEntityId: string;
   userId: string;
+  documentTitle?: string | null;
+  documentDate?: string | null;
+  description?: string | null;
 }) {
   if (!file || !(file instanceof File) || file.size === 0) return null;
 
@@ -32,6 +38,11 @@ export async function saveFormAttachment({
   const ext = extensionForMime(file.type);
   const storageKey = `${relatedEntityType}/${relatedEntityId}/${randomUUID()}.${ext}`;
 
+  const cleanTitle = documentTitle?.trim();
+  const filename = cleanTitle
+    ? (cleanTitle.toLowerCase().endsWith(`.${ext}`) ? cleanTitle : `${cleanTitle}.${ext}`)
+    : file.name;
+
   const admin = createAdminClient();
   const { error: uploadError } = await admin.storage
     .from(STORAGE_BUCKET)
@@ -39,6 +50,14 @@ export async function saveFormAttachment({
 
   if (uploadError) {
     throw new Error(`Storage upload failed: ${uploadError.message}`);
+  }
+
+  let insertCreatedAt: string | undefined = undefined;
+  if (documentDate) {
+    const parsedDate = new Date(documentDate);
+    if (!Number.isNaN(parsedDate.getTime())) {
+      insertCreatedAt = parsedDate.toISOString();
+    }
   }
 
   const supabase = await createClient();
@@ -49,9 +68,11 @@ export async function saveFormAttachment({
       related_entity_type: relatedEntityType,
       related_entity_id: relatedEntityId,
       uploaded_by: userId,
-      original_filename: file.name,
+      original_filename: filename,
       mime_type: file.type,
       size_bytes: file.size,
+      description: description?.trim() || null,
+      ...(insertCreatedAt ? { created_at: insertCreatedAt } : {}),
     })
     .select()
     .single();

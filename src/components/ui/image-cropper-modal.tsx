@@ -39,6 +39,8 @@ async function getCroppedBlob(
   cropCanvas.width = pixelCrop.width;
   cropCanvas.height = pixelCrop.height;
   const cropCtx = cropCanvas.getContext("2d")!;
+  cropCtx.fillStyle = "#ffffff";
+  cropCtx.fillRect(0, 0, cropCanvas.width, cropCanvas.height);
 
   cropCtx.drawImage(
     canvas,

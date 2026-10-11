@@ -38,6 +38,7 @@ export interface OfficerProfileData {
   id: string;
   fullName: string;
   avatarUrl?: string | null;
+  signatureUrl?: string | null;
   phone?: string | null;
   email?: string | null;
   departmentId?: string | null;

@@ -13,6 +13,7 @@ export interface FilePreviewModalProps {
   fileUrl: string;
   mimeType?: string;
   fileSize?: number;
+  description?: string | null;
 }
 
 export function FilePreviewModal({
@@ -22,6 +23,7 @@ export function FilePreviewModal({
   fileUrl,
   mimeType = "",
   fileSize,
+  description,
 }: FilePreviewModalProps) {
   const [zoom, setZoom] = useState(1);
 
@@ -77,11 +79,17 @@ export function FilePreviewModal({
               <span className="text-sm font-bold text-foreground truncate">
                 {fileName}
               </span>
-              {fileSize && (
-                <span className="text-[11px] text-muted-foreground">
-                  {formatSize(fileSize)}
-                </span>
-              )}
+              <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground truncate">
+                {fileSize && <span>{formatSize(fileSize)}</span>}
+                {description && (
+                  <>
+                    {fileSize && <span>•</span>}
+                    <span className="truncate italic text-muted-foreground/90 max-w-xs sm:max-w-md">
+                      {description}
+                    </span>
+                  </>
+                )}
+              </div>
             </div>
           </div>
 

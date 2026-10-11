@@ -3,18 +3,11 @@
 import { useActionState, useEffect } from "react";
 import Link from "next/link";
 import {
-  User,
   Shield,
-  Building2,
-  Phone,
-  Droplet,
-  HeartPulse,
   MapPin,
-  Calendar,
   ChevronRight,
   Loader2,
   Check,
-  AlertCircle,
   Award,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -328,7 +321,7 @@ export function CompactSettingsProfile({
           </div>
 
           {/* Form Action Button */}
-          <div className="flex items-center justify-end pt-3 border-t border-border/80">
+          <div className="flex items-center justify-end pt-4 border-t border-border/80">
             <button
               type="submit"
               disabled={isPending}
