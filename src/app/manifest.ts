@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "My Duty - Gujarat Police Portal",
+    name: "My Duty -Gujarat Police Duty & Leave Portal",
     short_name: "My Duty",
-    description: "Official Gujarat Police Duty Log Book & Officer Management Portal",
+    description: "Duty Log Book & Leave Management Portal for Police Personnel",
     start_url: "/",
     id: "/",
     display: "standalone",

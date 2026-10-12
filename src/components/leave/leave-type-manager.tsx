@@ -10,6 +10,8 @@ import {
   CheckCircle2,
   EyeOff,
   Loader2,
+  ChevronDown,
+  Tag,
 } from "lucide-react";
 import { ColorPicker } from "@/components/ui/color-picker";
 import { SubmitButton } from "@/components/ui/submit-button";
@@ -84,13 +86,18 @@ export function LeaveTypeManager({
   const { formRef, fieldProps, errorProps } = useFormFeedback({ state });
   const { toast } = useToast();
 
+  const [isAddOpen, setIsAddOpen] = useState(false);
+
   // Leaving edit mode is a state reset driven by a new action result, so it
   // is adjusted during render rather than in an effect -- the same pattern
   // useFormFeedback uses, and what `react-hooks/set-state-in-effect` wants.
   const [seenState, setSeenState] = useState(state);
   if (state !== seenState) {
     setSeenState(state);
-    if (state?.ok) setEditing(null);
+    if (state?.ok) {
+      setEditing(null);
+      setIsAddOpen(false);
+    }
   }
 
   // The toast is a genuine external side effect, so it stays in an effect.
@@ -265,72 +272,99 @@ export function LeaveTypeManager({
       )}
 
       {editable && (
-        <form
-          // Keyed on the row being edited so the inputs re-seed when you switch
-          // from one type to another, or back to the create form.
-          key={editing?.id ?? "new"}
-          ref={formRef}
-          action={formAction}
-          className="space-y-3 rounded-2xl border border-border bg-muted/30 p-4"
-        >
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-bold text-foreground">
-              {editing ? `Edit “${editing.name}”` : "Add a leave type"}
-            </p>
-            {editing && (
-              <button
-                type="button"
-                onClick={() => setEditing(null)}
-                className="inline-flex cursor-pointer items-center gap-1 text-[11px] font-semibold text-muted-foreground hover:text-foreground"
+        <div className="rounded-2xl border border-border bg-card shadow-2xs overflow-hidden transition-all duration-200">
+          <button
+            type="button"
+            onClick={() => {
+              if (editing) setEditing(null);
+              setIsAddOpen((prev) => !prev);
+            }}
+            className="flex w-full cursor-pointer items-center justify-between p-3.5 sm:p-4 text-left transition-colors hover:bg-muted/40"
+            aria-expanded={isAddOpen || Boolean(editing)}
+          >
+            <div className="flex items-center gap-2.5 text-xs font-bold text-foreground">
+              <div className="flex size-7 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+                <Tag className="size-4 shrink-0" />
+              </div>
+              <span>{editing ? `Edit “${editing.name}”` : "Add a leave type"}</span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {editing && (
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditing(null);
+                  }}
+                  className="inline-flex cursor-pointer items-center gap-1 text-[11px] font-semibold text-rose-500 hover:text-rose-600 bg-rose-500/10 px-2 py-0.5 rounded-md"
+                >
+                  <X className="size-3" />
+                  Cancel edit
+                </span>
+              )}
+              <div
+                className={`flex size-7 items-center justify-center rounded-lg border border-border bg-muted/50 text-muted-foreground transition-transform duration-200 ${
+                  (isAddOpen || Boolean(editing)) ? "rotate-180 bg-muted text-foreground" : ""
+                }`}
               >
-                <X className="size-3" />
-                Cancel
-              </button>
-            )}
-          </div>
+                <ChevronDown className="size-3.5" />
+              </div>
+            </div>
+          </button>
 
-          {editing && <input type="hidden" name="id" value={editing.id} />}
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="flex flex-col gap-1.5">
-              <span className="text-[11px] font-semibold text-foreground">Name</span>
-              <input
-                required
-                {...fieldProps("name")}
-                defaultValue={editing?.name ?? ""}
-                placeholder="e.g. Study Leave"
-                className="w-full rounded-xl border border-border bg-card px-3 py-2 text-xs shadow-xs focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 aria-[invalid]:border-rose-500"
-              />
-              <FieldError {...errorProps("name")} />
-            </label>
-            <label className="flex flex-col gap-1.5">
-              <span className="text-[11px] font-semibold text-foreground">
-                Code <span className="font-normal text-muted-foreground">(optional)</span>
-              </span>
-              <input
-                name="code"
-                defaultValue={editing?.code ?? ""}
-                // The leave rules find HL / OH / SPL by code, so it is fixed.
-                readOnly={Boolean(editing?.is_system)}
-                title={editing?.is_system ? "System type: the code is fixed" : undefined}
-                placeholder="Derived from the name if left blank"
-                className="w-full rounded-xl border border-border bg-card px-3 py-2 text-xs shadow-xs focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 read-only:cursor-not-allowed read-only:bg-muted read-only:text-muted-foreground"
-              />
-            </label>
-          </div>
-
-          <ColorPicker defaultValue={editing?.color} />
-
-          <div className="flex justify-end">
-            <SubmitButton
-              icon={editing ? Pencil : Plus}
-              loadingText={editing ? "Saving…" : "Adding…"}
-              disabled={isPending}
+          {(isAddOpen || Boolean(editing)) && (
+            <form
+              // Keyed on the row being edited so the inputs re-seed when you switch
+              // from one type to another, or back to the create form.
+              key={editing?.id ?? "new"}
+              ref={formRef}
+              action={formAction}
+              className="space-y-3 p-3.5 sm:p-4 border-t border-border/80 bg-muted/20 animate-in fade-in-50 duration-150"
             >
-              {editing ? "Save changes" : "Add leave type"}
-            </SubmitButton>
-          </div>
-        </form>
+              {editing && <input type="hidden" name="id" value={editing.id} />}
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-[11px] font-semibold text-foreground">Name</span>
+                  <input
+                    required
+                    {...fieldProps("name")}
+                    defaultValue={editing?.name ?? ""}
+                    placeholder="e.g. Study Leave"
+                    className="w-full rounded-xl border border-border bg-card px-3 py-2 text-xs shadow-xs focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 aria-[invalid]:border-rose-500"
+                  />
+                  <FieldError {...errorProps("name")} />
+                </label>
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-[11px] font-semibold text-foreground">
+                    Code <span className="font-normal text-muted-foreground">(optional)</span>
+                  </span>
+                  <input
+                    name="code"
+                    defaultValue={editing?.code ?? ""}
+                    // The leave rules find HL / OH / SPL by code, so it is fixed.
+                    readOnly={Boolean(editing?.is_system)}
+                    title={editing?.is_system ? "System type: the code is fixed" : undefined}
+                    placeholder="Derived from the name if left blank"
+                    className="w-full rounded-xl border border-border bg-card px-3 py-2 text-xs shadow-xs focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 read-only:cursor-not-allowed read-only:bg-muted read-only:text-muted-foreground"
+                  />
+                </label>
+              </div>
+
+              <ColorPicker defaultValue={editing?.color} />
+
+              <div className="flex justify-end">
+                <SubmitButton
+                  icon={editing ? Pencil : Plus}
+                  loadingText={editing ? "Saving…" : "Adding…"}
+                  disabled={isPending}
+                >
+                  {editing ? "Save changes" : "Add leave type"}
+                </SubmitButton>
+              </div>
+            </form>
+          )}
+        </div>
       )}
 
       <ConfirmDeleteModal

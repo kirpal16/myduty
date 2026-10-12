@@ -84,13 +84,18 @@ export function MyHolidaysPanel({
   });
   const { toast } = useToast();
 
+  const [isFormOpen, setIsFormOpen] = useState(false);
+
   // Leaving edit mode is a state reset driven by a new action result, so it
   // is adjusted during render rather than in an effect -- the same pattern
   // useFormFeedback uses, and what `react-hooks/set-state-in-effect` wants.
   const [seenState, setSeenState] = useState(state);
   if (state !== seenState) {
     setSeenState(state);
-    if (state?.ok) setEditing(null);
+    if (state?.ok) {
+      setEditing(null);
+      setIsFormOpen(false);
+    }
   }
 
   // The toast is a genuine external side effect, so it stays in an effect.
@@ -288,90 +293,117 @@ export function MyHolidaysPanel({
         </Section>
       </div>
 
-      <form
-        key={editing?.id ?? "new"}
-        ref={formRef}
-        action={formAction}
-        noValidate
-        className="space-y-3 rounded-2xl border border-border bg-muted/30 p-3 sm:p-4"
-      >
-        <div className="flex items-center justify-between">
-          <p className="flex items-center gap-1.5 text-xs font-bold text-foreground">
-            <CalendarDays className="size-3.5 text-indigo-500" />
-            {editing ? `Edit “${editing.name}”` : "Add a holiday"}
-          </p>
-          {editing && (
-            <button
-              type="button"
-              onClick={() => setEditing(null)}
-              className="inline-flex cursor-pointer items-center gap-1 text-[11px] font-semibold text-muted-foreground hover:text-foreground"
+      {/* Add / Edit Holiday Accordion Card (default closed) */}
+      <div className="rounded-2xl border border-border bg-card shadow-2xs overflow-hidden transition-all duration-200">
+        <button
+          type="button"
+          onClick={() => {
+            if (editing) setEditing(null);
+            setIsFormOpen((prev) => !prev);
+          }}
+          className="flex w-full cursor-pointer items-center justify-between p-3.5 sm:p-4 text-left transition-colors hover:bg-muted/40"
+          aria-expanded={isFormOpen || Boolean(editing)}
+        >
+          <div className="flex items-center gap-2.5 text-xs font-bold text-foreground">
+            <div className="flex size-7 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+              <CalendarDays className="size-4 shrink-0" />
+            </div>
+            <span>{editing ? `Edit “${editing.name}”` : "Add a holiday"}</span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {editing && (
+              <span
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setEditing(null);
+                }}
+                className="inline-flex cursor-pointer items-center gap-1 text-[11px] font-semibold text-rose-500 hover:text-rose-600 bg-rose-500/10 px-2 py-0.5 rounded-md"
+              >
+                <X className="size-3" />
+                Cancel edit
+              </span>
+            )}
+            <div
+              className={`flex size-7 items-center justify-center rounded-lg border border-border bg-muted/50 text-muted-foreground transition-transform duration-200 ${
+                (isFormOpen || Boolean(editing)) ? "rotate-180 bg-muted text-foreground" : ""
+              }`}
             >
-              <X className="size-3" />
-              Cancel
-            </button>
-          )}
-        </div>
-
-        {state && !state.ok && formMessage && (
-          <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400">
-            {formMessage}
+              <ChevronDown className="size-3.5" />
+            </div>
           </div>
-        )}
+        </button>
 
-        {editing && <input type="hidden" name="id" value={editing.id} />}
-
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <label className="flex flex-col gap-1.5">
-            <span className="text-[11px] font-semibold text-foreground">Name</span>
-            <input
-              {...fieldProps("name")}
-              defaultValue={editing?.name ?? ""}
-              placeholder="e.g. Founders Day"
-              className="w-full rounded-xl border border-border bg-card px-3 py-2 text-xs shadow-xs focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 aria-[invalid]:border-rose-500 aria-[invalid]:ring-1 aria-[invalid]:ring-rose-500/30"
-            />
-            <FieldError {...errorProps("name")} />
-          </label>
-          <label className="flex flex-col gap-1.5">
-            <span className="text-[11px] font-semibold text-foreground">Date</span>
-            <input
-              type="date"
-              {...fieldProps("holidayDate")}
-              defaultValue={editing?.holiday_date ?? ""}
-              className="w-full rounded-xl border border-border bg-card px-3 py-2 text-xs shadow-xs focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 aria-[invalid]:border-rose-500 aria-[invalid]:ring-1 aria-[invalid]:ring-rose-500/30"
-            />
-            <FieldError {...errorProps("holidayDate")} />
-          </label>
-        </div>
-
-        {/* Optional holiday toggle / checkbox */}
-        <label className="flex items-start gap-2.5 cursor-pointer rounded-xl border border-border bg-card p-2.5 sm:p-3 transition-colors hover:bg-muted/50">
-          <input
-            type="checkbox"
-            name="isOptional"
-            defaultChecked={editing?.is_optional ?? false}
-            className="mt-0.5 size-4 rounded border-border text-purple-600 focus:ring-purple-500"
-          />
-          <div className="min-w-0">
-            <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-              <Palmtree className="size-3.5 text-purple-500" />
-              Optional Holiday (મરજિયાત રજા)
-            </p>
-            <p className="text-[11px] text-muted-foreground">
-              Mark as optional holiday. Employees can take any 2 per year; does not inflate general Holiday Leave entitlement.
-            </p>
-          </div>
-        </label>
-
-        <div className="flex justify-end">
-          <SubmitButton
-            icon={editing ? Pencil : Plus}
-            loadingText={editing ? "Saving…" : "Adding…"}
-            disabled={isPending}
+        {(isFormOpen || Boolean(editing)) && (
+          <form
+            key={editing?.id ?? "new"}
+            ref={formRef}
+            action={formAction}
+            noValidate
+            className="space-y-3 p-3.5 sm:p-4 border-t border-border/80 bg-muted/20 animate-in fade-in-50 duration-150"
           >
-            {editing ? "Save changes" : "Add holiday"}
-          </SubmitButton>
-        </div>
-      </form>
+            {state && !state.ok && formMessage && (
+              <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400">
+                {formMessage}
+              </div>
+            )}
+
+            {editing && <input type="hidden" name="id" value={editing.id} />}
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label className="flex flex-col gap-1.5">
+                <span className="text-[11px] font-semibold text-foreground">Name</span>
+                <input
+                  {...fieldProps("name")}
+                  defaultValue={editing?.name ?? ""}
+                  placeholder="e.g. Founders Day"
+                  className="w-full rounded-xl border border-border bg-card px-3 py-2 text-xs shadow-xs focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 aria-[invalid]:border-rose-500 aria-[invalid]:ring-1 aria-[invalid]:ring-rose-500/30"
+                />
+                <FieldError {...errorProps("name")} />
+              </label>
+              <label className="flex flex-col gap-1.5">
+                <span className="text-[11px] font-semibold text-foreground">Date</span>
+                <input
+                  type="date"
+                  {...fieldProps("holidayDate")}
+                  defaultValue={editing?.holiday_date ?? ""}
+                  className="w-full rounded-xl border border-border bg-card px-3 py-2 text-xs shadow-xs focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 aria-[invalid]:border-rose-500 aria-[invalid]:ring-1 aria-[invalid]:ring-rose-500/30"
+                />
+                <FieldError {...errorProps("holidayDate")} />
+              </label>
+            </div>
+
+            {/* Optional holiday toggle / checkbox */}
+            <label className="flex items-start gap-2.5 cursor-pointer rounded-xl border border-border bg-card p-2.5 sm:p-3 transition-colors hover:bg-muted/50">
+              <input
+                type="checkbox"
+                name="isOptional"
+                defaultChecked={editing?.is_optional ?? false}
+                className="mt-0.5 size-4 rounded border-border text-purple-600 focus:ring-purple-500"
+              />
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                  <Palmtree className="size-3.5 text-purple-500" />
+                  Optional Holiday (મરજિયાત રજા)
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  Mark as optional holiday. Employees can take any 2 per year; does not inflate general Holiday Leave entitlement.
+                </p>
+              </div>
+            </label>
+
+            <div className="flex justify-end">
+              <SubmitButton
+                icon={editing ? Pencil : Plus}
+                loadingText={editing ? "Saving…" : "Adding…"}
+                disabled={isPending}
+              >
+                {editing ? "Save changes" : "Add holiday"}
+              </SubmitButton>
+            </div>
+          </form>
+        )}
+      </div>
 
       <ConfirmDeleteModal
         isOpen={Boolean(deleting)}

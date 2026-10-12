@@ -160,21 +160,21 @@ export function PwaInstallButton({
           type="button"
           onClick={handleClick}
           disabled={isInstalled}
-          className={`group flex items-center justify-center gap-2.5 rounded-xl border px-6 py-3.5 text-base font-semibold transition-all shadow-lg backdrop-blur-md cursor-pointer hover:scale-[1.02] disabled:scale-100 disabled:cursor-default
+          className={`group inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-xs sm:text-sm font-semibold transition-all shadow-sm backdrop-blur-md cursor-pointer hover:scale-[1.02] active:scale-[0.98] disabled:scale-100 disabled:cursor-default
             ${isInstalled
               ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
-              : "border-amber-500/40 bg-gradient-to-r from-amber-600/30 via-yellow-500/20 to-amber-700/30 text-amber-100 hover:text-white hover:border-amber-400/60 hover:bg-amber-600/40 shadow-amber-950/40"
+              : "border-amber-500/30 bg-amber-500/10 text-amber-200 hover:border-amber-400/50 hover:bg-amber-500/20 hover:text-white"
             } ${className}`}
           aria-label={isInstalled ? "App installed" : "Install My Duty App"}
         >
-          <span className={`flex size-6 items-center justify-center rounded-lg transition-transform group-hover:scale-110 ${isInstalled ? "bg-emerald-400/20" : "bg-amber-400/20 text-amber-300"}`}>
+          <span className={`flex size-4 items-center justify-center transition-transform group-hover:scale-110 ${isInstalled ? "text-emerald-400" : "text-amber-300"}`}>
             {isInstalled
-              ? <Check className="size-4 text-emerald-400" />
-              : <Download className="size-4" />
+              ? <Check className="size-3.5" />
+              : <Download className="size-3.5" />
             }
           </span>
           <span>
-            {isInstalled ? "App Installed" : isReady ? "Install My Duty App" : "Download My Duty App"}
+            {isInstalled ? "App Installed" : isReady ? "Install App" : "Download App"}
           </span>
         </button>
       )}

@@ -16,7 +16,11 @@ import {
 export default function ReportsLoading() {
   return (
     <LoadingShell>
-      <PageHeaderSkeleton compactActions badge actionWidths={["w-16 sm:w-28"]} />
+      <PageHeaderSkeleton
+        compactActions={false}
+        badge
+        actionWidths={["w-36 sm:w-44", "w-28 sm:w-36", "w-24 sm:w-28"]}
+      />
       <FilterBarSkeleton count={2} />
       {/* useSearchParams needs a boundary of its own; the pay-breakdown shape
           is the fallback, so the worst case is the previous behaviour. */}

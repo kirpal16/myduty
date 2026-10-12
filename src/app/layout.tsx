@@ -44,7 +44,7 @@ export const metadata: Metadata = {
     template: "%s | My Duty",
   },
   description:
-    "Official Gujarat Police Duty Log Book & Officer Management Portal",
+    "Duty Log Book & Leave Management Portal for Police Personnel",
   applicationName: "My Duty",
   appleWebApp: {
     capable: true,

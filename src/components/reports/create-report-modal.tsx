@@ -34,6 +34,7 @@ import {
   REPORT_TEMPLATES,
   formatSegmentDateRange,
   formatSegmentsAsNarrativeParagraph,
+  buildTableIntroParagraph,
 } from "@/lib/reports/reportTemplates";
 import { LeaveSegmentBuilder } from "./leave-segment-builder";
 import type { PrintOfficer } from "@/lib/reports/printReport";
@@ -72,7 +73,7 @@ export function CreateReportModal({
   const [mobileTab, setMobileTab] = useState<"edit" | "preview">("edit");
 
   // Sub-section filter in Editor: "leave" | "content" | "header" | "all"
-  const [activeSection, setActiveSection] = useState<"leave" | "content" | "header" | "all">("leave");
+  const [activeSection, setActiveSection] = useState<"leave" | "content" | "header" | "all">("all");
 
   // Form State
   const [reportData, setReportData] = useState<CustomReportData>(() => {
@@ -85,6 +86,7 @@ export function CreateReportModal({
   // Toggles
   const [useGujaratiDigits, setUseGujaratiDigits] = useState<boolean>(true);
   const [includeSignature, setIncludeSignature] = useState<boolean>(false);
+  const [highlightSubject, setHighlightSubject] = useState<boolean>(false);
 
   // Number converter helper based on current toggle
   const numFn = (val: number | string) =>
@@ -99,11 +101,14 @@ export function CreateReportModal({
     initial.showHeader = true;
     initial.showLogo = true;
     initial.leaveDisplayFormat = "table";
+    initial.leaveReasonMode = initial.leaveReasonMode || "same";
+    initial.commonReason = initial.commonReason || "અંગત તથા કૌટુંબિક કામ સબબ";
     setReportData(initial);
     setStep(1);
     setMobileTab("edit");
-    setActiveSection("leave");
+    setActiveSection("all");
     setIncludeSignature(false);
+    setHighlightSubject(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
@@ -117,7 +122,7 @@ export function CreateReportModal({
     setReportData(initialData);
     setStep(2);
     setMobileTab("edit");
-    setActiveSection(initialData.leaveSegments && initialData.leaveSegments.length > 0 ? "leave" : "content");
+    setActiveSection("all");
   };
 
   // Helper to update specific reportData field
@@ -248,7 +253,7 @@ export function CreateReportModal({
                     <td class="p-1.5 border-r border-gray-300 font-semibold">${esc(range)}</td>
                     <td class="p-1.5 border-r border-gray-300 font-semibold">${esc(seg.shortLabel || seg.leaveTypeName)}</td>
                     <td class="p-1.5 text-center font-bold border-r border-gray-300">${numFn(seg.days)}</td>
-                    <td class="p-1.5">${esc(seg.reason || "—")}</td>
+                    <td class="p-1.5">${esc(seg.reason || reportData.commonReason || "—")}</td>
                   </tr>
                 `;
                 })
@@ -328,24 +333,24 @@ export function CreateReportModal({
         <!-- Applicant Line (clean without start line) -->
         ${
           reportData.applicantLine
-            ? `<div style="font-size: 13.5pt; font-weight: 700; color: #111827; margin-bottom: 10px; line-height: 1.45;">${esc(reportData.applicantLine)}</div>`
+            ? `<div style="font-size: 13.5pt; font-weight: 700; color: #111827; margin-bottom: 12px; line-height: 1.45;">${esc(reportData.applicantLine)}</div>`
             : ""
         }
 
-        <!-- Subject (clean, bold, big font size, centered with compact spacing) -->
-        <div style="font-size: 15pt; font-weight: 800; text-align: center; color: #030712; margin: 10px 0; line-height: 1.4;">
+        <!-- Subject (clean, bold, prominent with dedicated up and down space) -->
+        <div style="font-size: 15pt; font-weight: 800; text-align: center; color: #030712; margin: 20px 0 18px 0; line-height: 1.4;">
           ${esc(reportData.subject)}
         </div>
 
         <!-- Reference -->
         ${
           reportData.reference
-            ? `<div style="font-size: 12pt; font-weight: 600; text-align: center; color: #374151; margin-bottom: 8px;">${esc(reportData.reference)}</div>`
+            ? `<div style="font-size: 12pt; font-weight: 600; text-align: center; color: #374151; margin-bottom: 12px;">${esc(reportData.reference)}</div>`
             : ""
         }
 
         <!-- Salutation & Body -->
-        <div style="font-size: 13.5pt; font-weight: 700; margin-top: 8px; margin-bottom: 2px;">${esc(reportData.salutation)}</div>
+        <div style="font-size: 13.5pt; font-weight: 700; margin-top: 14px; margin-bottom: 4px;">${esc(reportData.salutation)}</div>
         <p style="font-size: 13.5pt; line-height: 1.5; text-align: justify; margin: 0 0 8px 0; text-indent: 2em;">${esc(reportData.paragraph1)}</p>
 
         <!-- Leave Breakdown Table if exists & mode is table or both -->
@@ -413,7 +418,7 @@ export function CreateReportModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-2 sm:p-4 backdrop-blur-xs print:hidden animate-in fade-in duration-150">
-      <div className="flex h-[95vh] w-full max-w-6xl flex-col rounded-2xl bg-card border border-border shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
+      <div className="flex h-[95vh] w-full max-w-[96vw] xl:max-w-7xl 2xl:max-w-[1440px] flex-col rounded-2xl bg-card border border-border shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
         {/* Top Navbar */}
         <div className="flex items-center justify-between border-b border-border px-3 py-2.5 bg-muted/40 sm:px-6 sm:py-3 shrink-0 gap-2">
           <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -603,7 +608,7 @@ export function CreateReportModal({
           <div className="flex-1 flex flex-col lg:flex-row overflow-hidden bg-background">
             {/* LEFT PANE: Form Inputs */}
             <div
-              className={`w-full lg:w-1/2 flex flex-col border-r border-border overflow-y-auto p-4 sm:p-5 space-y-4 ${
+              className={`w-full lg:w-[48%] xl:w-[46%] 2xl:w-[45%] flex flex-col border-r border-border overflow-y-auto p-4 sm:p-5 space-y-4 ${
                 mobileTab === "preview" ? "hidden lg:flex" : "flex"
               }`}
             >
@@ -747,7 +752,11 @@ export function CreateReportModal({
                   type="text"
                   value={reportData.subject}
                   onChange={(e) => updateField("subject", e.target.value)}
-                  className="w-full rounded-xl border border-indigo-300/80 dark:border-indigo-700/70 bg-card p-2.5 text-xs font-bold text-foreground focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none shadow-2xs leading-relaxed"
+                  className={`w-full rounded-xl border p-2.5 text-xs font-bold text-foreground outline-none shadow-2xs leading-relaxed transition-all duration-300 ${
+                    highlightSubject
+                      ? "border-emerald-500 ring-2 ring-emerald-500/40 bg-emerald-50/50 dark:bg-emerald-950/40"
+                      : "border-indigo-300/80 dark:border-indigo-700/70 bg-card focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                  }`}
                   placeholder="વિષય: રજા મંજૂર કરવા બાબત."
                 />
               </div>
@@ -792,61 +801,67 @@ export function CreateReportModal({
               </div>
 
               {/* CONDITIONAL SUB-SECTION SELECTOR PILLS */}
-              <div className="flex items-center gap-1.5 overflow-x-auto p-1 pr-3 no-scrollbar border-b border-border/80 text-xs shrink-0">
-                <span className="text-[11px] font-semibold text-muted-foreground mr-1 flex items-center gap-1 shrink-0">
-                  <Layers className="size-3.5 text-indigo-500" />
+              <div className="flex items-center gap-1.5 overflow-x-auto p-1.5 rounded-2xl bg-muted/50 border border-border/80 shadow-2xs backdrop-blur-xs text-xs shrink-0 no-scrollbar">
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-indigo-600/10 text-indigo-700 dark:text-indigo-300 font-bold text-[11px] border border-indigo-500/15 shrink-0 select-none">
+                  <Layers className="size-3.5 text-indigo-600 dark:text-indigo-400" />
                   <span>વિભાગ:</span>
-                </span>
+                </div>
 
-                {hasLeaveSegments && (
+                <div className="flex items-center gap-1.5 flex-1 min-w-0 overflow-x-auto no-scrollbar py-0.5">
+                  {hasLeaveSegments && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveSection("leave")}
+                      className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all duration-150 cursor-pointer whitespace-nowrap ${
+                        activeSection === "leave"
+                          ? "bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-md shadow-indigo-600/25 ring-1 ring-white/20"
+                          : "bg-card text-muted-foreground hover:text-foreground hover:bg-muted border border-border/70 shadow-2xs"
+                      }`}
+                    >
+                      <Calendar className="size-3.5 text-indigo-500 shrink-0" />
+                      <span>રજા વિગત</span>
+                    </button>
+                  )}
+
                   <button
                     type="button"
-                    onClick={() => setActiveSection("leave")}
-                    className={`shrink-0 rounded-xl px-2.5 sm:px-3 py-1.5 text-xs font-bold transition-all cursor-pointer whitespace-nowrap shadow-2xs ${
-                      activeSection === "leave"
-                        ? "bg-indigo-600 text-white shadow-indigo-600/20"
-                        : "bg-muted/70 text-muted-foreground hover:text-foreground hover:bg-muted"
+                    onClick={() => setActiveSection("content")}
+                    className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all duration-150 cursor-pointer whitespace-nowrap ${
+                      activeSection === "content"
+                        ? "bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-md shadow-indigo-600/25 ring-1 ring-white/20"
+                        : "bg-card text-muted-foreground hover:text-foreground hover:bg-muted border border-border/70 shadow-2xs"
                     }`}
                   >
-                    📅 રજા વિગત
+                    <FileEdit className="size-3.5 text-purple-500 shrink-0" />
+                    <span>પત્ર ફકરા</span>
                   </button>
-                )}
 
-                <button
-                  type="button"
-                  onClick={() => setActiveSection("content")}
-                  className={`shrink-0 rounded-xl px-2.5 sm:px-3 py-1.5 text-xs font-bold transition-all cursor-pointer whitespace-nowrap shadow-2xs ${
-                    activeSection === "content"
-                      ? "bg-indigo-600 text-white shadow-indigo-600/20"
-                      : "bg-muted/70 text-muted-foreground hover:text-foreground hover:bg-muted"
-                  }`}
-                >
-                  ✍️ પત્ર ફકરા
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveSection("header")}
+                    className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all duration-150 cursor-pointer whitespace-nowrap ${
+                      activeSection === "header"
+                        ? "bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-md shadow-indigo-600/25 ring-1 ring-white/20"
+                        : "bg-card text-muted-foreground hover:text-foreground hover:bg-muted border border-border/70 shadow-2xs"
+                    }`}
+                  >
+                    <Building className="size-3.5 text-amber-500 shrink-0" />
+                    <span>હેડર</span>
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={() => setActiveSection("header")}
-                  className={`shrink-0 rounded-xl px-2.5 sm:px-3 py-1.5 text-xs font-bold transition-all cursor-pointer whitespace-nowrap shadow-2xs ${
-                    activeSection === "header"
-                      ? "bg-indigo-600 text-white shadow-indigo-600/20"
-                      : "bg-muted/70 text-muted-foreground hover:text-foreground hover:bg-muted"
-                  }`}
-                >
-                  🏛️ હેડર
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveSection("all")}
-                  className={`shrink-0 rounded-xl px-2.5 sm:px-3 py-1.5 text-xs font-bold transition-all cursor-pointer whitespace-nowrap shadow-2xs ${
-                    activeSection === "all"
-                      ? "bg-indigo-600 text-white shadow-indigo-600/20"
-                      : "bg-muted/70 text-muted-foreground hover:text-foreground hover:bg-muted"
-                  }`}
-                >
-                  📋 તમામ
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveSection("all")}
+                    className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all duration-150 cursor-pointer whitespace-nowrap ${
+                      activeSection === "all"
+                        ? "bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-md shadow-indigo-600/25 ring-1 ring-white/20"
+                        : "bg-card text-muted-foreground hover:text-foreground hover:bg-muted border border-border/70 shadow-2xs"
+                    }`}
+                  >
+                    <FileCheck className="size-3.5 text-emerald-500 shrink-0" />
+                    <span>તમામ (All)</span>
+                  </button>
+                </div>
               </div>
 
               {/* SECTION A: Leave Segment Builder (Shown when 'leave' or 'all') */}
@@ -856,16 +871,83 @@ export function CreateReportModal({
                     segments={reportData.leaveSegments!}
                     useGujaratiDigits={useGujaratiDigits}
                     displayFormat={reportData.leaveDisplayFormat || "table"}
+                    reasonMode={reportData.leaveReasonMode || "same"}
+                    commonReason={reportData.commonReason || "અંગત તથા કૌટુંબિક કામ સબબ"}
                     dbLeaveTypes={leaveTypes}
-                    onFormatChange={(fmt) => updateField("leaveDisplayFormat", fmt)}
-                    onChange={(updated, newSubject, narrative) => {
-                      updateField("leaveSegments", updated);
-                      if (newSubject) {
-                        updateField("subject", newSubject);
-                      }
-                      if (reportData.leaveDisplayFormat === "paragraph" && narrative) {
-                        updateField("paragraph1", narrative);
-                      }
+                    onFormatChange={(fmt) => {
+                      setReportData((prev) => {
+                        let nextParagraph1 = prev.paragraph1;
+                        if (prev.leaveSegments && prev.leaveSegments.length > 0) {
+                          if (fmt === "paragraph") {
+                            nextParagraph1 = formatSegmentsAsNarrativeParagraph(
+                              prev.leaveSegments,
+                              useGujaratiDigits,
+                              prev.leaveReasonMode || "same",
+                              prev.commonReason || "અંગત તથા કૌટુંબિક કામ સબબ",
+                            );
+                          } else {
+                            nextParagraph1 = buildTableIntroParagraph(
+                              prev.leaveReasonMode || "same",
+                              prev.commonReason || "અંગત તથા કૌટુંબિક કામ સબબ",
+                            );
+                          }
+                        }
+                        return {
+                          ...prev,
+                          leaveDisplayFormat: fmt,
+                          paragraph1: nextParagraph1,
+                        };
+                      });
+                    }}
+                    onReasonModeChange={(mode, commonR) => {
+                      setReportData((prev) => {
+                        const nextR = commonR ?? prev.commonReason ?? "અંગત તથા કૌટુંબિક કામ સબબ";
+                        let nextPara = prev.paragraph1;
+                        if (prev.leaveSegments && prev.leaveSegments.length > 0) {
+                          if (prev.leaveDisplayFormat === "paragraph") {
+                            nextPara = formatSegmentsAsNarrativeParagraph(
+                              prev.leaveSegments,
+                              useGujaratiDigits,
+                              mode,
+                              nextR,
+                            );
+                          } else if (mode === "same") {
+                            nextPara = buildTableIntroParagraph("same", nextR);
+                          }
+                        }
+                        return {
+                          ...prev,
+                          leaveReasonMode: mode,
+                          commonReason: nextR,
+                          paragraph1: nextPara,
+                        };
+                      });
+                    }}
+                    onSyncSubject={(newSub) => {
+                      setHighlightSubject(true);
+                      toast(`વિષય લાઇન સફળતાપૂર્વક અપડેટ થઈ ગઈ: ${newSub}`);
+                      setTimeout(() => setHighlightSubject(false), 2000);
+                    }}
+                    onChange={(updated, newSubject, narrative, rMode, cReason) => {
+                      setReportData((prev) => {
+                        const currentMode = rMode ?? prev.leaveReasonMode ?? "same";
+                        const currentCommon = cReason ?? prev.commonReason ?? "અંગત તથા કૌટુંબિક કામ સબબ";
+                        const next: CustomReportData = {
+                          ...prev,
+                          leaveSegments: updated,
+                          leaveReasonMode: currentMode,
+                          commonReason: currentCommon,
+                        };
+                        if (newSubject) {
+                          next.subject = newSubject;
+                        }
+                        if (prev.leaveDisplayFormat === "paragraph" && narrative) {
+                          next.paragraph1 = narrative;
+                        } else if (prev.leaveDisplayFormat === "table" && currentMode === "same") {
+                          next.paragraph1 = buildTableIntroParagraph("same", currentCommon);
+                        }
+                        return next;
+                      });
                     }}
                   />
                 </div>
@@ -1059,7 +1141,7 @@ export function CreateReportModal({
 
             {/* RIGHT PANE: Live A4 Paper Preview */}
             <div
-              className={`w-full lg:w-1/2 flex flex-col bg-muted/40 p-3 sm:p-6 overflow-y-auto ${
+              className={`w-full lg:w-[52%] xl:w-[54%] 2xl:w-[55%] flex flex-col bg-muted/40 p-3 sm:p-6 overflow-y-auto ${
                 mobileTab === "edit" ? "hidden lg:flex" : "flex"
               }`}
             >
@@ -1093,7 +1175,7 @@ export function CreateReportModal({
               </div>
 
               {/* Realistic A4 Sheet Card */}
-              <div className="w-full max-w-[700px] mx-auto rounded-lg border border-gray-300 dark:border-gray-700 bg-white text-gray-900 shadow-2xl shadow-indigo-950/15 p-3.5 sm:p-7 md:p-10 font-sans text-xs leading-relaxed space-y-3.5 sm:space-y-4 ring-1 ring-black/5">
+              <div className="w-full max-w-[720px] mx-auto rounded-lg border border-gray-300 dark:border-gray-700 bg-white text-gray-900 shadow-2xl shadow-indigo-950/15 p-3.5 sm:p-7 md:p-10 font-sans text-xs leading-relaxed space-y-3.5 sm:space-y-4 ring-1 ring-black/5">
                 {/* Header: Rendered only if showHeader is TRUE */}
                 {reportData.showHeader ? (
                   <div className="border-b-2 border-black pb-2 sm:pb-3 mb-3 sm:mb-4">
@@ -1144,23 +1226,23 @@ export function CreateReportModal({
 
                 {/* Applicant (clean without start line) */}
                 {reportData.applicantLine && (
-                  <div className="text-xs sm:text-sm font-bold text-gray-900">
+                  <div className="text-xs sm:text-sm font-bold text-gray-900 mb-2 sm:mb-2.5">
                     {reportData.applicantLine}
                   </div>
                 )}
 
-                {/* Subject (clean, bold and centered with prominent font size) */}
-                <div className="font-extrabold text-sm sm:text-base text-center tracking-wide leading-snug text-gray-950 my-2">
+                {/* Subject (clean, bold and centered with prominent spacing up and down) */}
+                <div className="font-extrabold text-sm sm:text-base text-center tracking-wide leading-snug text-gray-950 my-4 sm:my-5">
                   {reportData.subject}
                 </div>
 
                 {/* Reference */}
                 {reportData.reference && (
-                  <div className="text-xs sm:text-sm font-semibold text-center text-gray-800">{reportData.reference}</div>
+                  <div className="text-xs sm:text-sm font-semibold text-center text-gray-800 mb-2 sm:mb-2.5">{reportData.reference}</div>
                 )}
 
                 {/* Salutation */}
-                <div className="font-bold text-xs sm:text-sm pt-0.5">{reportData.salutation}</div>
+                <div className="font-bold text-xs sm:text-sm pt-1.5 pb-0.5">{reportData.salutation}</div>
 
                 {/* Paragraph 1 */}
                 <p className="text-xs sm:text-sm leading-normal text-justify indent-6 text-gray-900">
@@ -1201,7 +1283,7 @@ export function CreateReportModal({
                                 <td className="p-1.5 text-center font-bold border-r border-gray-300">
                                   {numFn(seg.days)}
                                 </td>
-                                <td className="p-1.5">{seg.reason || "—"}</td>
+                                <td className="p-1.5">{seg.reason || reportData.commonReason || "—"}</td>
                               </tr>
                             );
                           })}

@@ -17,6 +17,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ColorDot } from "@/components/ui/color-dot";
 import { LeaveAllowanceRow } from "@/components/leave/leave-allowance-row";
+import { RegisteredLeavesAccordion } from "@/components/leave/registered-leaves-accordion";
 import {
   clampYear,
   getCurrentYear,
@@ -488,32 +489,18 @@ export default async function SettingsPage({
 
         </Card>
 
-        {/* My Registered Leave Logs & Removal Card */}
-        <Card className="p-4 sm:p-8">
-          <div className="flex items-center justify-between pb-4 mb-6 border-b border-border/80 gap-3">
-            <div className="flex items-center gap-3">
-              <div className="flex size-10 items-center justify-center rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400">
-                <CalendarOff className="size-5" />
-              </div>
-              <div>
-                <h2 className="text-base font-bold text-foreground">
-                  My Registered Leave Applications ({currentYear})
-                </h2>
-                <p className="text-xs text-muted-foreground">
-                  Review and remove any active leave requests to restore quota balance.
-                </p>
-              </div>
-            </div>
-            <Badge variant="secondary">
-              Total Leaves:{" "}
-              {formatDays(
-                (myLeaves ?? []).reduce(
-                  (a, l) => a + leaveDayCount(l.start_date, l.end_date, l.is_half_day),
-                  0,
-                ),
-              )}
-            </Badge>
-          </div>
+        {/* My Registered Leave Logs & Removal Card (Accordion, default closed) */}
+        <RegisteredLeavesAccordion
+          currentYear={currentYear}
+          totalDaysFormatted={formatDays(
+            (myLeaves ?? []).reduce(
+              (a, l) => a + leaveDayCount(l.start_date, l.end_date, l.is_half_day),
+              0,
+            ),
+          )}
+          count={(myLeaves ?? []).length}
+          defaultOpen={false}
+        >
 
           {(myLeaves ?? []).length > 0 ? (
             <>
@@ -661,7 +648,7 @@ export default async function SettingsPage({
               No leave applications recorded for {currentYear}.
             </div>
           )}
-        </Card>
+        </RegisteredLeavesAccordion>
           </>
         )}
 

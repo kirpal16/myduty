@@ -43,6 +43,8 @@ export interface CustomReportData {
   leaveSegments?: LeaveSegment[]; // Breakdown for merged/multi-leave
   showSegmentsTable?: boolean;
   leaveDisplayFormat?: "table" | "paragraph"; // 'table' = only table, 'paragraph' = only paragraph
+  leaveReasonMode?: "same" | "different"; // 'same' = common reason for all leaves; 'different' = individual per leave
+  commonReason?: string; // Common reason for leaves when leaveReasonMode is 'same'
   paragraph2: string; // Specific prayer / request / Headquarter leave
   paragraph3?: string; // Additional notes
   reportDate: string; // Gujarati or standard date string
@@ -292,6 +294,7 @@ export function formatSegmentDateRange(
 export function generateMergedLeaveSubject(
   segments: LeaveSegment[],
   useDigits = true,
+  includeDates = false,
 ): string {
   if (!segments || segments.length === 0) {
     return "વિષય: રજા મંજૂર કરવા બાબત.";
@@ -300,7 +303,27 @@ export function generateMergedLeaveSubject(
   const totalDays = segments.reduce((sum, s) => sum + (Number(s.days) || 0), 0);
   const daysStr = useDigits ? toGujaratiNumerals(totalDays) : String(totalDays);
 
+  if (includeDates && segments[0]?.startDate) {
+    const firstStart = segments[0].startDate;
+    const lastEnd = segments[segments.length - 1]?.endDate || firstStart;
+    const rangeStr = formatSegmentDateRange(firstStart, lastEnd, useDigits);
+    return `વિષય: તારીખ ${rangeStr} સુધી કુલ ${daysStr} દિવસ રજા મંજૂર કરવા બાબત.`;
+  }
+
   return `વિષય: ${daysStr} દિવસ રજા મંજૂર કરવા બાબત.`;
+}
+
+/**
+ * Builds the standard opening introductory paragraph for Table display mode
+ */
+export function buildTableIntroParagraph(
+  reasonMode: "same" | "different" = "same",
+  commonReason = "અંગત તથા કૌટુંબિક કામ સબબ",
+): string {
+  if (reasonMode === "same" && commonReason?.trim()) {
+    return `જય ભારત સાથે સવિનય જણાવવાનું કે, નીચે જણાવેલ વિગત મુજબ મારે ${commonReason.trim()} રજા ભોગવવાની ખાસ જરૂરિયાત ઉપસ્થિત થયેલ છે. જેની તારીખવાર વિગત નીચે મુજબ છે:`;
+  }
+  return "જય ભારત સાથે સવિનય જણાવવાનું કે, નીચે જણાવેલ વિગત મુજબ મારે રજા ભોગવવાની ખાસ જરૂરિયાત ઉપસ્થિત થયેલ છે. જેની તારીખવાર વિગત નીચે મુજબ છે:";
 }
 
 /**
@@ -309,19 +332,52 @@ export function generateMergedLeaveSubject(
 export function formatSegmentsAsNarrativeParagraph(
   segments: LeaveSegment[],
   useDigits = true,
+  reasonMode: "same" | "different" = "same",
+  commonReason = "અંગત તથા કૌટુંબિક કામ સબબ",
 ): string {
   if (!segments || segments.length === 0) return "";
   const totalDays = segments.reduce((sum, s) => sum + (Number(s.days) || 0), 0);
   const totalDaysStr = useDigits ? toGujaratiNumerals(totalDays) : String(totalDays);
 
+  if (reasonMode === "same") {
+    const parts = segments.map((s) => {
+      const range = formatSegmentDateRange(s.startDate, s.endDate, useDigits);
+      const dStr = useDigits ? toGujaratiNumerals(s.days) : String(s.days);
+      const label = s.shortLabel || s.leaveTypeName;
+      const isSingle = !s.endDate || s.startDate === s.endDate;
+      return isSingle
+        ? `તારીખ ${range} ના રોજ ${label} (${dStr} દિવસ)`
+        : `તારીખ ${range} સુધી ${label} (${dStr} દિવસ)`;
+    });
+
+    const segmentsText =
+      parts.length > 1
+        ? `${parts.slice(0, -1).join(", ")} તથા ${parts[parts.length - 1]}`
+        : parts[0];
+
+    const reason = (commonReason || "અંગત તથા કૌટુંબિક કામ સબબ").trim();
+
+    return `જય ભારત સાથે સવિનય જણાવવાનું કે, મારે ${reason} ${segmentsText} મળી કુલ ${totalDaysStr} દિવસ રજા ભોગવવાની ખાસ જરૂરિયાત ઉપસ્થિત થયેલ છે.`;
+  }
+
+  // Different reasons per segment
   const parts = segments.map((s) => {
     const range = formatSegmentDateRange(s.startDate, s.endDate, useDigits);
     const dStr = useDigits ? toGujaratiNumerals(s.days) : String(s.days);
     const label = s.shortLabel || s.leaveTypeName;
-    return `તારીખ ${range} સુધી ${label} (${dStr} દિવસ)`;
+    const isSingle = !s.endDate || s.startDate === s.endDate;
+    const reasonStr = (s.reason || "અંગત કામ").trim();
+    return isSingle
+      ? `તારીખ ${range} ના રોજ ${label} (${dStr} દિવસ - ${reasonStr})`
+      : `તારીખ ${range} સુધી ${label} (${dStr} દિવસ - ${reasonStr})`;
   });
 
-  return `સદરહુ રજાની તારીખવાર વિગત: ${parts.join(", ")} મળી કુલ ${totalDaysStr} દિવસ રજા ભોગવવાની ખાસ જરૂરિયાત ઉપસ્થિત થયેલ છે.`;
+  const segmentsText =
+    parts.length > 1
+      ? `${parts.slice(0, -1).join(", ")} તથા ${parts[parts.length - 1]}`
+      : parts[0];
+
+  return `જય ભારત સાથે સવિનય જણાવવાનું કે, મારે નીચે જણાવેલ વિગત મુજબ ${segmentsText} મળી કુલ ${totalDaysStr} દિવસ રજા ભોગવવાની ખાસ જરૂરિયાત ઉપસ્થિત થયેલ છે.`;
 }
 
 /**
@@ -430,6 +486,8 @@ export const REPORT_TEMPLATES: ReportTemplateMeta[] = [
         leaveSegments: defaultSegments,
         showSegmentsTable: true,
         leaveDisplayFormat: "table",
+        leaveReasonMode: "same",
+        commonReason: "અંગત તથા કૌટુંબિક કામ સબબ",
         paragraph2:
           "ઉપરોક્ત જણાવેલ રજા સમયગાળા દરમિયાન મારું હેડક્વાર્ટર છોડવાની પરવાનગી આપવા તથા સદરહુ રજા મંજૂર કરવા આપ સાહેબશ્રીને નમ્ર અરજ છે.",
         paragraph3:
