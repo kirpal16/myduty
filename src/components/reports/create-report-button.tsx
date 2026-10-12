@@ -3,18 +3,20 @@
 import { useState } from "react";
 import { PlusCircle } from "lucide-react";
 import type { PrintOfficer } from "@/lib/reports/printReport";
-import type { DbLeaveTypeItem } from "@/lib/reports/reportTemplates";
+import type { DbLeaveTypeItem, SanctionItem } from "@/lib/reports/reportTemplates";
 import { CreateReportModal } from "./create-report-modal";
 
 interface CreateReportButtonProps {
   officer: PrintOfficer | null;
   leaveTypes?: DbLeaveTypeItem[];
+  sanctions?: SanctionItem[];
   className?: string;
 }
 
 export function CreateReportButton({
   officer,
   leaveTypes,
+  sanctions,
   className = "",
 }: CreateReportButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -37,6 +39,7 @@ export function CreateReportButton({
         onClose={() => setIsOpen(false)}
         officer={officer}
         leaveTypes={leaveTypes}
+        sanctions={sanctions}
       />
     </>
   );

@@ -380,11 +380,10 @@ async function DashboardBody({
 
       {/* Metric Stat Cards */}
       <div
-        className={`grid grid-cols-2 gap-3 sm:gap-4.5 ${
-          binpagariDays > 0
+        className={`grid grid-cols-2 gap-3 sm:gap-4.5 ${binpagariDays > 0
             ? "sm:grid-cols-3 xl:grid-cols-6"
             : "sm:grid-cols-3 xl:grid-cols-5"
-        }`}
+          }`}
       >
         <StatCard
           title="Duty Logs"
@@ -506,9 +505,8 @@ async function DashboardBody({
               Remaining
             </p>
             <p
-              className={`text-xl font-bold ${
-                totalRemaining < 0 ? "text-rose-600 dark:text-rose-400" : "text-foreground"
-              }`}
+              className={`text-xl font-bold ${totalRemaining < 0 ? "text-rose-600 dark:text-rose-400" : "text-foreground"
+                }`}
             >
               {totalRemaining}
             </p>
@@ -753,29 +751,29 @@ async function DashboardBody({
                 } | null;
                 const breakdown = recentBreakdownFor(l.id);
                 return (
-                <div
-                  key={l.id}
-                  className="flex items-start justify-between gap-3 p-3 rounded-xl bg-muted/40 border border-border/60 hover:bg-muted/70 transition-colors"
-                >
-                  <div className="flex min-w-0 flex-col gap-0.5">
-                    {breakdown ? (
-                      <span className="flex min-w-0 items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400">
-                        <Sparkles className="size-3 text-indigo-500 shrink-0" />
-                        <span className="truncate">Multi-Type ({breakdown.map((b) => `${b.days} ${b.code}`).join(", ")})</span>
+                  <div
+                    key={l.id}
+                    className="flex items-start justify-between gap-3 p-3 rounded-xl bg-muted/40 border border-border/60 hover:bg-muted/70 transition-colors"
+                  >
+                    <div className="flex min-w-0 flex-col gap-0.5">
+                      {breakdown ? (
+                        <span className="flex min-w-0 items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+                          <Sparkles className="size-3 text-indigo-500 shrink-0" />
+                          <span className="truncate">Multi-Type ({breakdown.map((b) => `${b.days} ${b.code}`).join(", ")})</span>
+                        </span>
+                      ) : (
+                        <span className="flex min-w-0 items-center gap-1.5 text-xs font-semibold text-foreground">
+                          <ColorDot color={leaveType?.color} label={leaveType?.name ?? "Leave"} />
+                          <span className="truncate">{leaveType?.name ?? "Leave"}</span>
+                        </span>
+                      )}
+                      <span className="text-xs text-muted-foreground">
+                        {formatDateRange(l.start_date, l.end_date)}
+                        {l.is_half_day ? ` (${l.half_day_session} half-day)` : ""}
                       </span>
-                    ) : (
-                      <span className="flex min-w-0 items-center gap-1.5 text-xs font-semibold text-foreground">
-                        <ColorDot color={leaveType?.color} label={leaveType?.name ?? "Leave"} />
-                        <span className="truncate">{leaveType?.name ?? "Leave"}</span>
-                      </span>
-                    )}
-                    <span className="text-xs text-muted-foreground">
-                      {formatDateRange(l.start_date, l.end_date)}
-                      {l.is_half_day ? ` (${l.half_day_session} half-day)` : ""}
-                    </span>
+                    </div>
+                    <Badge variant="purple">Logged</Badge>
                   </div>
-                  <Badge variant="purple">Logged</Badge>
-                </div>
                 );
               })}
 
@@ -961,11 +959,10 @@ export default async function DashboardPage({
               key={preset.label}
               href={`/dashboard?${preset.query}`}
               aria-current={preset.active ? "true" : undefined}
-              className={`rounded-xl px-3 py-1.5 text-[11px] font-bold transition-colors ${
-                preset.active
+              className={`rounded-xl px-3 py-1.5 text-[11px] font-bold transition-colors ${preset.active
                   ? "bg-indigo-600 text-white shadow-xs shadow-indigo-600/25"
                   : "border border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground"
-              }`}
+                }`}
             >
               {preset.label}
             </Link>

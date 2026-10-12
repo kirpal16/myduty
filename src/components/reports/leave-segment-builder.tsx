@@ -11,6 +11,7 @@ import {
   Check,
   Loader2,
   Tag,
+  Clock,
 } from "lucide-react";
 import {
   type LeaveSegment,
@@ -72,22 +73,61 @@ export function LeaveSegmentBuilder({
     }));
   }, [leaveOptions]);
 
-  const numFn = (val: number | string) =>
-    useGujaratiDigits ? toGujaratiNumerals(val) : String(val);
+  const numFn = (val: number | string) => {
+    const num = Number(val);
+    if (!isNaN(num)) {
+      const rounded = Math.round(num * 10) / 10;
+      return useGujaratiDigits ? toGujaratiNumerals(rounded) : String(rounded);
+    }
+    return useGujaratiDigits ? toGujaratiNumerals(val) : String(val);
+  };
 
   const totalDays = segments.reduce((sum, s) => sum + (Number(s.days) || 0), 0);
+
+  const handleToggleHalfDay = (index: number) => {
+    const updated = segments.map((item, i) => {
+      if (i !== index) return item;
+      const nextHalf = !item.isHalfDay;
+      const next: LeaveSegment = {
+        ...item,
+        isHalfDay: nextHalf,
+        days: nextHalf ? 0.5 : calculateInclusiveDays(item.startDate, item.endDate || item.startDate),
+        endDate: nextHalf ? item.startDate : (item.endDate || item.startDate),
+        halfDaySession: nextHalf ? (item.halfDaySession || "PM") : undefined,
+        halfDayTime: nextHalf ? (item.halfDayTime || "બપોરે ૧૨:૦૦ થી ૧૬:૦૦") : undefined,
+      };
+      return next;
+    });
+
+    const newSubject = autoUpdateSubject
+      ? generateMergedLeaveSubject(updated, useGujaratiDigits)
+      : undefined;
+
+    const narrative = formatSegmentsAsNarrativeParagraph(
+      updated,
+      useGujaratiDigits,
+      reasonMode,
+      commonReason,
+    );
+
+    onChange(updated, newSubject, narrative, reasonMode, commonReason);
+  };
 
   const handleUpdateSegment = (
     index: number,
     field: keyof LeaveSegment,
-    value: string | number,
+    value: string | number | boolean | undefined,
   ) => {
     const updated = segments.map((item, i) => {
       if (i !== index) return item;
       const next = { ...item, [field]: value };
 
-      // Re-calculate days if start or end date changed
-      if (field === "startDate" || field === "endDate") {
+      if (next.isHalfDay) {
+        if (field === "startDate") {
+          next.endDate = String(value);
+        }
+        next.days = 0.5;
+      } else if (field === "startDate" || field === "endDate") {
         next.days = calculateInclusiveDays(next.startDate, next.endDate);
       }
 
@@ -445,7 +485,7 @@ export function LeaveSegmentBuilder({
               className="rounded-xl border border-border/80 bg-card p-3 sm:p-3.5 shadow-2xs transition-all hover:border-indigo-300 dark:hover:border-indigo-600/70 space-y-2.5"
             >
               {/* Segment top status bar */}
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/50 pb-2">
                 <span className="inline-flex items-center gap-1.5 text-xs font-bold text-foreground">
                   <span className="flex size-5 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 text-[10px] font-extrabold">
                     {numFn(idx + 1)}
@@ -457,7 +497,33 @@ export function LeaveSegmentBuilder({
                 </span>
 
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                  {/* Half Day Toggle */}
+                  <button
+                    type="button"
+                    onClick={() => handleToggleHalfDay(idx)}
+                    className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold border transition-all cursor-pointer shadow-2xs ${
+                      seg.isHalfDay
+                        ? "bg-amber-600 text-white border-amber-600 shadow-amber-600/20"
+                        : "bg-muted/70 hover:bg-muted text-muted-foreground hover:text-foreground border-border/80"
+                    }`}
+                    title="અડધો દિવસ રજા ચાલુ / બંધ કરો"
+                  >
+                    <Clock className="size-3 shrink-0" />
+                    <span>અડધો દિવસ</span>
+                    <span
+                      className={`text-[9px] font-bold px-1 rounded ${
+                        seg.isHalfDay ? "bg-white/20 text-white" : "bg-card text-muted-foreground"
+                      }`}
+                    >
+                      {seg.isHalfDay ? "ON" : "OFF"}
+                    </span>
+                  </button>
+
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${
+                    seg.isHalfDay
+                      ? "text-amber-700 dark:text-amber-400 bg-amber-500/10 border-amber-500/20"
+                      : "text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20"
+                  }`}>
                     {numFn(seg.days)} દિવસ
                   </span>
 
@@ -474,9 +540,86 @@ export function LeaveSegmentBuilder({
                 </div>
               </div>
 
-              {/* Grid of Inputs: Spacious layout preventing date clipping on desktop */}
+              {/* Dedicated Half-Day Session & Time Panel when active */}
+              {seg.isHalfDay && (
+                <div className="rounded-xl border border-amber-400/50 dark:border-amber-700/60 bg-amber-50/50 dark:bg-amber-950/20 p-2.5 space-y-2 text-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 text-amber-950 dark:text-amber-200 font-bold text-[11px]">
+                      <Clock className="size-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                      <span>અડધો દિવસ સત્ર &amp; સમય:</span>
+                    </div>
+
+                    {/* Session Switcher AM vs PM */}
+                    <div className="inline-flex rounded-lg bg-card p-0.5 border border-amber-300 dark:border-amber-800 text-[11px]">
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateSegment(idx, "halfDaySession", "AM")}
+                        className={`px-2 py-0.5 rounded-md font-semibold transition-all cursor-pointer ${
+                          seg.halfDaySession !== "PM" && seg.halfDaySession !== "second_half"
+                            ? "bg-amber-600 text-white shadow-2xs"
+                            : "text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        પ્રથમ સત્ર / સવાર (AM)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateSegment(idx, "halfDaySession", "PM")}
+                        className={`px-2 py-0.5 rounded-md font-semibold transition-all cursor-pointer ${
+                          seg.halfDaySession === "PM" || seg.halfDaySession === "second_half"
+                            ? "bg-amber-600 text-white shadow-2xs"
+                            : "text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        દ્વિતીય સત્ર / બપોર (PM)
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Half-Day Time input & Quick chips */}
+                  <div className="space-y-1.5 pt-0.5">
+                    <div className="flex items-center gap-2">
+                      <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide whitespace-nowrap">
+                        સમય વિગત (Time):
+                      </label>
+                      <input
+                        type="text"
+                        value={seg.halfDayTime || ""}
+                        onChange={(e) => handleUpdateSegment(idx, "halfDayTime", e.target.value)}
+                        placeholder="દા.ત. બપોરે ૧૨:૦૦ થી ૧૬:૦૦ કલાક"
+                        className="flex-1 rounded-lg border border-input bg-background px-2.5 py-1 text-xs font-semibold focus:border-amber-500 focus:outline-hidden focus:ring-1 focus:ring-amber-500"
+                      />
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-1 text-[10px]">
+                      <span className="text-muted-foreground font-semibold">ઝડપી સમય પસંદગી:</span>
+                      {[
+                        "બપોરે ૧૨:૦૦ થી ૧૬:૦૦",
+                        "સવારે ૦૮:૦૦ થી ૧૨:૦૦",
+                        "બપોર ૧૨:૦૦ પછી",
+                        "સાંજે ૧૭:૦૦ કલાકે",
+                      ].map((timeChip) => (
+                        <button
+                          key={timeChip}
+                          type="button"
+                          onClick={() => handleUpdateSegment(idx, "halfDayTime", timeChip)}
+                          className={`px-2 py-0.5 rounded border transition-all cursor-pointer ${
+                            seg.halfDayTime === timeChip
+                              ? "bg-amber-600 text-white border-amber-600"
+                              : "bg-card hover:bg-muted text-muted-foreground hover:text-foreground border-border"
+                          }`}
+                        >
+                          {timeChip}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Grid of Inputs */}
               {reasonMode === "same" ? (
-                /* SAME REASON MODE: Type gets 50%, Dates get 25% each on desktop */
+                /* SAME REASON MODE */
                 <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 text-xs">
                   {/* Leave Type Selector */}
                   <div className="sm:col-span-6 space-y-1">
@@ -493,34 +636,36 @@ export function LeaveSegmentBuilder({
                     />
                   </div>
 
-                  {/* Start Date: Generous width, will never clip */}
-                  <div className="sm:col-span-3 space-y-1">
+                  {/* Start Date */}
+                  <div className={seg.isHalfDay ? "sm:col-span-6 space-y-1" : "sm:col-span-3 space-y-1"}>
                     <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">
-                      શરૂ તારીખ (From)
+                      {seg.isHalfDay ? "રજા તારીખ (Date)" : "શરૂ તારીખ (From)"}
                     </label>
                     <input
                       type="date"
                       value={seg.startDate}
                       onChange={(e) => handleUpdateSegment(idx, "startDate", e.target.value)}
-                      className="w-full min-w-[130px] rounded-xl border border-input bg-card px-2.5 py-2 text-xs font-medium focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 shadow-2xs"
+                      className="w-full rounded-xl border border-input bg-card px-2.5 py-2 text-xs font-medium focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 shadow-2xs"
                     />
                   </div>
 
-                  {/* End Date: Generous width, will never clip */}
-                  <div className="sm:col-span-3 space-y-1">
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">
-                      અંત તારીખ (To)
-                    </label>
-                    <input
-                      type="date"
-                      value={seg.endDate}
-                      onChange={(e) => handleUpdateSegment(idx, "endDate", e.target.value)}
-                      className="w-full min-w-[130px] rounded-xl border border-input bg-card px-2.5 py-2 text-xs font-medium focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 shadow-2xs"
-                    />
-                  </div>
+                  {/* End Date (hidden or disabled if half day) */}
+                  {!seg.isHalfDay && (
+                    <div className="sm:col-span-3 space-y-1">
+                      <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">
+                        અંત તારીખ (To)
+                      </label>
+                      <input
+                        type="date"
+                        value={seg.endDate}
+                        onChange={(e) => handleUpdateSegment(idx, "endDate", e.target.value)}
+                        className="w-full rounded-xl border border-input bg-card px-2.5 py-2 text-xs font-medium focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 shadow-2xs"
+                      />
+                    </div>
+                  )}
                 </div>
               ) : (
-                /* DIFFERENT REASONS MODE: 2-Row Layout giving 50% width to dates */
+                /* DIFFERENT REASONS MODE */
                 <div className="space-y-2.5 text-xs">
                   {/* Row 1: Type + Reason */}
                   <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
@@ -552,31 +697,33 @@ export function LeaveSegmentBuilder({
                     </div>
                   </div>
 
-                  {/* Row 2: Dates with full 50% width each */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {/* Row 2: Dates */}
+                  <div className={`grid grid-cols-1 ${seg.isHalfDay ? "sm:grid-cols-1" : "sm:grid-cols-2"} gap-2.5`}>
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">
-                        શરૂ તારીખ (From Date)
+                        {seg.isHalfDay ? "રજા તારીખ (Date)" : "શરૂ તારીખ (From Date)"}
                       </label>
                       <input
                         type="date"
                         value={seg.startDate}
                         onChange={(e) => handleUpdateSegment(idx, "startDate", e.target.value)}
-                        className="w-full min-w-[130px] rounded-xl border border-input bg-card px-2.5 py-2 text-xs font-medium focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 shadow-2xs"
+                        className="w-full rounded-xl border border-input bg-card px-2.5 py-2 text-xs font-medium focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 shadow-2xs"
                       />
                     </div>
 
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">
-                        અંત તારીખ (To Date)
-                      </label>
-                      <input
-                        type="date"
-                        value={seg.endDate}
-                        onChange={(e) => handleUpdateSegment(idx, "endDate", e.target.value)}
-                        className="w-full min-w-[130px] rounded-xl border border-input bg-card px-2.5 py-2 text-xs font-medium focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 shadow-2xs"
-                      />
-                    </div>
+                    {!seg.isHalfDay && (
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">
+                          અંત તારીખ (To Date)
+                        </label>
+                        <input
+                          type="date"
+                          value={seg.endDate}
+                          onChange={(e) => handleUpdateSegment(idx, "endDate", e.target.value)}
+                          className="w-full rounded-xl border border-input bg-card px-2.5 py-2 text-xs font-medium focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 shadow-2xs"
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

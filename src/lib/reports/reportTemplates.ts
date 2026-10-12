@@ -24,6 +24,22 @@ export interface LeaveSegment {
   shortLabel: string; // Police short abbreviation: 'કે.લીવ', 'મ.રજા', 'લાભ રજા'
   days: number;
   reason?: string;
+  isHalfDay?: boolean;
+  halfDaySession?: "AM" | "PM" | "first_half" | "second_half" | string;
+  halfDayTime?: string; // Time details e.g. "૧૨:૦૦ થી ૧૬:૦૦" or "બપોરે ૧૨:૦૦ કલાક પછી"
+}
+
+export interface SanctionItem {
+  id: string;
+  order_no?: string | null;
+  approved_date?: string | null;
+  approved_days?: number | null;
+  valid_from?: string | null;
+  valid_to?: string | null;
+  reason?: string | null;
+  approved_by?: string | null;
+  leave_type_id?: string | null;
+  leave_types?: { name?: string | null; code?: string | null } | null;
 }
 
 export interface CustomReportData {
@@ -38,6 +54,9 @@ export interface CustomReportData {
   applicantLine: string; // 'અરજદાર: પો.કો. રમેશભાઈ બ.નં. ૧૨૩૪'
   subject: string; // 'વિષય: ... બાબત.'
   reference?: string; // 'સંદર્ભ: આપશ્રીના જા.નં. / હુકમ...'
+  showReference?: boolean; // TRUE = print/show reference; FALSE = hide reference
+  referencePosition?: "above" | "below"; // 'above' = below subject, 'below' = below body paragraphs
+  referenceShowLine?: boolean; // TRUE = show divider line above reference when placed below; FALSE = clean without line
   salutation: string; // 'મહેરબાન સાહેબ,'
   paragraph1: string; // Opening context / reason
   leaveSegments?: LeaveSegment[]; // Breakdown for merged/multi-leave
@@ -78,43 +97,43 @@ export const LEAVE_TYPE_PRESETS: {
   fullName: string;
   defaultReason: string;
 }[] = [
-  {
-    code: "cl",
-    shortLabel: "કે.લીવ",
-    fullName: "કે.લીવ - કેઝ્યુઅલ લીવ (CL)",
-    defaultReason: "અંગત કામ સબબ",
-  },
-  {
-    code: "oh",
-    shortLabel: "મ.રજા",
-    fullName: "મ.રજા - મરજિયાત રજા (OH)",
-    defaultReason: "તહેવાર સબબ",
-  },
-  {
-    code: "hl",
-    shortLabel: "લાભ રજા",
-    fullName: "લાભ રજા - લાભ રજા / જાહેર રજા (HL)",
-    defaultReason: "લાભ રજા સબબ",
-  },
-  {
-    code: "el",
-    shortLabel: "હ.રજા",
-    fullName: "હ.રજા - હક રજા / અર્જિત રજા (EL)",
-    defaultReason: "કૌટુંબિક કાર્ય સબબ",
-  },
-  {
-    code: "ml",
-    shortLabel: "ત.રજા",
-    fullName: "ત.રજા - તબીબી / માંદગી રજા (ML)",
-    defaultReason: "માંદગી સબબ",
-  },
-  {
-    code: "other",
-    shortLabel: "અન્ય રજા",
-    fullName: "અન્ય રજા - અન્ય વિશેષ રજા",
-    defaultReason: "ખાસ કારણ સબબ",
-  },
-];
+    {
+      code: "cl",
+      shortLabel: "કે.લીવ",
+      fullName: "કે.લીવ - કેઝ્યુઅલ લીવ (CL)",
+      defaultReason: "અંગત કામ સબબ",
+    },
+    {
+      code: "oh",
+      shortLabel: "મ.રજા",
+      fullName: "મ.રજા - મરજિયાત રજા (OH)",
+      defaultReason: "તહેવાર સબબ",
+    },
+    {
+      code: "hl",
+      shortLabel: "લાભ રજા",
+      fullName: "લાભ રજા - લાભ રજા / જાહેર રજા (HL)",
+      defaultReason: "લાભ રજા સબબ",
+    },
+    {
+      code: "el",
+      shortLabel: "હ.રજા",
+      fullName: "હ.રજા - હક રજા / અર્જિત રજા (EL)",
+      defaultReason: "કૌટુંબિક કાર્ય સબબ",
+    },
+    {
+      code: "ml",
+      shortLabel: "ત.રજા",
+      fullName: "ત.રજા - તબીબી / માંદગી રજા (ML)",
+      defaultReason: "માંદગી સબબ",
+    },
+    {
+      code: "other",
+      shortLabel: "અન્ય રજા",
+      fullName: "અન્ય રજા - અન્ય વિશેષ રજા",
+      defaultReason: "ખાસ કારણ સબબ",
+    },
+  ];
 
 export interface DbLeaveTypeItem {
   id: string;
@@ -232,16 +251,16 @@ export function mapDbLeaveTypesToOptions(
       codeUpper === "CL" || nameLower.includes("casual")
         ? "#2563eb"
         : codeUpper === "HL" || nameLower.includes("holiday")
-        ? "#ec4899"
-        : codeUpper === "OH" || nameLower.includes("optional")
-        ? "#8b5cf6"
-        : codeUpper === "ML" || nameLower.includes("sick") || nameLower.includes("medic")
-        ? "#991b1b"
-        : codeUpper === "SPL" || nameLower.includes("special")
-        ? "#581c87"
-        : nameLower.includes("binpagari") || codeUpper === "LWP"
-        ? "#dc2626"
-        : "#4f46e5";
+          ? "#ec4899"
+          : codeUpper === "OH" || nameLower.includes("optional")
+            ? "#8b5cf6"
+            : codeUpper === "ML" || nameLower.includes("sick") || nameLower.includes("medic")
+              ? "#991b1b"
+              : codeUpper === "SPL" || nameLower.includes("special")
+                ? "#581c87"
+                : nameLower.includes("binpagari") || codeUpper === "LWP"
+                  ? "#dc2626"
+                  : "#4f46e5";
 
     return {
       code: lt.id,
@@ -301,16 +320,37 @@ export function generateMergedLeaveSubject(
   }
 
   const totalDays = segments.reduce((sum, s) => sum + (Number(s.days) || 0), 0);
-  const daysStr = useDigits ? toGujaratiNumerals(totalDays) : String(totalDays);
+  const rounded = Math.round(totalDays * 10) / 10;
+
+  // Single segment half-day case with detailed timing
+  if (segments.length === 1 && segments[0].isHalfDay) {
+    const s = segments[0];
+    const rangeStr = formatSegmentDateRange(s.startDate, s.endDate, useDigits);
+    const sessionLabel =
+      s.halfDaySession === "PM" || s.halfDaySession === "second_half"
+        ? "દ્વિતીય સત્ર / બપોર પછી"
+        : "પ્રથમ સત્ર / સવાર";
+    const timeText = s.halfDayTime ? ` (${s.halfDayTime})` : "";
+    return `વિષય: તારીખ ${rangeStr} ના રોજ ${sessionLabel}${timeText} અડધો દિવસ (૦.૫ દિવસ) રજા મંજૂર કરવા બાબત.`;
+  }
+
+  let daysStr: string;
+  if (rounded === 0.5) {
+    daysStr = useDigits ? "અડધો દિવસ (૦.૫ દિવસ)" : "Half Day (0.5 day)";
+  } else {
+    daysStr = useDigits
+      ? `${toGujaratiNumerals(rounded)} દિવસ`
+      : `${rounded} days`;
+  }
 
   if (includeDates && segments[0]?.startDate) {
     const firstStart = segments[0].startDate;
     const lastEnd = segments[segments.length - 1]?.endDate || firstStart;
     const rangeStr = formatSegmentDateRange(firstStart, lastEnd, useDigits);
-    return `વિષય: તારીખ ${rangeStr} સુધી કુલ ${daysStr} દિવસ રજા મંજૂર કરવા બાબત.`;
+    return `વિષય: તારીખ ${rangeStr} સુધી કુલ ${daysStr} રજા મંજૂર કરવા બાબત.`;
   }
 
-  return `વિષય: ${daysStr} દિવસ રજા મંજૂર કરવા બાબત.`;
+  return `વિષય: ${daysStr} રજા મંજૂર કરવા બાબત.`;
 }
 
 /**
@@ -337,19 +377,39 @@ export function formatSegmentsAsNarrativeParagraph(
 ): string {
   if (!segments || segments.length === 0) return "";
   const totalDays = segments.reduce((sum, s) => sum + (Number(s.days) || 0), 0);
-  const totalDaysStr = useDigits ? toGujaratiNumerals(totalDays) : String(totalDays);
+  const rounded = Math.round(totalDays * 10) / 10;
+  const totalDaysStr =
+    rounded === 0.5
+      ? (useDigits ? "અડધો દિવસ (૦.૫ દિવસ)" : "0.5 day")
+      : (useDigits ? `${toGujaratiNumerals(rounded)} દિવસ` : `${rounded} days`);
+
+  const formatOneSeg = (s: LeaveSegment, withReason: boolean) => {
+    const range = formatSegmentDateRange(s.startDate, s.endDate, useDigits);
+    const label = s.shortLabel || s.leaveTypeName;
+    const isSingle = !s.endDate || s.startDate === s.endDate;
+
+    let segmentLabelPart = "";
+    if (s.isHalfDay) {
+      const sessionLabel =
+        s.halfDaySession === "PM" || s.halfDaySession === "second_half"
+          ? "દ્વિતીય સત્ર / બપોર"
+          : "પ્રથમ સત્ર / સવાર";
+      const timePart = s.halfDayTime ? `, સમય: ${s.halfDayTime}` : "";
+      segmentLabelPart = `${label} (અડધો દિવસ - ${sessionLabel}${timePart})`;
+    } else {
+      const dStr = useDigits ? toGujaratiNumerals(s.days) : String(s.days);
+      segmentLabelPart = `${label} (${dStr} દિવસ)`;
+    }
+
+    const reasonPart = withReason ? ` - ${(s.reason || "અંગત કામ").trim()}` : "";
+
+    return isSingle
+      ? `તારીખ ${range} ના રોજ ${segmentLabelPart}${reasonPart}`
+      : `તારીખ ${range} સુધી ${segmentLabelPart}${reasonPart}`;
+  };
 
   if (reasonMode === "same") {
-    const parts = segments.map((s) => {
-      const range = formatSegmentDateRange(s.startDate, s.endDate, useDigits);
-      const dStr = useDigits ? toGujaratiNumerals(s.days) : String(s.days);
-      const label = s.shortLabel || s.leaveTypeName;
-      const isSingle = !s.endDate || s.startDate === s.endDate;
-      return isSingle
-        ? `તારીખ ${range} ના રોજ ${label} (${dStr} દિવસ)`
-        : `તારીખ ${range} સુધી ${label} (${dStr} દિવસ)`;
-    });
-
+    const parts = segments.map((s) => formatOneSeg(s, false));
     const segmentsText =
       parts.length > 1
         ? `${parts.slice(0, -1).join(", ")} તથા ${parts[parts.length - 1]}`
@@ -357,27 +417,96 @@ export function formatSegmentsAsNarrativeParagraph(
 
     const reason = (commonReason || "અંગત તથા કૌટુંબિક કામ સબબ").trim();
 
-    return `જય ભારત સાથે સવિનય જણાવવાનું કે, મારે ${reason} ${segmentsText} મળી કુલ ${totalDaysStr} દિવસ રજા ભોગવવાની ખાસ જરૂરિયાત ઉપસ્થિત થયેલ છે.`;
+    return `જય ભારત સાથે સવિનય જણાવવાનું કે, મારે ${reason} ${segmentsText} મળી કુલ ${totalDaysStr} રજા ભોગવવાની ખાસ જરૂરિયાત ઉપસ્થિત થયેલ છે.`;
   }
 
   // Different reasons per segment
-  const parts = segments.map((s) => {
-    const range = formatSegmentDateRange(s.startDate, s.endDate, useDigits);
-    const dStr = useDigits ? toGujaratiNumerals(s.days) : String(s.days);
-    const label = s.shortLabel || s.leaveTypeName;
-    const isSingle = !s.endDate || s.startDate === s.endDate;
-    const reasonStr = (s.reason || "અંગત કામ").trim();
-    return isSingle
-      ? `તારીખ ${range} ના રોજ ${label} (${dStr} દિવસ - ${reasonStr})`
-      : `તારીખ ${range} સુધી ${label} (${dStr} દિવસ - ${reasonStr})`;
-  });
-
+  const parts = segments.map((s) => formatOneSeg(s, true));
   const segmentsText =
     parts.length > 1
       ? `${parts.slice(0, -1).join(", ")} તથા ${parts[parts.length - 1]}`
       : parts[0];
 
-  return `જય ભારત સાથે સવિનય જણાવવાનું કે, મારે નીચે જણાવેલ વિગત મુજબ ${segmentsText} મળી કુલ ${totalDaysStr} દિવસ રજા ભોગવવાની ખાસ જરૂરિયાત ઉપસ્થિત થયેલ છે.`;
+  return `જય ભારત સાથે સવિનય જણાવવાનું કે, મારે નીચે જણાવેલ વિગત મુજબ ${segmentsText} મળી કુલ ${totalDaysStr} રજા ભોગવવાની ખાસ જરૂરિયાત ઉપસ્થિત થયેલ છે.`;
+}
+
+export interface RelievingReportParams {
+  authority?: string;
+  orderNo?: string;
+  orderDate?: string;
+  leaveType?: string;
+  days?: number | string;
+  startDate?: string;
+  endDate?: string;
+  relieveDateTime?: string;
+  chargeOfficer?: string;
+  headquarterPlace?: string; // નોકરીનું સ્થળ / સ્ટેશન
+  showReference?: boolean;
+  referencePosition?: "above" | "below";
+  referenceShowLine?: boolean;
+  useDigits?: boolean;
+}
+
+export function buildRelievingReportTexts({
+  authority = "મહેરબાન પોલીસ અધિક્ષકશ્રી",
+  orderNo = "",
+  orderDate = "",
+  leaveType = "બિનપગારી રજા",
+  days = 15,
+  startDate = "",
+  endDate = "",
+  relieveDateTime = "",
+  chargeOfficer = "",
+  headquarterPlace = "નોકરીનું સ્થળ",
+  showReference = true,
+  referencePosition = "above",
+  referenceShowLine = false,
+  useDigits = true,
+}: RelievingReportParams) {
+  const daysNum = Number(days) || 0;
+  const daysStr = useDigits ? toGujaratiNumerals(daysNum || days) : String(daysNum || days);
+
+  const formattedOrderDate = orderDate
+    ? formatGujaratiDate(orderDate, { useGujaratiDigits: useDigits, shortYear: false })
+    : orderDate;
+
+  const dateRange =
+    startDate && endDate
+      ? formatSegmentDateRange(startDate, endDate, useDigits)
+      : "";
+
+  const refPart = orderNo
+    ? `સંદર્ભ: ${authority}નો રજા મંજૂરી હુકમ જા.નં. ${orderNo}${formattedOrderDate ? ` તા. ${formattedOrderDate}` : ""} અન્વયે.`
+    : `સંદર્ભ: ${authority}નો રજા મંજૂરી હુકમ અન્વયે.`;
+
+  const subject = `વિષય: મંજૂર થયેલ ${leaveType} (${daysStr} દિવસ) ભોગવવા સારૂ ફરજ પરથી છૂટા કરવા બાબત.`;
+
+  const periodText = dateRange ? `મારી તારીખ ${dateRange} સુધીની ` : "મારી ";
+  const relieveText = relieveDateTime || (startDate ? `તારીખ ${formatGujaratiDate(startDate, { useGujaratiDigits: useDigits })} ના રોજ ફરજ પૂર્ણ થયેથી` : "નિયત તારીખે ફરજ પૂર્ણ થયેથી");
+
+  const openingRefText = showReference ? "સંદર્ભિત હુકમ અન્વયે" : "મંજૂર થયેલ હુકમ અન્વયે";
+
+  const paragraph1 = `જય ભારત સાથે સવિનય અહેવાલ રજૂ કરવાનો કે, ${openingRefText} ${periodText}કુલ ${daysStr} દિવસની ${leaveType} મંજૂર કરવામાં આવેલ છે. સદરહુ મંજૂર થયેલ રજા ભોગવવા સારૂ મારે ${relieveText} રજા પર રવાના થવાનું હોય, જેથી મને સદરહુ રજા ભોગવવા સારૂ ફરજ પરથી છૂટા કરવા આપ સાહેબશ્રી તરફ નમ્ર વિનંતી છે.`;
+
+  const chargeText = chargeOfficer?.trim()
+    ? ` તથા મારી ગેરહાજરી દરમિયાન મારી ફરજનો જરૂરી ચાર્જ ${chargeOfficer.trim()} ને સોંપવા તજવીજ થવા`
+    : "";
+
+  const hqLabel = headquarterPlace?.trim()
+    ? `હેડક્વાર્ટર (${headquarterPlace.trim()})`
+    : "હેડક્વાર્ટર (નોકરીનું સ્થળ)";
+
+  const paragraph2 = `સદરહુ રજા સમયગાળા દરમિયાન મારું ${hqLabel} છોડવાની પરવાનગી આપવા${chargeText} વિનંતી છે. રજા પૂરી થયેથી હું નિયત સમયે મારી મૂળ ફરજ ઉપર હાજર થઈ જઈશ.`;
+
+  return {
+    reference: refPart,
+    showReference,
+    referencePosition,
+    referenceShowLine,
+    subject,
+    paragraph1,
+    paragraph2,
+  };
 }
 
 /**
@@ -415,15 +544,15 @@ function getSampleDate(offsetDays = 0): string {
  * The Gujarat Police Templates Catalogue
  */
 export const REPORT_TEMPLATES: ReportTemplateMeta[] = [
-  // 1. Multiple / Merged Leave Spell (FEATURED)
+  // 1. Unified Leave Application (Single, Merged, or Half-Day with Time)
   {
-    id: "merged_leave",
-    titleGu: "સંયુક્ત / મર્જ રજા અરજી",
-    titleEn: "Multiple / Merged Leave (CL + OH + HL)",
+    id: "leave_application",
+    titleGu: "રજા અરજી (સામાન્ય / સળંગ / અડધો દિવસ)",
+    titleEn: "Official Leave Application (Single, Combined or Half-Day)",
     category: "leave",
-    badge: "મોસ્ટ પોપ્યુલર",
+    badge: "રજા અરજી",
     description:
-      "તારીખવાર કે.લીવ, મ.રજા, લાભ રજા (જાહેર રજા) વગેરે સળંગ રજાઓ ભેગી કરીને એક સાથે મંજૂર કરવાની અધિકૃત અરજી.",
+      "તમામ પ્રકારની રજા (કે.લીવ, મ.રજા, લાભ રજા, હક રજા, અડધો દિવસ રજા સમય સાથે કે સળંગ સંયુક્ત રજા) મંજૂર કરાવવા માટેની એકસૂત્રી અધિકૃત અરજી.",
     iconName: "CalendarDays",
     buildDefaults: (officer, useDigits = true) => {
       const off = getOfficerDefaults(officer, useDigits);
@@ -431,11 +560,7 @@ export const REPORT_TEMPLATES: ReportTemplateMeta[] = [
       const formattedToday = formatGujaratiDate(today, { useGujaratiDigits: useDigits });
 
       const d1Start = getSampleDate(1);
-      const d1End = getSampleDate(3);
-      const d2Start = getSampleDate(4);
-      const d2End = getSampleDate(4);
-      const d3Start = getSampleDate(5);
-      const d3End = getSampleDate(6);
+      const d1End = getSampleDate(2);
 
       const defaultSegments: LeaveSegment[] = [
         {
@@ -445,35 +570,17 @@ export const REPORT_TEMPLATES: ReportTemplateMeta[] = [
           leaveTypeCode: "cl",
           leaveTypeName: "કે.લીવ - કેઝ્યુઅલ લીવ (CL)",
           shortLabel: "કે.લીવ",
-          days: 3,
-          reason: "અંગત કામ સબબ",
-        },
-        {
-          id: "seg_2",
-          startDate: d2Start,
-          endDate: d2End,
-          leaveTypeCode: "oh",
-          leaveTypeName: "મ.રજા - મરજિયાત રજા (OH)",
-          shortLabel: "મ.રજા",
-          days: 1,
-          reason: "તહેવાર સબબ",
-        },
-        {
-          id: "seg_3",
-          startDate: d3Start,
-          endDate: d3End,
-          leaveTypeCode: "hl",
-          leaveTypeName: "લાભ રજા - લાભ રજા / જાહેર રજા (HL)",
-          shortLabel: "લાભ રજા",
           days: 2,
-          reason: "લાભ રજા સબબ",
+          reason: "અંગત કામ સબબ",
         },
       ];
 
+      const hqPlace = off.station && off.station !== "પોલીસ સ્ટેશન" ? off.station : (off.place || "નોકરીનું સ્થળ");
+
       return {
         id: `report_${Date.now()}`,
-        templateId: "merged_leave",
-        templateTitle: "સંયુક્ત / મર્જ રજા અરજી",
+        templateId: "leave_application",
+        templateTitle: "રજા અરજી",
         showHeader: true,
         headerLine1: "ગુજરાત પોલીસ (GUJARAT POLICE)",
         headerLine2: off.station,
@@ -489,7 +596,7 @@ export const REPORT_TEMPLATES: ReportTemplateMeta[] = [
         leaveReasonMode: "same",
         commonReason: "અંગત તથા કૌટુંબિક કામ સબબ",
         paragraph2:
-          "ઉપરોક્ત જણાવેલ રજા સમયગાળા દરમિયાન મારું હેડક્વાર્ટર છોડવાની પરવાનગી આપવા તથા સદરહુ રજા મંજૂર કરવા આપ સાહેબશ્રીને નમ્ર અરજ છે.",
+          `ઉપરોક્ત જણાવેલ રજા સમયગાળા દરમિયાન મારું હેડક્વાર્ટર (${hqPlace}) છોડવાની પરવાનગી આપવા તથા સદરહુ રજા મંજૂર કરવા આપ સાહેબશ્રીને નમ્ર અરજ છે.`,
         paragraph3:
           "રજા પૂર્ણ થયેથી હું નિયત સમયે મારી ફરજ ઉપર હાજર થઈ જઈશ.",
         reportDate: formattedToday,
@@ -500,240 +607,65 @@ export const REPORT_TEMPLATES: ReportTemplateMeta[] = [
         signatoryStation: "",
         includeSignature: false,
         useGujaratiDigits: useDigits,
+        showReference: false,
+        referencePosition: "above",
       };
     },
   },
 
-  // 2. Dedicated Holiday Leave (લાભ રજા / જાહેર રજા) - NEW REQUESTED
+  // 2. Relieving Request Report for Sanctioned Leave (બિનપગારી / ખાસ રજા છૂટા કરવા વિનંતી રિપોર્ટ)
   {
-    id: "holiday_leave",
-    titleGu: "લાભ રજા અરજી (Holiday Leave / લાભ રજા)",
-    titleEn: "Holiday Leave Application (HL)",
+    id: "leave_relieving",
+    titleGu: "રજા પર છૂટા કરવા વિનંતી રિપોર્ટ",
+    titleEn: "Leave Relieving Report (Sanctioned / Binpagari / Special Leave)",
     category: "leave",
-    badge: "લાભ રજા",
-    description: "જાહેર રજા અથવા તહેવારના દિવસે ફરજ બજાવ્યા બદલ મળવાપાત્ર લાભ રજા (Holiday Leave) મંજૂર કરાવવા માટેની અરજી.",
-    iconName: "CalendarDays",
+    badge: "છૂટા થવા બાબત",
+    description:
+      "મંજૂર થયેલ બિનપગારી રજા, ખાસ રજા કે અન્ય રજા ભોગવવા માટે નિયત તારીખે ફરજ પરથી છૂટા કરવા (રવાનગી મેળવવા) માટેનો અધિકૃત રિપોર્ટ.",
+    iconName: "FileText",
     buildDefaults: (officer, useDigits = true) => {
       const off = getOfficerDefaults(officer, useDigits);
+      const hqPlace = off.station && off.station !== "પોલીસ સ્ટેશન" ? off.station : (off.place || "નોકરીનું સ્થળ");
       const today = new Date();
       const formattedToday = formatGujaratiDate(today, { useGujaratiDigits: useDigits });
-      const startStr = getSampleDate(1);
-      const endStr = getSampleDate(2);
-      const rangeStr = formatSegmentDateRange(startStr, endStr, useDigits);
-      const daysCount = useDigits ? toGujaratiNumerals(2) : "2";
+      const startDate = getSampleDate(1);
+      const endDate = getSampleDate(15);
+      const days = 15;
 
-      const defaultSegments: LeaveSegment[] = [
-        {
-          id: "seg_hl",
-          startDate: startStr,
-          endDate: endStr,
-          leaveTypeCode: "hl",
-          leaveTypeName: "લાભ રજા - લાભ રજા / જાહેર રજા (HL)",
-          shortLabel: "લાભ રજા",
-          days: 2,
-          reason: "લાભ રજા સબબ",
-        },
-      ];
+      const texts = buildRelievingReportTexts({
+        authority: "મહેરબાન પોલીસ અધિક્ષકશ્રી",
+        orderNo: useDigits ? toGujaratiNumerals("123/2026") : "123/2026",
+        orderDate: getSampleDate(-5),
+        leaveType: "બિનપગારી રજા",
+        days,
+        startDate,
+        endDate,
+        relieveDateTime: `તારીખ ${formatGujaratiDate(startDate, { useGujaratiDigits: useDigits })} ના રોજ સાંજે ફરજ પૂર્ણ થયેથી`,
+        chargeOfficer: "",
+        headquarterPlace: hqPlace,
+        showReference: true,
+        referencePosition: "above",
+        referenceShowLine: false,
+        useDigits,
+      });
 
       return {
         id: `report_${Date.now()}`,
-        templateId: "holiday_leave",
-        templateTitle: "લાભ રજા અરજી",
+        templateId: "leave_relieving",
+        templateTitle: "રજા પર છૂટા કરવા વિનંતી રિપોર્ટ",
         showHeader: true,
         headerLine1: "ગુજરાત પોલીસ (GUJARAT POLICE)",
         headerLine2: off.station,
         toLines: `પ્રતિ,\nપોલીસ સબ ઇન્સપેક્ટરશ્રી,\n${off.station}`,
         applicantLine: off.applicant,
-        subject: `વિષય: ${daysCount} દિવસ લાભ રજા મંજૂર કરવા બાબત.`,
-        reference: "",
+        subject: texts.subject,
+        reference: texts.reference,
+        showReference: true,
+        referencePosition: "above",
         salutation: "મહેરબાન સાહેબ,",
-        paragraph1: `જય ભારત સાથે સવિનય જણાવવાનું કે, મારે અંગત કામ સબબ નીચે જણાવેલ વિગત મુજબ તારીખ ${rangeStr} (કુલ ${daysCount} દિવસ) લાભ રજા ભોગવવાની જરૂરિયાત છે:`,
-        leaveSegments: defaultSegments,
-        showSegmentsTable: true,
-        leaveDisplayFormat: "table",
-        paragraph2:
-          "સદરહુ રજા સમયગાળા દરમિયાન મારું હેડક્વાર્ટર છોડવાની પરવાનગી આપવા તથા સદરહુ લાભ રજા મંજૂર કરવા આપ સાહેબશ્રીને નમ્ર વિનંતી છે. રજા પૂરી થયે હું સમયસર મારી ફરજ પર હાજર થઈશ.",
-        reportDate: formattedToday,
-        place: off.place,
-        signatoryName: off.name,
-        signatoryRank: off.post,
-        signatoryBuckle: off.buckle,
-        signatoryStation: "",
-        includeSignature: false,
-        useGujaratiDigits: useDigits,
-      };
-    },
-  },
-
-  // 3. Casual Leave (કે.લીવ / સી.એલ.)
-  {
-    id: "casual_leave",
-    titleGu: "કેઝ્યુઅલ રજા અરજી (કે.લીવ)",
-    titleEn: "Casual Leave Application (CL)",
-    category: "leave",
-    badge: "રજા અરજી",
-    description: "અંગત અથવા આકસ્મિક કામ સબબ કેઝ્યુઅલ લીવ (CL) મંજૂર કરાવવા માટેની અરજી.",
-    iconName: "FileSpreadsheet",
-    buildDefaults: (officer, useDigits = true) => {
-      const off = getOfficerDefaults(officer, useDigits);
-      const today = new Date();
-      const formattedToday = formatGujaratiDate(today, { useGujaratiDigits: useDigits });
-      const startStr = getSampleDate(1);
-      const endStr = getSampleDate(2);
-      const rangeStr = formatSegmentDateRange(startStr, endStr, useDigits);
-      const daysCount = useDigits ? toGujaratiNumerals(2) : "2";
-
-      const defaultSegments: LeaveSegment[] = [
-        {
-          id: "seg_cl",
-          startDate: startStr,
-          endDate: endStr,
-          leaveTypeCode: "cl",
-          leaveTypeName: "કે.લીવ - કેઝ્યુઅલ લીવ (CL)",
-          shortLabel: "કે.લીવ",
-          days: 2,
-          reason: "અંગત કામ સબબ",
-        },
-      ];
-
-      return {
-        id: `report_${Date.now()}`,
-        templateId: "casual_leave",
-        templateTitle: "કેઝ્યુઅલ રજા અરજી",
-        showHeader: true,
-        headerLine1: "ગુજરાત પોલીસ (GUJARAT POLICE)",
-        headerLine2: off.station,
-        toLines: `પ્રતિ,\nપોલીસ સબ ઇન્સપેક્ટરશ્રી,\n${off.station}`,
-        applicantLine: off.applicant,
-        subject: `વિષય: ${daysCount} દિવસ કેઝ્યુઅલ રજા (કે.લીવ) મંજૂર કરવા બાબત.`,
-        salutation: "મહેરબાન સાહેબ,",
-        paragraph1: `જય ભારત સાથે સવિનય જણાવવાનું કે, મારે અંગત તેમજ ઘરેલું અગત્યના કામ સબબ તારીખ ${rangeStr} (કુલ ${daysCount} દિવસ) કેઝ્યુઅલ રજા (કે.લીવ) ભોગવવાની જરૂરિયાત છે:`,
-        leaveSegments: defaultSegments,
-        showSegmentsTable: true,
-        leaveDisplayFormat: "table",
-        paragraph2:
-          "સદરહુ રજા સમયગાળા દરમિયાન મારું હેડક્વાર્ટર છોડવાની પરવાનગી આપવા તથા રજા મંજૂર કરવા આપ સાહેબશ્રીને નમ્ર વિનંતી છે. રજા પૂરી થયે હું સમયસર ફરજ પર હાજર થઈશ.",
-        reportDate: formattedToday,
-        place: off.place,
-        signatoryName: off.name,
-        signatoryRank: off.post,
-        signatoryBuckle: off.buckle,
-        signatoryStation: "",
-        includeSignature: false,
-        useGujaratiDigits: useDigits,
-      };
-    },
-  },
-
-  // 4. Earned Leave (હક રજા - હ.રજા)
-  {
-    id: "earned_leave",
-    titleGu: "હક રજા અરજી (હ.રજા / EL)",
-    titleEn: "Earned / Privilege Leave Application",
-    category: "leave",
-    badge: "રજા અરજી",
-    description: "લાંબા ગાળાના સામાજિક પ્રસંગ કે કૌટુંબિક કાર્ય સબબ હક રજા (EL) મંજૂર કરાવવા માટે.",
-    iconName: "Award",
-    buildDefaults: (officer, useDigits = true) => {
-      const off = getOfficerDefaults(officer, useDigits);
-      const today = new Date();
-      const formattedToday = formatGujaratiDate(today, { useGujaratiDigits: useDigits });
-      const startStr = getSampleDate(5);
-      const endStr = getSampleDate(14);
-      const rangeStr = formatSegmentDateRange(startStr, endStr, useDigits);
-      const daysCount = useDigits ? toGujaratiNumerals(10) : "10";
-
-      const defaultSegments: LeaveSegment[] = [
-        {
-          id: "seg_el",
-          startDate: startStr,
-          endDate: endStr,
-          leaveTypeCode: "el",
-          leaveTypeName: "હ.રજા - હક રજા / અર્જિત રજા (EL)",
-          shortLabel: "હ.રજા",
-          days: 10,
-          reason: "કૌટુંબિક પ્રસંગ સબબ",
-        },
-      ];
-
-      return {
-        id: `report_${Date.now()}`,
-        templateId: "earned_leave",
-        templateTitle: "હક રજા અરજી",
-        showHeader: true,
-        headerLine1: "ગુજરાત પોલીસ (GUJARAT POLICE)",
-        headerLine2: off.station,
-        toLines: `પ્રતિ,\nનાયબ પોલીસ અધિક્ષકશ્રી / પોલીસ ઇન્સપેક્ટરશ્રી,\n${off.station}`,
-        applicantLine: off.applicant,
-        subject: `વિષય: ${daysCount} દિવસ હક રજા (હ.રજા) મંજૂર કરવા બાબત.`,
-        salutation: "મહેરબાન સાહેબ,",
-        paragraph1: `સવિનય જણાવવાનું કે, મારે કૌટુંબિક સામાજિક પ્રસંગ તેમજ અનિવાર્ય કામકાજ સબબ તારીખ ${rangeStr} (કુલ ${daysCount} દિવસ) હક રજા (Earned Leave) ની જરૂરિયાત ઉપસ્થિત થયેલ છે. મારા ખાતામાં હક રજા જમા છે:`,
-        leaveSegments: defaultSegments,
-        showSegmentsTable: true,
-        leaveDisplayFormat: "table",
-        paragraph2:
-          "સદરહુ રજા સમયગાળા દરમિયાન હેડક્વાર્ટર છોડવાની પરવાનગી આપવા તથા સદરહુ હક રજા મંજૂર કરવા આપ સાહેબશ્રી તરફ યોગ્ય હુકમ થવા નમ્ર વિનંતી છે.",
-        reportDate: formattedToday,
-        place: off.place,
-        signatoryName: off.name,
-        signatoryRank: off.post,
-        signatoryBuckle: off.buckle,
-        signatoryStation: "",
-        includeSignature: false,
-        useGujaratiDigits: useDigits,
-      };
-    },
-  },
-
-  // 5. Medical Leave (તબીબી રજા / માંદગી રજા)
-  {
-    id: "medical_leave",
-    titleGu: "તબીબી / માંદગી રજા અરજી (ત.રજા)",
-    titleEn: "Medical / Sick Leave Application",
-    category: "leave",
-    badge: "રજા અરજી",
-    description: "અસ્વસ્થતા અથવા બીમારી સબબ મેડિકલ સર્ટિફિકેટ સાથે રજા મંજૂર કરાવવા માટેની અરજી.",
-    iconName: "ShieldAlert",
-    buildDefaults: (officer, useDigits = true) => {
-      const off = getOfficerDefaults(officer, useDigits);
-      const today = new Date();
-      const formattedToday = formatGujaratiDate(today, { useGujaratiDigits: useDigits });
-      const startStr = getSampleDate(0);
-      const endStr = getSampleDate(4);
-      const rangeStr = formatSegmentDateRange(startStr, endStr, useDigits);
-      const daysCount = useDigits ? toGujaratiNumerals(5) : "5";
-
-      const defaultSegments: LeaveSegment[] = [
-        {
-          id: "seg_ml",
-          startDate: startStr,
-          endDate: endStr,
-          leaveTypeCode: "ml",
-          leaveTypeName: "ત.રજા - તબીબી / માંદગી રજા (ML)",
-          shortLabel: "ત.રજા",
-          days: 5,
-          reason: "માંદગી સબબ",
-        },
-      ];
-
-      return {
-        id: `report_${Date.now()}`,
-        templateId: "medical_leave",
-        templateTitle: "તબીબી રજા અરજી",
-        showHeader: true,
-        headerLine1: "ગુજરાત પોલીસ (GUJARAT POLICE)",
-        headerLine2: off.station,
-        toLines: `પ્રતિ,\nપોલીસ સબ ઇન્સપેક્ટરશ્રી,\n${off.station}`,
-        applicantLine: off.applicant,
-        subject: `વિષય: ${daysCount} દિવસ માંદગી સબબ તબીબી રજા મંજૂર કરવા બાબત.`,
-        reference: "સંદર્ભ: સરકારી દવાખાના / ડૉક્ટરશ્રીનું મેડિકલ સર્ટિફિકેટ.",
-        salutation: "મહેરબાન સાહેબ,",
-        paragraph1: `જય ભારત સાથે સવિનય જણાવવાનું કે, અચાનક તબિયત અસ્વસ્થ થવાના કારણે ડૉક્ટરશ્રી દ્વારા મને તારીખ ${rangeStr} સુધી સંપૂર્ણ આરામ (Bed Rest) કરવાની તબીબી સલાહ આપવામાં આવેલ છે. જેનું મેડિકલ સર્ટિફિકેટ આ સાથે સામેલ રાખેલ છે:`,
-        leaveSegments: defaultSegments,
-        showSegmentsTable: true,
-        leaveDisplayFormat: "table",
-        paragraph2:
-          "આથી સદરહુ સમયગાળાની તબીબી રજા મંજૂર કરવા તથા સ્વસ્થ થતાં જ ફિટનેસ સર્ટિફિકેટ સાથે હાજર થવા પરવાનગી આપવા નમ્ર વિનંતી છે.",
+        paragraph1: texts.paragraph1,
+        paragraph2: texts.paragraph2,
+        paragraph3: "",
         reportDate: formattedToday,
         place: off.place,
         signatoryName: off.name,

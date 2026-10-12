@@ -40,6 +40,7 @@ import {
   isPrintableReport,
   type PrintOfficer,
 } from "@/lib/reports/printReport";
+import type { SanctionItem, DbLeaveTypeItem } from "@/lib/reports/reportTemplates";
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
@@ -265,8 +266,9 @@ export default async function ReportsPage({
     currentPage * pageSize,
   );
 
+  const targetUserId = userId || user?.id || "";
   const supabase = await createClient();
-  const [{ data: usersList }, { data: dbLeaveTypes }] = await Promise.all([
+  const [{ data: usersList }, { data: dbLeaveTypes }, sanctionsRes] = await Promise.all([
     canViewAll
       ? supabase.from("users").select("id, full_name").order("full_name")
       : Promise.resolve({ data: [] }),
@@ -275,7 +277,43 @@ export default async function ReportsPage({
       .select("id, name, code, color, is_system")
       .eq("is_active", true)
       .order("name"),
+    targetUserId
+      ? supabase
+          .from("special_leave_applications")
+          .select("id, order_no, approved_date, approved_days, valid_from, valid_to, reason, approved_by, leave_type_id")
+          .eq("user_id", targetUserId)
+          .eq("status", "APPROVED")
+          .order("created_at", { ascending: false })
+      : Promise.resolve({ data: [] }),
   ]);
+
+  const approvedSanctions: SanctionItem[] = (
+    ((sanctionsRes as { data: Array<{
+      id: string;
+      order_no: string | null;
+      approved_date: string | null;
+      approved_days: number | null;
+      valid_from: string | null;
+      valid_to: string | null;
+      reason: string | null;
+      approved_by: string | null;
+      leave_type_id: string;
+    }> | null })?.data || [])
+  ).map((s) => {
+    const lt = (dbLeaveTypes as DbLeaveTypeItem[] || []).find((t: DbLeaveTypeItem) => t.id === s.leave_type_id);
+    return {
+      id: s.id,
+      order_no: s.order_no,
+      approved_date: s.approved_date,
+      approved_days: s.approved_days,
+      valid_from: s.valid_from,
+      valid_to: s.valid_to,
+      reason: s.reason,
+      approved_by: s.approved_by,
+      leave_type_id: s.leave_type_id,
+      leave_types: lt ? { name: lt.name, code: lt.code } : null,
+    };
+  });
 
   const exportQuery = new URLSearchParams({
     type,
@@ -367,6 +405,7 @@ export default async function ReportsPage({
               <CreateReportButton
                 officer={printOfficer}
                 leaveTypes={dbLeaveTypes ?? []}
+                sanctions={approvedSanctions ?? []}
                 className="w-full sm:w-auto justify-center"
               />
             </div>
