@@ -140,7 +140,7 @@ export function CreateReportModal({
     initial.showLogo = true;
     initial.leaveDisplayFormat = "table";
     initial.leaveReasonMode = initial.leaveReasonMode || "same";
-    initial.commonReason = initial.commonReason || "અંગત તથા કૌટુંબિક કામ સબબ";
+    initial.commonReason = initial.commonReason || "અંગત તથા કૌટુંબિક કામ અર્થે";
     setReportData(initial);
     setStep(1);
     setMobileTab("edit");
@@ -1047,7 +1047,7 @@ export function CreateReportModal({
                     useGujaratiDigits={useGujaratiDigits}
                     displayFormat={reportData.leaveDisplayFormat || "table"}
                     reasonMode={reportData.leaveReasonMode || "same"}
-                    commonReason={reportData.commonReason || "અંગત તથા કૌટુંબિક કામ સબબ"}
+                    commonReason={reportData.commonReason || "અંગત તથા કૌટુંબિક કામ અર્થે"}
                     dbLeaveTypes={leaveTypes}
                     onFormatChange={(fmt) => {
                       setReportData((prev) => {
@@ -1058,12 +1058,12 @@ export function CreateReportModal({
                               prev.leaveSegments,
                               useGujaratiDigits,
                               prev.leaveReasonMode || "same",
-                              prev.commonReason || "અંગત તથા કૌટુંબિક કામ સબબ",
+                              prev.commonReason || "અંગત તથા કૌટુંબિક કામ અર્થે",
                             );
                           } else {
                             nextParagraph1 = buildTableIntroParagraph(
                               prev.leaveReasonMode || "same",
-                              prev.commonReason || "અંગત તથા કૌટુંબિક કામ સબબ",
+                              prev.commonReason || "અંગત તથા કૌટુંબિક કામ અર્થે",
                             );
                           }
                         }
@@ -1076,7 +1076,7 @@ export function CreateReportModal({
                     }}
                     onReasonModeChange={(mode, commonR) => {
                       setReportData((prev) => {
-                        const nextR = commonR ?? prev.commonReason ?? "અંગત તથા કૌટુંબિક કામ સબબ";
+                        const nextR = commonR ?? prev.commonReason ?? "અંગત તથા કૌટુંબિક કામ અર્થે";
                         let nextPara = prev.paragraph1;
                         if (prev.leaveSegments && prev.leaveSegments.length > 0) {
                           if (prev.leaveDisplayFormat === "paragraph") {
@@ -1106,7 +1106,7 @@ export function CreateReportModal({
                     onChange={(updated, newSubject, narrative, rMode, cReason) => {
                       setReportData((prev) => {
                         const currentMode = rMode ?? prev.leaveReasonMode ?? "same";
-                        const currentCommon = cReason ?? prev.commonReason ?? "અંગત તથા કૌટુંબિક કામ સબબ";
+                        const currentCommon = cReason ?? prev.commonReason ?? "અંગત તથા કૌટુંબિક કામ અર્થે";
                         const next: CustomReportData = {
                           ...prev,
                           leaveSegments: updated,

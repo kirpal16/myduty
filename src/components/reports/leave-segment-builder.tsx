@@ -48,7 +48,7 @@ export function LeaveSegmentBuilder({
   useGujaratiDigits,
   displayFormat = "table",
   reasonMode = "same",
-  commonReason = "અંગત તથા કૌટુંબિક કામ સબબ",
+  commonReason = "અંગત તથા કૌટુંબિક કામ અર્થે",
   dbLeaveTypes,
   onChange,
   onFormatChange,
@@ -143,7 +143,7 @@ export function LeaveSegmentBuilder({
           next.leaveTypeCode = found.code;
           next.leaveTypeName = found.label;
           next.shortLabel = found.shortLabel;
-          if (reasonMode === "different" && (!next.reason || next.reason === "અંગત કામ સબબ")) {
+          if (reasonMode === "different" && (!next.reason || next.reason === "અંગત કામ અર્થે")) {
             next.reason = found.defaultReason;
           }
         }
@@ -185,7 +185,7 @@ export function LeaveSegmentBuilder({
       label: "Casual Leave",
       shortLabel: "કે.લીવ",
       color: "#2563eb",
-      defaultReason: "અંગત કામ સબબ",
+      defaultReason: "અંગત કામ અર્થે",
     };
 
     const newSeg: LeaveSegment = {
@@ -259,7 +259,7 @@ export function LeaveSegmentBuilder({
     }
     const updated = segments.map((s) => ({
       ...s,
-      reason: mode === "same" ? commonReason : s.reason || "અંગત કામ સબબ",
+      reason: mode === "same" ? commonReason : s.reason || "અંગત કામ અર્થે",
     }));
     const newSubject = autoUpdateSubject
       ? generateMergedLeaveSubject(updated, useGujaratiDigits)
@@ -435,7 +435,7 @@ export function LeaveSegmentBuilder({
               type="text"
               value={commonReason}
               onChange={(e) => handleCommonReasonChange(e.target.value)}
-              placeholder="અંગત તથા કૌટુંબિક કામ સબબ..."
+              placeholder="અંગત તથા કૌટુંબિક કામ અર્થે..."
               className="w-full rounded-xl border border-input bg-background px-3 py-2 text-xs font-semibold focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 shadow-2xs"
             />
 
@@ -443,11 +443,11 @@ export function LeaveSegmentBuilder({
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-[10px] text-muted-foreground font-semibold">ઝડપી પસંદગી:</span>
               {[
-                "અંગત તથા કૌટુંબિક કામ સબબ",
-                "તહેવાર સબબ",
-                "લગ્ન પ્રસંગ સબબ",
-                "માંદગી / બીમારી સબબ",
-                "સામાજિક કામ સબબ",
+                "અંગત તથા કૌટુંબિક કામ અર્થે",
+                "તહેવાર અર્થે",
+                "લગ્ન પ્રસંગ અર્થે",
+                "માંદગી / બીમારી અર્થે",
+                "સામાજિક કામ અર્થે",
               ].map((chip) => (
                 <button
                   key={chip}
@@ -690,7 +690,7 @@ export function LeaveSegmentBuilder({
                       <input
                         type="text"
                         value={seg.reason || ""}
-                        placeholder="અંગત કામ, લાભ રજા સબબ..."
+                        placeholder="અંગત કામ, લાભ રજા અર્થે..."
                         onChange={(e) => handleUpdateSegment(idx, "reason", e.target.value)}
                         className="w-full rounded-xl border border-input bg-card px-3 py-2 text-xs font-medium focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 shadow-2xs"
                       />

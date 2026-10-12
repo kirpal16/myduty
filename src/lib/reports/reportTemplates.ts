@@ -101,37 +101,37 @@ export const LEAVE_TYPE_PRESETS: {
       code: "cl",
       shortLabel: "કે.લીવ",
       fullName: "કે.લીવ - કેઝ્યુઅલ લીવ (CL)",
-      defaultReason: "અંગત કામ સબબ",
+      defaultReason: "અંગત કામ અર્થે",
     },
     {
       code: "oh",
       shortLabel: "મ.રજા",
       fullName: "મ.રજા - મરજિયાત રજા (OH)",
-      defaultReason: "તહેવાર સબબ",
+      defaultReason: "તહેવાર અર્થે",
     },
     {
       code: "hl",
       shortLabel: "લાભ રજા",
       fullName: "લાભ રજા - લાભ રજા / જાહેર રજા (HL)",
-      defaultReason: "લાભ રજા સબબ",
+      defaultReason: "લાભ રજા અર્થે",
     },
     {
       code: "el",
       shortLabel: "હ.રજા",
       fullName: "હ.રજા - હક રજા / અર્જિત રજા (EL)",
-      defaultReason: "કૌટુંબિક કાર્ય સબબ",
+      defaultReason: "કૌટુંબિક કાર્ય અર્થે",
     },
     {
       code: "ml",
       shortLabel: "ત.રજા",
       fullName: "ત.રજા - તબીબી / માંદગી રજા (ML)",
-      defaultReason: "માંદગી સબબ",
+      defaultReason: "માંદગી અર્થે",
     },
     {
       code: "other",
       shortLabel: "અન્ય રજા",
       fullName: "અન્ય રજા - અન્ય વિશેષ રજા",
-      defaultReason: "ખાસ કારણ સબબ",
+      defaultReason: "ખાસ કારણ અર્થે",
     },
   ];
 
@@ -189,25 +189,25 @@ export function mapDbLeaveTypesToOptions(
     const nameLower = (lt.name || "").toLowerCase();
 
     let shortLabel = lt.name;
-    let defaultReason = `${lt.name} સબબ`;
+    let defaultReason = `${lt.name} અર્થે`;
 
     if (codeUpper === "CL" || nameLower.includes("casual")) {
       shortLabel = "કે.લીવ";
-      defaultReason = "અંગત કામ સબબ";
+      defaultReason = "અંગત કામ અર્થે";
     } else if (
       codeUpper === "HL" ||
       codeUpper === "HOLIDAY_LEAVE" ||
       nameLower.includes("holiday")
     ) {
       shortLabel = "લાભ રજા";
-      defaultReason = "લાભ રજા સબબ";
+      defaultReason = "લાભ રજા અર્થે";
     } else if (
       codeUpper === "OH" ||
       codeUpper === "OPTIONAL_HOLIDAY" ||
       nameLower.includes("optional")
     ) {
       shortLabel = "મ.રજા";
-      defaultReason = "તહેવાર સબબ";
+      defaultReason = "તહેવાર અર્થે";
     } else if (
       codeUpper === "PL" ||
       codeUpper === "EL" ||
@@ -215,7 +215,7 @@ export function mapDbLeaveTypesToOptions(
       nameLower.includes("earned")
     ) {
       shortLabel = "હ.રજા";
-      defaultReason = "કૌટુંબિક કાર્ય સબબ";
+      defaultReason = "કૌટુંબિક કાર્ય અર્થે";
     } else if (
       codeUpper === "MEDICAL" ||
       codeUpper === "ML" ||
@@ -224,7 +224,7 @@ export function mapDbLeaveTypesToOptions(
       nameLower.includes("sick")
     ) {
       shortLabel = "ત.રજા";
-      defaultReason = "માંદગી સબબ";
+      defaultReason = "માંદગી અર્થે";
     } else if (
       codeUpper === "LWP" ||
       codeUpper === "BINPAGARI" ||
@@ -232,7 +232,7 @@ export function mapDbLeaveTypesToOptions(
       nameLower.includes("બિનપગારી")
     ) {
       shortLabel = "બિનપગારી રજા";
-      defaultReason = "અંગત કામ સબબ";
+      defaultReason = "અંગત કામ અર્થે";
     } else if (
       codeUpper === "SPL" ||
       codeUpper === "SPECIAL" ||
@@ -240,10 +240,10 @@ export function mapDbLeaveTypesToOptions(
       nameLower.includes("ખાસ")
     ) {
       shortLabel = "ખાસ રજા";
-      defaultReason = "ખાસ ફરજ સબબ";
+      defaultReason = "ખાસ ફરજ અર્થે";
     } else if (codeUpper === "COMPENSATORY" || nameLower.includes("compen")) {
       shortLabel = "વળતર રજા";
-      defaultReason = "વળતર રજા સબબ";
+      defaultReason = "વળતર રજા અર્થે";
     }
 
     // Default palette color matching existing leave views
@@ -358,7 +358,7 @@ export function generateMergedLeaveSubject(
  */
 export function buildTableIntroParagraph(
   reasonMode: "same" | "different" = "same",
-  commonReason = "અંગત તથા કૌટુંબિક કામ સબબ",
+  commonReason = "અંગત તથા કૌટુંબિક કામ અર્થે",
 ): string {
   if (reasonMode === "same" && commonReason?.trim()) {
     return `જય ભારત સાથે સવિનય જણાવવાનું કે, નીચે જણાવેલ વિગત મુજબ મારે ${commonReason.trim()} રજા ભોગવવાની ખાસ જરૂરિયાત ઉપસ્થિત થયેલ છે. જેની તારીખવાર વિગત નીચે મુજબ છે:`;
@@ -373,7 +373,7 @@ export function formatSegmentsAsNarrativeParagraph(
   segments: LeaveSegment[],
   useDigits = true,
   reasonMode: "same" | "different" = "same",
-  commonReason = "અંગત તથા કૌટુંબિક કામ સબબ",
+  commonReason = "અંગત તથા કૌટુંબિક કામ અર્થે",
 ): string {
   if (!segments || segments.length === 0) return "";
   const totalDays = segments.reduce((sum, s) => sum + (Number(s.days) || 0), 0);
@@ -415,7 +415,7 @@ export function formatSegmentsAsNarrativeParagraph(
         ? `${parts.slice(0, -1).join(", ")} તથા ${parts[parts.length - 1]}`
         : parts[0];
 
-    const reason = (commonReason || "અંગત તથા કૌટુંબિક કામ સબબ").trim();
+    const reason = (commonReason || "અંગત તથા કૌટુંબિક કામ અર્થે").trim();
 
     return `જય ભારત સાથે સવિનય જણાવવાનું કે, મારે ${reason} ${segmentsText} મળી કુલ ${totalDaysStr} રજા ભોગવવાની ખાસ જરૂરિયાત ઉપસ્થિત થયેલ છે.`;
   }
@@ -571,7 +571,7 @@ export const REPORT_TEMPLATES: ReportTemplateMeta[] = [
           leaveTypeName: "કે.લીવ - કેઝ્યુઅલ લીવ (CL)",
           shortLabel: "કે.લીવ",
           days: 2,
-          reason: "અંગત કામ સબબ",
+          reason: "અંગત કામ અર્થે",
         },
       ];
 
@@ -589,12 +589,12 @@ export const REPORT_TEMPLATES: ReportTemplateMeta[] = [
         subject: generateMergedLeaveSubject(defaultSegments, useDigits),
         salutation: "મહેરબાન સાહેબ,",
         paragraph1:
-          "જય ભારત સાથે સવિનય જણાવવાનું કે, નીચે જણાવેલ વિગત મુજબ મારે અંગત તથા કૌટુંબિક કામ સબબ રજા ભોગવવાની ખાસ જરૂરિયાત ઉપસ્થિત થયેલ છે. જેની તારીખવાર વિગત નીચે મુજબ છે:",
+          "જય ભારત સાથે સવિનય જણાવવાનું કે, નીચે જણાવેલ વિગત મુજબ મારે અંગત તથા કૌટુંબિક કામ અર્થે રજા ભોગવવાની ખાસ જરૂરિયાત ઉપસ્થિત થયેલ છે. જેની તારીખવાર વિગત નીચે મુજબ છે:",
         leaveSegments: defaultSegments,
         showSegmentsTable: true,
         leaveDisplayFormat: "table",
         leaveReasonMode: "same",
-        commonReason: "અંગત તથા કૌટુંબિક કામ સબબ",
+        commonReason: "અંગત તથા કૌટુંબિક કામ અર્થે",
         paragraph2:
           `ઉપરોક્ત જણાવેલ રજા સમયગાળા દરમિયાન મારું હેડક્વાર્ટર (${hqPlace}) છોડવાની પરવાનગી આપવા તથા સદરહુ રજા મંજૂર કરવા આપ સાહેબશ્રીને નમ્ર અરજ છે.`,
         paragraph3:
