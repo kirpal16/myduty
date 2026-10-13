@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { Download, Eye, FileText } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Download, Eye, FileText, Pencil } from "lucide-react";
 import { FilePreviewModal } from "./file-preview-modal";
 import { DeleteFileButton } from "@/components/storage/delete-file-button";
+import { EditFileModal } from "@/components/storage/edit-file-modal";
 
 export interface AttachmentCardItem {
   id: string;
@@ -31,6 +32,7 @@ function formatAttachmentDate(dateStr?: string) {
 export function AttachmentCardList({
   attachments,
   canDelete = false,
+  canEdit = true,
 }: {
   attachments: AttachmentCardItem[];
   /**
@@ -38,8 +40,44 @@ export function AttachmentCardList({
    * so a receipt attached to the wrong duty had to be hunted down there.
    */
   canDelete?: boolean;
+  canEdit?: boolean;
 }) {
+  const [items, setItems] = useState<AttachmentCardItem[]>(attachments);
   const [previewFile, setPreviewFile] = useState<AttachmentCardItem | null>(null);
+  const [editingFile, setEditingFile] = useState<AttachmentCardItem | null>(null);
+
+  useEffect(() => {
+    setItems(attachments);
+  }, [attachments]);
+
+  const handleUpdated = (updated: {
+    id: string;
+    original_filename: string;
+    description: string | null;
+  }) => {
+    setItems((prev) =>
+      prev.map((item) =>
+        item.id === updated.id
+          ? {
+              ...item,
+              original_filename: updated.original_filename,
+              description: updated.description,
+            }
+          : item,
+      ),
+    );
+    if (previewFile?.id === updated.id) {
+      setPreviewFile((prev) =>
+        prev
+          ? {
+              ...prev,
+              original_filename: updated.original_filename,
+              description: updated.description,
+            }
+          : null,
+      );
+    }
+  };
 
   const formatSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;
@@ -50,7 +88,7 @@ export function AttachmentCardList({
   return (
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {attachments.map((file) => {
+        {items.map((file) => {
           const isImage = file.mime_type.startsWith("image/");
           const formattedDate = formatAttachmentDate(file.created_at);
           return (
@@ -112,6 +150,16 @@ export function AttachmentCardList({
                 >
                   <Eye className="size-3.5 text-sky-500" />
                 </button>
+                {canEdit && (
+                  <button
+                    type="button"
+                    onClick={() => setEditingFile(file)}
+                    className="p-1.5 rounded-xl border border-border bg-card text-muted-foreground hover:text-amber-500 hover:bg-muted transition-colors shadow-2xs cursor-pointer"
+                    title="Edit Document Name & Description"
+                  >
+                    <Pencil className="size-3.5 text-amber-500" />
+                  </button>
+                )}
                 <a
                   href={`/api/storage/${file.id}`}
                   download={file.original_filename}
@@ -138,6 +186,15 @@ export function AttachmentCardList({
           mimeType={previewFile.mime_type}
           fileSize={previewFile.size_bytes}
           description={previewFile.description || undefined}
+        />
+      )}
+
+      {editingFile && (
+        <EditFileModal
+          isOpen={Boolean(editingFile)}
+          onClose={() => setEditingFile(null)}
+          file={editingFile}
+          onUpdated={handleUpdated}
         />
       )}
     </>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Download,
   Eye,
@@ -9,8 +9,10 @@ import {
   File,
   Calendar,
   FolderArchive,
+  Pencil,
 } from "lucide-react";
 import { DeleteFileButton } from "./delete-file-button";
+import { EditFileModal } from "./edit-file-modal";
 import { FilePreviewModal } from "@/components/ui/file-preview-modal";
 
 export interface FileAttachmentItem {
@@ -27,7 +29,42 @@ export function StorageFileTable({
 }: {
   files: FileAttachmentItem[];
 }) {
+  const [items, setItems] = useState<FileAttachmentItem[]>(files);
   const [previewFile, setPreviewFile] = useState<FileAttachmentItem | null>(null);
+  const [editingFile, setEditingFile] = useState<FileAttachmentItem | null>(null);
+
+  useEffect(() => {
+    setItems(files);
+  }, [files]);
+
+  const handleUpdated = (updated: {
+    id: string;
+    original_filename: string;
+    description: string | null;
+  }) => {
+    setItems((prev) =>
+      prev.map((item) =>
+        item.id === updated.id
+          ? {
+              ...item,
+              original_filename: updated.original_filename,
+              description: updated.description,
+            }
+          : item,
+      ),
+    );
+    if (previewFile?.id === updated.id) {
+      setPreviewFile((prev) =>
+        prev
+          ? {
+              ...prev,
+              original_filename: updated.original_filename,
+              description: updated.description,
+            }
+          : null,
+      );
+    }
+  };
 
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;
@@ -58,7 +95,7 @@ export function StorageFileTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-border/60">
-            {files.map((f) => {
+            {items.map((f) => {
               const isImage = f.mime_type.startsWith("image/");
               return (
                 <tr
@@ -117,6 +154,17 @@ export function StorageFileTable({
                         <span>Preview</span>
                       </button>
 
+                      {/* Edit (Pencil) */}
+                      <button
+                        type="button"
+                        onClick={() => setEditingFile(f)}
+                        className="inline-flex items-center gap-1 rounded-xl border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-muted hover:border-amber-500/50 transition-colors shadow-2xs cursor-pointer"
+                        title="Edit File Name & Description"
+                      >
+                        <Pencil className="size-3.5 text-amber-500" />
+                        <span>Edit</span>
+                      </button>
+
                       {/* Download */}
                       <a
                         href={`/api/storage/${f.id}`}
@@ -143,7 +191,7 @@ export function StorageFileTable({
 
       {/* Mobile Card List */}
       <div className="md:hidden flex flex-col divide-y divide-border/60">
-        {files.map((f) => {
+        {items.map((f) => {
           const isImage = f.mime_type.startsWith("image/");
           return (
             <div key={f.id} className="p-4 space-y-3 bg-card hover:bg-muted/20 transition-colors">
@@ -188,6 +236,14 @@ export function StorageFileTable({
                   <Eye className="size-3.5 text-sky-500" />
                   <span>Preview</span>
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingFile(f)}
+                  className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-border bg-card py-2 text-xs font-semibold text-foreground hover:bg-muted shadow-2xs transition-colors cursor-pointer"
+                >
+                  <Pencil className="size-3.5 text-amber-500" />
+                  <span>Edit</span>
+                </button>
                 <a
                   href={`/api/storage/${f.id}`}
                   download={f.original_filename}
@@ -205,7 +261,7 @@ export function StorageFileTable({
         })}
       </div>
 
-      {files.length === 0 && (
+      {items.length === 0 && (
         <div className="py-12 text-center text-muted-foreground">
           <div className="flex flex-col items-center justify-center gap-2">
             <FolderArchive className="size-8 text-slate-300 dark:text-slate-700" />
@@ -229,6 +285,16 @@ export function StorageFileTable({
           mimeType={previewFile.mime_type}
           fileSize={previewFile.size_bytes}
           description={previewFile.description || undefined}
+        />
+      )}
+
+      {/* Edit File Modal */}
+      {editingFile && (
+        <EditFileModal
+          isOpen={Boolean(editingFile)}
+          onClose={() => setEditingFile(null)}
+          file={editingFile}
+          onUpdated={handleUpdated}
         />
       )}
     </>
