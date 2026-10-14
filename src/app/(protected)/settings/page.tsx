@@ -55,28 +55,35 @@ import { CompactSettingsProfile } from "@/components/settings/compact-settings-p
 import { OfficerSignatureEditor } from "@/components/profile/officer-signature-editor";
 import { PrintConfigPanel } from "@/components/settings/print-config-panel";
 import type { OfficerProfileData } from "@/components/profile/officer-profile-container";
+import { LanguageToggle } from "@/components/layout/language-toggle";
+import { getServerTranslations } from "@/lib/i18n/server";
+import { toGujaratiNumerals } from "@/lib/reports/gujaratiReportUtils";
 
-const SETTINGS_TABS: TabDef[] = [
+const DEFAULT_SETTINGS_TABS: TabDef[] = [
   { id: "profile", label: "Profile", icon: "user" },
   { id: "holidays", label: "Holidays", icon: "calendar" },
   { id: "duty", label: "Duty", icon: "sparkles" },
   { id: "leave", label: "Leave", icon: "scale" },
   { id: "print", label: "Print Template", icon: "printer" },
+  { id: "language", label: "Language", icon: "globe" },
 ];
 
-function ChargedAs({ entries }: { entries: { code: string; days: number; color: string | null }[] | null }) {
+function ChargedAs({ entries, isGu }: { entries: { code: string; days: number; color: string | null }[] | null; isGu?: boolean }) {
   if (!entries) return null;
   return (
     <span className="inline-flex flex-wrap items-center gap-1 text-[10px] font-medium text-muted-foreground">
-      {entries.map((e) => (
-        <span
-          key={e.code}
-          className="inline-flex items-center gap-1 rounded-md border border-border/70 bg-card px-1.5 py-0.5 font-semibold text-foreground whitespace-nowrap"
-        >
-          <ColorDot color={e.color} label={e.code} />
-          {Number.isInteger(e.days) ? e.days : e.days.toFixed(1)} {e.code}
-        </span>
-      ))}
+      {entries.map((e) => {
+        const val = Number.isInteger(e.days) ? e.days : e.days.toFixed(1);
+        return (
+          <span
+            key={e.code}
+            className="inline-flex items-center gap-1 rounded-md border border-border/70 bg-card px-1.5 py-0.5 font-semibold text-foreground whitespace-nowrap"
+          >
+            <ColorDot color={e.color} label={e.code} />
+            {isGu ? toGujaratiNumerals(val) : val} {e.code}
+          </span>
+        );
+      })}
     </span>
   );
 }
@@ -87,8 +94,20 @@ export default async function SettingsPage({
   searchParams: Promise<{ tab?: string; year?: string }>;
 }) {
   const { tab, year: yearParam } = await searchParams;
+  const { lang, t } = await getServerTranslations();
+  const isGu = lang === "gu";
+
+  const settingsTabs: TabDef[] = [
+    { id: "profile", label: t.settings.tabs.profile, icon: "user" },
+    { id: "holidays", label: t.settings.tabs.holidays, icon: "calendar" },
+    { id: "duty", label: t.settings.tabs.duties, icon: "sparkles" },
+    { id: "leave", label: t.settings.tabs.leaves, icon: "scale" },
+    { id: "print", label: t.settings.tabs.print, icon: "printer" },
+    { id: "language", label: t.settings.tabs.language, icon: "globe" },
+  ];
+
   // Resolved on the server so the first paint already shows the right panel.
-  const activeTab = resolveTab(SETTINGS_TABS, tab);
+  const activeTab = resolveTab(settingsTabs, tab);
   const user = await getCurrentUser();
   const supabase = await createClient();
   const thisYear = getCurrentYear();
@@ -252,11 +271,11 @@ export default async function SettingsPage({
   return (
     <main className="mx-auto w-full max-w-5xl space-y-6 px-3 py-6 sm:space-y-8 sm:px-6 lg:px-8 2xl:max-w-6xl">
       <PageHeader
-        title="Account & System Settings"
-        subtitle="Your profile, holiday calendar, duty defaults and leave entitlement."
+        title={t.settings.pageTitle}
+        subtitle={t.settings.pageSubtitle}
       />
 
-      <Tabs tabs={SETTINGS_TABS} activeId={activeTab} />
+      <Tabs tabs={settingsTabs} activeId={activeTab} />
 
       <div className="grid grid-cols-1 gap-8">
         {activeTab === "profile" && (
@@ -276,9 +295,11 @@ export default async function SettingsPage({
                   <Clock className="size-4.5" />
                 </div>
                 <div>
-                  <h2 className="text-sm sm:text-base font-bold text-foreground">Time Display Format</h2>
+                  <h2 className="text-sm sm:text-base font-bold text-foreground">
+                    {t.settings.timeDisplayFormat}
+                  </h2>
                   <p className="text-[11px] text-muted-foreground">
-                    Controls timestamp formatting across all duty rosters, shifts, and the calendar.
+                    {t.settings.timeDisplayFormatSubtitle}
                   </p>
                 </div>
               </div>
@@ -305,10 +326,10 @@ export default async function SettingsPage({
                 </div>
                 <div className="min-w-0 flex-1 basis-40">
                   <h2 className="text-base font-bold text-foreground">
-                    My Holiday Calendar
+                    {t.settings.myHolidayCalendar}
                   </h2>
                   <p className="text-xs text-muted-foreground">
-                    Official gazetted holidays, declared optional holidays (max 2 leaves/yr), and custom dates.
+                    {t.settings.myHolidayCalendarSubtitle}
                   </p>
                 </div>
                 <HolidayYearPicker
@@ -343,56 +364,55 @@ export default async function SettingsPage({
             </div>
             <div>
               <h2 className="text-base font-bold text-foreground">
-                Duty &amp; Allowance Defaults
+                {t.settings.dutyDefaultsTitle}
               </h2>
               <p className="text-xs text-muted-foreground">
-                Used to pre-fill new duty entries. Every value stays editable
-                per duty.
+                {t.settings.dutyDefaultsSubtitle}
               </p>
             </div>
           </div>
 
           <ActionForm
             action={updateUserSettings}
-            submitLabel="Save defaults"
-            successMessage="Defaults saved."
+            submitLabel={t.settings.saveDefaults}
+            successMessage={t.settings.defaultsSaved}
             dirtyGuard
             resetOnSuccess={false}
             fields={[
               {
                 name: "holidayDayRate",
-                label: "Holiday day rate (₹)",
+                label: t.settings.holidayDayRate,
                 type: "number",
                 step: "0.01",
                 min: "0",
                 defaultValue: settings.holidayDayRate || "",
-                placeholder: "e.g. 500",
-                hint: "Paid for a holiday you WORK. A holiday taken off pays nothing extra.",
+                placeholder: t.settings.holidayRatePlaceholder,
+                hint: t.settings.holidayDayRateHint,
               },
               {
                 name: "dailySalaryRate",
-                label: "Daily Salary Rate / દૈનિક પગાર (₹)",
+                label: t.settings.dailySalaryRateLabel,
                 type: "number",
                 step: "0.01",
                 min: "0",
                 defaultValue: settings.dailySalaryRate || "",
-                placeholder: "e.g. 1000",
-                hint: "Standard per-day salary rate used to calculate deduction for Binpagari Leave (બિનપગારી રજા / LWP).",
+                placeholder: t.settings.dailySalaryRatePlaceholder,
+                hint: t.settings.dailySalaryRateHint,
               },
               {
                 name: "defaultShiftStart",
-                label: "Default shift start",
+                label: t.settings.defaultShiftStartLabel,
                 type: "time",
                 required: true,
                 defaultValue: settings.defaultShiftStart,
               },
               {
                 name: "defaultShiftEnd",
-                label: "Default shift end",
+                label: t.settings.defaultShiftEndLabel,
                 type: "time",
                 required: true,
                 defaultValue: settings.defaultShiftEnd,
-                hint: "Used to pre-fill new duty entries. Every value stays editable per duty.",
+                hint: t.settings.dutyDefaultsSubtitle,
               },
             ]}
           />
@@ -412,11 +432,10 @@ export default async function SettingsPage({
             </div>
             <div>
               <h2 className="text-base font-bold text-foreground">
-                My Leave Types &amp; Calendar Colours
+                {t.settings.leaveTypesTitle}
               </h2>
               <p className="text-xs text-muted-foreground">
-                Add leave types of your own on top of the department&apos;s, and
-                choose how each one looks on the calendar.
+                {t.settings.leaveTypesSubtitle}
               </p>
             </div>
           </div>
@@ -428,8 +447,8 @@ export default async function SettingsPage({
             onUpdate={updateMyLeaveType}
             onDelete={deleteMyLeaveType}
             onToggleDisabled={toggleUserLeaveType}
-            title="Department leave types"
-            emptyHint="No department leave types have been set up yet."
+            title={t.settings.deptLeaveTypes}
+            emptyHint={t.settings.deptLeaveTypesEmpty}
           />
 
           <LeaveTypeManager
@@ -439,8 +458,8 @@ export default async function SettingsPage({
             onUpdate={updateMyLeaveType}
             onDelete={deleteMyLeaveType}
             onToggleDisabled={toggleUserLeaveType}
-            title="My own leave types"
-            emptyHint="You have not added any leave types of your own yet."
+            title={t.settings.myLeaveTypes}
+            emptyHint={t.settings.myLeaveTypesEmpty}
           />
         </Card>
 
@@ -452,10 +471,10 @@ export default async function SettingsPage({
             </div>
             <div>
               <h2 className="text-base font-bold text-foreground">
-                My Annual Leave Entitlement ({currentYear})
+                {t.settings.annualLeaveEntitlement} ({isGu ? toGujaratiNumerals(currentYear) : currentYear})
               </h2>
               <p className="text-xs text-muted-foreground">
-                Set your personal quota allocations per leave type. You may log more than this quota anytime.
+                {t.settings.annualLeaveEntitlementSubtitle}
               </p>
             </div>
           </div>
@@ -482,7 +501,7 @@ export default async function SettingsPage({
 
             {activeLeaveTypes.length === 0 && (
               <p className="py-8 text-center text-xs text-muted-foreground">
-                No active leave types yet.
+                {t.settings.noActiveLeaveTypes}
               </p>
             )}
           </div>
@@ -497,6 +516,7 @@ export default async function SettingsPage({
               (a, l) => a + leaveDayCount(l.start_date, l.end_date, l.is_half_day),
               0,
             ),
+            isGu,
           )}
           count={(myLeaves ?? []).length}
           defaultOpen={false}
@@ -509,12 +529,12 @@ export default async function SettingsPage({
                 <table className="w-full text-left text-xs sm:text-sm">
                   <thead className="bg-muted/50 border-b border-border text-muted-foreground uppercase text-[11px] font-semibold tracking-wider">
                     <tr>
-                      <th className="py-3 px-4">Leave Category</th>
-                      <th className="py-3 px-4">Date Range</th>
-                      <th className="py-3 px-4">Days</th>
-                      <th className="py-3 px-4">Type / Session</th>
-                      <th className="py-3 px-4">Reason</th>
-                      <th className="py-3 px-4 text-right">Actions</th>
+                      <th className="py-3 px-4">{t.settings.colLeaveCategory}</th>
+                      <th className="py-3 px-4">{t.settings.colDateRange}</th>
+                      <th className="py-3 px-4">{t.settings.colDays}</th>
+                      <th className="py-3 px-4">{t.settings.colTypeSession}</th>
+                      <th className="py-3 px-4">{t.settings.colReason}</th>
+                      <th className="py-3 px-4 text-right">{t.settings.colActions}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/60">
@@ -537,7 +557,7 @@ export default async function SettingsPage({
                                 title={`Multi-Leave: ${breakdown?.map((b) => `${b.days} ${b.code}`).join(", ")}`}
                               >
                                 <Sparkles className="size-3 text-indigo-500 shrink-0" />
-                                <span>Multi-Leave</span>
+                                <span>{t.leave.multiType}</span>
                               </span>
                             ) : (
                               <span className="flex items-center gap-2">
@@ -547,28 +567,28 @@ export default async function SettingsPage({
                             )}
                           </td>
                           <td className="py-3.5 px-4 text-muted-foreground font-medium whitespace-nowrap">
-                            {formatDateRange(l.start_date, l.end_date)}
+                            {formatDateRange(l.start_date, l.end_date, isGu ? "gu" : "en-US")}
                           </td>
                           <td className="py-3.5 px-4 whitespace-nowrap">
                             <div className="flex flex-wrap items-center gap-2">
                               <Badge variant="info">
-                                {formatDays(leaveDayCount(l.start_date, l.end_date, l.is_half_day))}
+                                {formatDays(leaveDayCount(l.start_date, l.end_date, l.is_half_day), isGu)}
                               </Badge>
-                              {breakdown && <ChargedAs entries={breakdown} />}
+                              {breakdown && <ChargedAs entries={breakdown} isGu={isGu} />}
                             </div>
                           </td>
                           <td className="py-3.5 px-4 whitespace-nowrap">
                             {l.is_half_day ? (
-                              <Badge variant="warning">{l.half_day_session} Half-Day</Badge>
+                              <Badge variant="warning">{l.half_day_session} {t.leave.halfDay}</Badge>
                             ) : (
-                              <Badge variant="outline">Full Day</Badge>
+                              <Badge variant="outline">{t.leave.fullDay}</Badge>
                             )}
                           </td>
                           <td className="py-3.5 px-4 text-muted-foreground truncate max-w-xs">
                             {l.reason ? `"${l.reason}"` : "—"}
                           </td>
                           <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                            <DeleteLeaveButton id={l.id} label="Remove" />
+                            <DeleteLeaveButton id={l.id} label={t.common.remove} />
                           </td>
                         </tr>
                       );
@@ -596,7 +616,7 @@ export default async function SettingsPage({
                           {isMultiType ? (
                             <span className="inline-flex items-center gap-1.5 rounded-full border border-indigo-500/30 bg-indigo-500/10 px-2.5 py-0.5 text-xs font-bold text-indigo-700 dark:text-indigo-300">
                               <Sparkles className="size-3 text-indigo-500 shrink-0" />
-                              <span>Multi-Leave</span>
+                              <span>{t.leave.multiType}</span>
                             </span>
                           ) : (
                             <span className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
@@ -606,26 +626,26 @@ export default async function SettingsPage({
                           )}
                         </div>
                         {l.is_half_day ? (
-                          <Badge variant="warning">{l.half_day_session} Half-Day</Badge>
+                          <Badge variant="warning">{l.half_day_session} {t.leave.halfDay}</Badge>
                         ) : (
-                          <Badge variant="outline">Full Day</Badge>
+                          <Badge variant="outline">{t.leave.fullDay}</Badge>
                         )}
                       </div>
 
                       <div className="flex items-center justify-between gap-2 text-xs font-medium text-foreground bg-muted/40 p-2.5 rounded-xl border border-border/60">
                         <div className="flex items-center gap-1.5 min-w-0">
                           <CalendarDays className="size-3.5 text-indigo-500 shrink-0" />
-                          <span className="truncate">{formatDateRange(l.start_date, l.end_date)}</span>
+                          <span className="truncate">{formatDateRange(l.start_date, l.end_date, isGu ? "gu" : "en-US")}</span>
                         </div>
                         <Badge variant="info">
-                          {formatDays(leaveDayCount(l.start_date, l.end_date, l.is_half_day))}
+                          {formatDays(leaveDayCount(l.start_date, l.end_date, l.is_half_day), isGu)}
                         </Badge>
                       </div>
 
                       {breakdown && (
                         <div className="flex items-center gap-1.5 text-[11px] bg-muted/20 p-2 rounded-lg border border-border/40">
-                          <span className="text-muted-foreground font-medium shrink-0">Charged as:</span>
-                          <ChargedAs entries={breakdown} />
+                          <span className="text-muted-foreground font-medium shrink-0">{t.settings.chargedAsLabel}</span>
+                          <ChargedAs entries={breakdown} isGu={isGu} />
                         </div>
                       )}
 
@@ -636,7 +656,7 @@ export default async function SettingsPage({
                       )}
 
                       <div className="flex justify-end pt-1">
-                        <DeleteLeaveButton id={l.id} label="Remove" />
+                        <DeleteLeaveButton id={l.id} label={t.common.remove} />
                       </div>
                     </div>
                   );
@@ -645,7 +665,10 @@ export default async function SettingsPage({
             </>
           ) : (
             <div className="py-8 text-center text-xs text-muted-foreground border border-dashed border-border rounded-2xl p-6">
-              No leave applications recorded for {currentYear}.
+              {t.settings.noLeavesRecordedForYear.replace(
+                "{year}",
+                isGu ? toGujaratiNumerals(currentYear) : String(currentYear),
+              )}
             </div>
           )}
         </RegisteredLeavesAccordion>
@@ -660,6 +683,20 @@ export default async function SettingsPage({
             officerPosting={userRow?.current_posting ?? null}
             employeeCode={userRow?.employee_code ?? null}
           />
+        )}
+
+        {activeTab === "language" && (
+          <Card className="p-6 sm:p-8 space-y-6">
+            <div className="border-b border-border pb-4">
+              <h2 className="text-base sm:text-lg font-bold text-foreground">
+                Language & Regional Settings / ભાષા પસંદગી
+              </h2>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+                Switch seamlessly between English and Gujarati across all screens and reports.
+              </p>
+            </div>
+            <LanguageToggle variant="settings" />
+          </Card>
         )}
       </div>
     </main>

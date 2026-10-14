@@ -8,6 +8,8 @@ import {
 } from "@/components/profile/officer-profile-container";
 import type { TimelineEventItem } from "@/components/profile/timeline-event-modal";
 
+import { getServerTranslations } from "@/lib/i18n/server";
+
 export const metadata = {
   title: "Officer Career Profile — My Duty",
   description: "View and manage career milestones, postings, honours, and GST awards.",
@@ -23,6 +25,7 @@ export default async function ProfilePage() {
     { data: userRow },
     { data: departments },
     { data: rawTimeline },
+    translations,
   ] = await Promise.all([
     supabase
       .from("users")
@@ -41,7 +44,10 @@ export default async function ProfilePage() {
       .select("*")
       .eq("user_id", currentUser.id)
       .order("start_date", { ascending: false }),
+    getServerTranslations(),
   ]);
+
+  const { t } = translations;
 
   const deptData = userRow?.departments as unknown as { name: string } | null;
 
@@ -73,8 +79,8 @@ export default async function ProfilePage() {
   return (
     <main className="mx-auto w-full max-w-5xl space-y-6 px-3 py-6 sm:space-y-8 sm:px-6 lg:px-8 2xl:max-w-6xl">
       <PageHeader
-        title="Officer Career Profile"
-        subtitle="Chronological career milestones, postings, transfers, and official honours & awards."
+        title={t.profile.profileHeaderTitle}
+        subtitle={t.profile.profileHeaderSubtitle}
       />
 
       <OfficerProfileContainer

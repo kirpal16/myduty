@@ -25,6 +25,7 @@ import {
   updateTimelineEventAction,
 } from "@/actions/profile";
 import type { FormState } from "@/lib/forms/formState";
+import { useLanguage } from "@/lib/i18n/language-context";
 
 export interface TimelineEventItem {
   id: string;
@@ -53,54 +54,63 @@ interface TimelineEventModalProps {
 const EVENT_TYPE_OPTIONS: Array<{
   type: OfficerTimelineEventType;
   label: string;
+  gujaratiLabel: string;
   icon: typeof Shield;
   hint: string;
 }> = [
   {
     type: "JOINING",
     label: "Joining",
+    gujaratiLabel: "સેવા પ્રવેશ",
     icon: Shield,
     hint: "Initial police service appointment & induction",
   },
   {
     type: "TRAINING",
     label: "Training",
+    gujaratiLabel: "તાલીમ",
     icon: GraduationCap,
     hint: "Police academy or specialized courses",
   },
   {
     type: "POSTING",
     label: "Posting",
+    gujaratiLabel: "પોસ્ટિંગ",
     icon: Building2,
     hint: "Police station, branch or division assignment",
   },
   {
     type: "TRANSFER",
     label: "Transfer",
+    gujaratiLabel: "બદલી",
     icon: ArrowRightLeft,
     hint: "Relocation from one station to another",
   },
   {
     type: "PROMOTION",
     label: "Promotion",
+    gujaratiLabel: "બઢતી",
     icon: Award,
     hint: "Rank or designation elevation",
   },
   {
     type: "SPECIAL_DUTY",
     label: "Special Duty",
+    gujaratiLabel: "વિશેષ ફરજ",
     icon: Flame,
     hint: "Bandobast, election, VIP security or special ops",
   },
   {
     type: "ACHIEVEMENT",
     label: "Award",
+    gujaratiLabel: "એવોર્ડ",
     icon: Trophy,
     hint: "Medal, citation, or commendation letter",
   },
   {
     type: "OTHER",
     label: "Other",
+    gujaratiLabel: "અન્ય",
     icon: Bookmark,
     hint: "Other career milestone",
   },
@@ -113,6 +123,7 @@ export function TimelineEventModal({
   defaultEventType,
   onSuccess,
 }: TimelineEventModalProps) {
+  const { isGujarati, t } = useLanguage();
   useBodyScrollLock(isOpen);
 
   const [eventType, setEventType] = useState<OfficerTimelineEventType>(
@@ -239,10 +250,18 @@ export function TimelineEventModal({
               </div>
               <div>
                 <h2 className="text-base font-bold text-foreground">
-                  {eventToEdit ? "Edit Career Milestone" : "Add Career Milestone"}
+                  {eventToEdit
+                    ? isGujarati
+                      ? "કારકિર્દી માઇલસ્ટોન સંપાદિત કરો"
+                      : "Edit Career Milestone"
+                    : isGujarati
+                    ? "કારકિર્દી માઇલસ્ટોન ઉમેરો"
+                    : "Add Career Milestone"}
                 </h2>
                 <p className="text-xs text-muted-foreground">
-                  Track postings, transfers, academy training, and achievements.
+                  {isGujarati
+                    ? "પોસ્ટિંગ્સ, બદલીઓ, એકેડેમી તાલીમ અને સિદ્ધિઓ ટ્રૅક કરો."
+                    : "Track postings, transfers, academy training, and achievements."}
                 </p>
               </div>
             </div>
@@ -272,7 +291,8 @@ export function TimelineEventModal({
             {/* Event Type Selector */}
             <div>
               <label className="block text-xs font-semibold text-foreground mb-2">
-                Milestone Type <span className="text-rose-500">*</span>
+                {t.profile.milestoneType}{" "}
+                <span className="text-rose-500">*</span>
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {EVENT_TYPE_OPTIONS.map((opt) => {
@@ -285,10 +305,10 @@ export function TimelineEventModal({
                       onClick={() => {
                         setEventType(opt.type);
                         if (!title) {
-                          if (opt.type === "JOINING") setTitle("Joined Gujarat Police");
-                          if (opt.type === "TRAINING") setTitle("Academy Training Course");
-                          if (opt.type === "TRANSFER") setTitle("Transferred to New Station");
-                          if (opt.type === "PROMOTION") setTitle("Promoted in Rank");
+                          if (opt.type === "JOINING") setTitle(t.profile.joinedPolice);
+                          if (opt.type === "TRAINING") setTitle(t.profile.academyTraining);
+                          if (opt.type === "TRANSFER") setTitle(t.profile.transferredStation);
+                          if (opt.type === "PROMOTION") setTitle(t.profile.promotedRank);
                         }
                       }}
                       className={`flex flex-col items-center justify-center p-2.5 rounded-xl border text-center transition-all ${
@@ -298,7 +318,7 @@ export function TimelineEventModal({
                       }`}
                     >
                       <Icon className="size-5 mb-1 shrink-0" />
-                      <span className="text-xs">{opt.label}</span>
+                      <span className="text-xs">{isGujarati ? opt.gujaratiLabel : opt.label}</span>
                     </button>
                   );
                 })}
@@ -308,14 +328,19 @@ export function TimelineEventModal({
             {/* Title */}
             <div>
               <label className="block text-xs font-semibold text-foreground mb-1">
-                Milestone Title <span className="text-rose-500">*</span>
+                {t.profile.milestoneTitle}{" "}
+                <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
                 required
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. Station In-charge / Duty Officer"
+                placeholder={
+                  isGujarati
+                    ? "દા.ત. સ્ટેશન ઇન્ચાર્જ / ડ્યુટી ઓફિસર"
+                    : "e.g. Station In-charge / Duty Officer"
+                }
                 className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-indigo-500 focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
               />
             </div>
@@ -325,7 +350,9 @@ export function TimelineEventModal({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-2xl bg-cyan-500/5 border border-cyan-500/20">
                 <div>
                   <label className="block text-xs font-semibold text-foreground mb-1">
-                    Transferred From (Station / District)
+                    {isGujarati
+                      ? "ક્યાંથી બદલી (સ્ટેશન / જિલ્લો)"
+                      : "Transferred From (Station / District)"}
                   </label>
                   <div className="relative">
                     <MapPin className="absolute left-3 top-3 size-4 text-cyan-600 dark:text-cyan-400 pointer-events-none" />
@@ -333,7 +360,11 @@ export function TimelineEventModal({
                       type="text"
                       value={fromLocation}
                       onChange={(e) => setFromLocation(e.target.value)}
-                      placeholder="e.g. Ellisbridge Police Station"
+                      placeholder={
+                        isGujarati
+                          ? "દા.ત. એલિસબ્રિજ પોલીસ સ્ટેશન"
+                          : "e.g. Ellisbridge Police Station"
+                      }
                       className="w-full rounded-xl border border-border bg-background py-2.5 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-cyan-500 focus:outline-hidden focus:ring-1 focus:ring-cyan-500"
                     />
                   </div>
@@ -341,7 +372,9 @@ export function TimelineEventModal({
 
                 <div>
                   <label className="block text-xs font-semibold text-foreground mb-1">
-                    Transferred To (Station / District)
+                    {isGujarati
+                      ? "ક્યાં બદલી (સ્ટેશન / જિલ્લો)"
+                      : "Transferred To (Station / District)"}
                   </label>
                   <div className="relative">
                     <MapPin className="absolute left-3 top-3 size-4 text-indigo-600 dark:text-indigo-400 pointer-events-none" />
@@ -349,7 +382,11 @@ export function TimelineEventModal({
                       type="text"
                       value={toLocation}
                       onChange={(e) => setToLocation(e.target.value)}
-                      placeholder="e.g. Navrangpura Police Station"
+                      placeholder={
+                        isGujarati
+                          ? "દા.ત. નવરંગપુરા પોલીસ સ્ટેશન"
+                          : "e.g. Navrangpura Police Station"
+                      }
                       className="w-full rounded-xl border border-border bg-background py-2.5 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-indigo-500 focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
                     />
                   </div>
@@ -362,7 +399,11 @@ export function TimelineEventModal({
               <div>
                 <label className="block text-xs font-semibold text-foreground mb-1">
                   {eventType === "TRAINING"
-                    ? "Academy / Institution"
+                    ? isGujarati
+                      ? "એકેડેમી / સંસ્થા"
+                      : "Academy / Institution"
+                    : isGujarati
+                    ? "પોલીસ સ્ટેશન / શાખા / વિભાગ"
                     : "Police Station / Branch / Department"}
                 </label>
                 <div className="relative">
@@ -373,7 +414,11 @@ export function TimelineEventModal({
                     onChange={(e) => setDepartment(e.target.value)}
                     placeholder={
                       eventType === "TRAINING"
-                        ? "e.g. Gujarat Police Academy, Karai"
+                        ? isGujarati
+                          ? "દા.ત. ગુજરાત પોલીસ એકેડેમી, કરાઈ"
+                          : "e.g. Gujarat Police Academy, Karai"
+                        : isGujarati
+                        ? "દા.ત. નવરંગપુરા પોલીસ સ્ટેશન"
                         : "e.g. Navrangpura Police Station"
                     }
                     className="w-full rounded-xl border border-border bg-background py-2.5 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-indigo-500 focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
@@ -383,7 +428,7 @@ export function TimelineEventModal({
 
               <div>
                 <label className="block text-xs font-semibold text-foreground mb-1">
-                  Designation / Rank at that time
+                  {t.profile.designationRankAtTime}
                 </label>
                 <div className="relative">
                   <BadgeCheck className="absolute left-3 top-3 size-4 text-muted-foreground pointer-events-none" />
@@ -391,7 +436,11 @@ export function TimelineEventModal({
                     type="text"
                     value={designation}
                     onChange={(e) => setDesignation(e.target.value)}
-                    placeholder="e.g. Police Inspector, PSI, HC"
+                    placeholder={
+                      isGujarati
+                        ? "દા.ત. પોલીસ ઇન્સ્પેક્ટર, પીએસઆઈ, હે.કો."
+                        : "e.g. Police Inspector, PSI, HC"
+                    }
                     className="w-full rounded-xl border border-border bg-background py-2.5 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-indigo-500 focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
                   />
                 </div>
@@ -402,7 +451,7 @@ export function TimelineEventModal({
             {eventType !== "TRANSFER" && (
               <div>
                 <label className="block text-xs font-semibold text-foreground mb-1">
-                  Location / City / District
+                  {t.profile.locationCityDistrict}
                 </label>
                 <div className="relative">
                   <MapPin className="absolute left-3 top-3 size-4 text-muted-foreground pointer-events-none" />
@@ -410,7 +459,11 @@ export function TimelineEventModal({
                     type="text"
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
-                    placeholder="e.g. Ahmedabad City / Gandhinagar / Surat"
+                    placeholder={
+                      isGujarati
+                        ? "દા.ત. અમદાવાદ શહેર / ગાંધીનગર / સુરત"
+                        : "e.g. Ahmedabad City / Gandhinagar / Surat"
+                    }
                     className="w-full rounded-xl border border-border bg-background py-2.5 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-indigo-500 focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
                   />
                 </div>
@@ -422,9 +475,15 @@ export function TimelineEventModal({
               <div>
                 <label className="block text-xs font-semibold text-foreground mb-1">
                   {eventType === "JOINING"
-                    ? "Joining Date"
+                    ? isGujarati
+                      ? "પ્રવેશ તારીખ"
+                      : "Joining Date"
                     : eventType === "TRANSFER"
-                    ? "Transfer / Order Date"
+                    ? isGujarati
+                      ? "બદલી / હુકમ તારીખ"
+                      : "Transfer / Order Date"
+                    : isGujarati
+                    ? "શરૂઆત તારીખ"
                     : "Start Date"}{" "}
                   <span className="text-rose-500">*</span>
                 </label>
@@ -440,7 +499,7 @@ export function TimelineEventModal({
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="block text-xs font-semibold text-foreground">
-                    End / Completion Date
+                    {t.profile.endCompletionDate}
                   </label>
                   <label className="flex items-center gap-1.5 text-xs text-indigo-600 dark:text-indigo-400 font-medium cursor-pointer">
                     <input
@@ -452,7 +511,7 @@ export function TimelineEventModal({
                       }}
                       className="rounded border-border text-indigo-600 focus:ring-indigo-500 size-3.5"
                     />
-                    <span>Currently Active</span>
+                    <span>{t.profile.currentlyActive}</span>
                   </label>
                 </div>
                 <input
@@ -468,7 +527,9 @@ export function TimelineEventModal({
             {/* Description */}
             <div>
               <label className="block text-xs font-semibold text-foreground mb-1">
-                Details / Order Number / Responsibilities
+                {isGujarati
+                  ? "વિગતો / ઓર્ડર નંબર / જવાબદારીઓ"
+                  : "Details / Order Number / Responsibilities"}
               </label>
               <div className="relative">
                 <FileText className="absolute left-3 top-3 size-4 text-muted-foreground pointer-events-none" />
@@ -476,7 +537,11 @@ export function TimelineEventModal({
                   rows={3}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="e.g. Order No. GP/EST/2022/941. In-charge of Law & Order."
+                  placeholder={
+                    isGujarati
+                      ? "દા.ત. ઓર્ડર નં. GP/EST/2022/941. કાયદો અને વ્યવસ્થા ઇન્ચાર્જ."
+                      : "e.g. Order No. GP/EST/2022/941. In-charge of Law & Order."
+                  }
                   className="w-full rounded-xl border border-border bg-background py-2.5 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-indigo-500 focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
                 />
               </div>
@@ -491,7 +556,7 @@ export function TimelineEventModal({
               onClick={onClose}
               className="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
             >
-              Cancel
+              {t.common.cancel}
             </button>
 
             <button
@@ -503,10 +568,14 @@ export function TimelineEventModal({
               {isPending ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
-                  <span>Saving...</span>
+                  <span>{t.common.saving}</span>
                 </>
               ) : (
-                <span>{eventToEdit ? "Update Milestone" : "Add Milestone"}</span>
+                <span>
+                  {eventToEdit
+                    ? t.profile.editMilestone
+                    : t.profile.addMilestone}
+                </span>
               )}
             </button>
           </div>

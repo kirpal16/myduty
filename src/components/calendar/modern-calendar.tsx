@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useLanguage } from "@/lib/i18n/language-context";
+import { toGujaratiNumerals } from "@/lib/reports/gujaratiReportUtils";
 import { eventsForDay, eventDayRange } from "@/lib/calendar/eventDays";
 import { eventTimeRange } from "@/lib/calendar/eventTimeRange";
 import {
@@ -212,6 +214,12 @@ function customEventStyle(color?: string | null): React.CSSProperties | undefine
 
 const WEEKDAYS_FULL = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const GUJARATI_WEEKDAYS_FULL = ["રવિવાર", "સોમવાર", "મંગળવાર", "બુધવાર", "ગુરુવાર", "શુક્રવાર", "શનિવાર"];
+const GUJARATI_WEEKDAYS = ["રવિ", "સોમ", "મંગળ", "બુધ", "ગુરુ", "શુક્ર", "શનિ"];
+const GUJARATI_MONTH_FULL = [
+  "જાન્યુઆરી", "ફેબ્રુઆરી", "માર્ચ", "એપ્રિલ", "મે", "જૂન",
+  "જુલાઈ", "ઑગસ્ટ", "સપ્ટેમ્બર", "ઓક્ટોબર", "નવેમ્બર", "ડિસેમ્બર"
+];
 
 export function ModernCalendar({
   events,
@@ -226,6 +234,7 @@ export function ModernCalendar({
    */
   dbHolidays?: HolidayRecord[];
 }) {
+  const { lang, t, isGujarati } = useLanguage();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedMobileDate, setSelectedMobileDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<"month" | "week" | "agenda">("month");
@@ -238,7 +247,8 @@ export function ModernCalendar({
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
-  const monthName = formatSafeMonthFull(currentDate);
+  const monthName = lang === "gu" ? GUJARATI_MONTH_FULL[month] : formatSafeMonthFull(currentDate);
+  const displayWeekdays = lang === "gu" ? GUJARATI_WEEKDAYS : WEEKDAYS;
 
   // Navigation Handlers
   const handlePrev = () => {
@@ -466,14 +476,14 @@ export function ModernCalendar({
             </div>
             <div className="min-w-0">
               <span className="block text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider truncate">
-                Leaves
+                {t.nav.leaves}
               </span>
               <div className="flex items-baseline gap-1 sm:gap-1.5">
                 <span className="text-lg sm:text-2xl font-black text-foreground">
-                  {monthLeaveDays}
+                  {isGujarati ? toGujaratiNumerals(monthLeaveDays) : monthLeaveDays}
                 </span>
                 <span className="text-[10px] sm:text-xs text-muted-foreground font-medium truncate">
-                  Days Off
+                  {lang === "gu" ? "દિવસો રજા" : "Days Off"}
                 </span>
               </div>
             </div>
@@ -482,7 +492,7 @@ export function ModernCalendar({
             href="/leave/new"
             onClick={(e) => e.stopPropagation()}
             className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 transition-colors shrink-0"
-            title="Log Leave"
+            title={t.calendar.applyLeaveTooltip}
           >
             <Plus className="size-3.5 sm:size-4" />
           </Link>
@@ -503,14 +513,16 @@ export function ModernCalendar({
             </div>
             <div className="min-w-0">
               <span className="block text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider truncate">
-                Holidays &amp; Offs
+                {t.calendar.holidaysAndOffsTab}
               </span>
               <div className="flex items-baseline gap-1 sm:gap-1.5">
                 <span className="text-lg sm:text-2xl font-black text-foreground">
-                  {standardAccordionDays.length}
+                  {isGujarati
+                    ? toGujaratiNumerals(standardAccordionDays.length)
+                    : standardAccordionDays.length}
                 </span>
                 <span className="text-[10px] sm:text-xs text-muted-foreground font-medium truncate">
-                  Observances
+                  {t.calendar.observances}
                 </span>
               </div>
             </div>
@@ -532,14 +544,16 @@ export function ModernCalendar({
             </div>
             <div className="min-w-0">
               <span className="block text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider truncate">
-                Optional (મરજિયાત)
+                {t.holidays.optionalBadge}
               </span>
               <div className="flex items-baseline gap-1 sm:gap-1.5">
                 <span className="text-lg sm:text-2xl font-black text-foreground">
-                  {optionalAccordionDays.length}
+                  {isGujarati
+                    ? toGujaratiNumerals(optionalAccordionDays.length)
+                    : optionalAccordionDays.length}
                 </span>
                 <span className="text-[10px] sm:text-xs text-muted-foreground font-medium truncate">
-                  Available
+                  {t.calendar.available}
                 </span>
               </div>
             </div>
@@ -548,7 +562,7 @@ export function ModernCalendar({
             href="/leave/new?type=OH"
             onClick={(e) => e.stopPropagation()}
             className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl border border-purple-500/30 bg-purple-500/10 text-purple-700 dark:text-purple-300 hover:bg-purple-500/20 transition-colors shrink-0"
-            title="Apply Optional Leave"
+            title={t.calendar.applyLeaveTooltip}
           >
             <Plus className="size-3.5 sm:size-4" />
           </Link>
@@ -569,14 +583,14 @@ export function ModernCalendar({
             </div>
             <div className="min-w-0">
               <span className="block text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider truncate">
-                Duties
+                {t.nav.duties}
               </span>
               <div className="flex items-baseline gap-1 sm:gap-1.5">
                 <span className="text-lg sm:text-2xl font-black text-foreground">
-                  {monthDuties.length}
+                  {isGujarati ? toGujaratiNumerals(monthDuties.length) : monthDuties.length}
                 </span>
                 <span className="text-[10px] sm:text-xs text-muted-foreground font-medium truncate">
-                  Shifts Active
+                  {t.calendar.shiftsActive}
                 </span>
               </div>
             </div>
@@ -585,7 +599,7 @@ export function ModernCalendar({
             href="/duty/new"
             onClick={(e) => e.stopPropagation()}
             className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-indigo-600 text-white hover:bg-indigo-500 shadow-sm transition-colors shrink-0"
-            title="Log Duty"
+            title={t.calendar.logDutyTooltip}
           >
             <Plus className="size-3.5 sm:size-4" />
           </Link>
@@ -603,7 +617,7 @@ export function ModernCalendar({
                 type="button"
                 onClick={handlePrev}
                 className="p-1.5 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                title="Previous Month"
+                title={lang === "gu" ? "ગત મહિનો" : "Previous Month"}
               >
                 <ChevronLeft className="size-4.5" />
               </button>
@@ -612,13 +626,13 @@ export function ModernCalendar({
                 onClick={handleToday}
                 className="px-3.5 py-1 text-xs font-bold text-foreground hover:bg-muted rounded-xl transition-colors cursor-pointer"
               >
-                Today
+                {t.calendar.today}
               </button>
               <button
                 type="button"
                 onClick={handleNext}
                 className="p-1.5 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                title="Next Month"
+                title={lang === "gu" ? "આગામી મહિનો" : "Next Month"}
               >
                 <ChevronRight className="size-4.5" />
               </button>
@@ -629,7 +643,7 @@ export function ModernCalendar({
                 {monthName}
               </h2>
               <span className="text-sm font-bold text-muted-foreground">
-                {year}
+                {isGujarati ? toGujaratiNumerals(year) : year}
               </span>
             </div>
           </div>
@@ -647,7 +661,7 @@ export function ModernCalendar({
                 }`}
               >
                 <LayoutGrid className="size-3.5" />
-                <span>Month</span>
+                <span>{t.calendar.month}</span>
               </button>
               <button
                 type="button"
@@ -659,7 +673,7 @@ export function ModernCalendar({
                 }`}
               >
                 <CalendarDays className="size-3.5" />
-                <span>Week</span>
+                <span>{t.calendar.week}</span>
               </button>
               <button
                 type="button"
@@ -671,7 +685,7 @@ export function ModernCalendar({
                 }`}
               >
                 <List className="size-3.5" />
-                <span>Agenda</span>
+                <span>{t.calendar.agenda}</span>
               </button>
             </div>
           </div>
@@ -681,13 +695,13 @@ export function ModernCalendar({
         <div className="px-4 py-2.5 border-b border-border bg-card flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mr-1 flex items-center gap-1">
-              <Filter className="size-3" /> Filter:
+              <Filter className="size-3" /> {t.common.filter}:
             </span>
             {[
-              { id: "all", label: "All Items" },
-              { id: "duty", label: "Duties", dot: "bg-indigo-600" },
-              { id: "leave", label: "Leaves", dot: "bg-emerald-600" },
-              { id: "holiday", label: "Holidays / Off-Days", dot: "bg-amber-500" },
+              { id: "all", label: t.calendar.allFilter },
+              { id: "duty", label: t.calendar.dutiesFilter, dot: "bg-indigo-600" },
+              { id: "leave", label: t.calendar.leavesFilter, dot: "bg-emerald-600" },
+              { id: "holiday", label: t.calendar.holidaysFilter, dot: "bg-amber-500" },
             ].map((f) => (
               <button
                 key={f.id}
@@ -706,7 +720,9 @@ export function ModernCalendar({
           </div>
 
           <span className="text-[11px] text-muted-foreground hidden lg:inline">
-            Hover or tap any date to inspect details or declare off-days
+            {lang === "gu"
+              ? "વિગતો જોવા માટે કોઈપણ તારીખ પર ક્લિક કરો"
+              : "Hover or tap any date to inspect details or declare off-days"}
           </span>
         </div>
 
@@ -715,7 +731,7 @@ export function ModernCalendar({
           <div className="flex flex-col">
             {/* Weekday Labels Header */}
             <div className="grid grid-cols-7 border-b border-border bg-muted/40 text-center">
-              {WEEKDAYS.map((day, idx) => {
+              {displayWeekdays.map((day, idx) => {
                 const isWeekend = idx === 0 || idx === 6;
                 return (
                   <div
@@ -727,7 +743,7 @@ export function ModernCalendar({
                     }`}
                   >
                     <span className="hidden sm:inline">{day}</span>
-                    <span className="sm:hidden">{day.slice(0, 2)}</span>
+                    <span className="sm:hidden">{lang === "gu" ? day : day.slice(0, 2)}</span>
                   </div>
                 );
               })}
@@ -770,7 +786,7 @@ export function ModernCalendar({
                             : "text-muted-foreground"
                         }`}
                       >
-                        {cell.dayNumber}
+                        {isGujarati ? toGujaratiNumerals(cell.dayNumber) : cell.dayNumber}
                       </span>
 
                     </div>
@@ -786,7 +802,12 @@ export function ModernCalendar({
                           .replace("Leave: ", "")
                           .replace("Holiday: ", "")
                           .replace("My holiday: ", "")
-                          .replace("Optional Holiday: ", "");
+                          .replace("Optional Holiday: ", "")
+                          .replace("ફરજ: ", "")
+                          .replace("રજા: ", "")
+                          .replace("જાહેર રજા: ", "")
+                          .replace("મારી રજા: ", "")
+                          .replace("મરજિયાત રજા: ", "");
 
                         return (
                           <div
@@ -813,7 +834,7 @@ export function ModernCalendar({
 
                       {dayEvents.length > 3 && (
                         <div className="text-[10px] font-bold text-muted-foreground pl-1">
-                          +{dayEvents.length - 3} more
+                          +{isGujarati ? toGujaratiNumerals(dayEvents.length - 3) : dayEvents.length - 3} {lang === "gu" ? "વધુ" : "more"}
                         </div>
                       )}
                     </div>
@@ -868,14 +889,16 @@ export function ModernCalendar({
                   >
                     <div className="flex items-center justify-between border-b border-border pb-2 mb-2">
                       <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                        {WEEKDAYS[idx]}
+                        {displayWeekdays[idx]}
                       </span>
                       <span
                         className={`size-6 flex items-center justify-center rounded-full text-xs font-bold ${
                           isToday ? "bg-indigo-600 text-white" : "text-foreground"
                         }`}
                       >
-                        {startOfWeek.getDate()}
+                        {isGujarati
+                          ? toGujaratiNumerals(startOfWeek.getDate())
+                          : startOfWeek.getDate()}
                       </span>
                     </div>
 
@@ -944,7 +967,7 @@ export function ModernCalendar({
                         {formatSafeMonthShort(eventDate)}
                       </span>
                       <span className="text-base font-extrabold text-foreground">
-                        {eventDate.getDate()}
+                        {isGujarati ? toGujaratiNumerals(eventDate.getDate()) : eventDate.getDate()}
                       </span>
                     </div>
 
@@ -965,7 +988,7 @@ export function ModernCalendar({
                           <span>{e.type === "leave" && e.rawType ? e.rawType : style.label}</span>
                         </span>
                         <span className="text-xs font-semibold text-muted-foreground">
-                          {formatSafeWeekdayFull(eventDate)}
+                          {formatSafeWeekdayFull(eventDate, isGujarati)}
                         </span>
                         {/* Labelled here — a desktop row has the width, and
                             the amount is worth reading. */}
@@ -1074,7 +1097,7 @@ export function ModernCalendar({
               className="flex items-center justify-center gap-1 py-2 rounded-xl bg-indigo-600 text-white text-xs font-semibold shadow-xs"
             >
               <Plus className="size-3" />
-              <span>Log Duty</span>
+              <span>{t.calendar.logDuty}</span>
             </Link>
           </div>
         </div>
@@ -1096,9 +1119,11 @@ export function ModernCalendar({
             >
               <Sparkles className="size-3.5 shrink-0 text-amber-500" />
               <span className="truncate">
-                <span className="sm:hidden">Holidays</span>
-                <span className="hidden sm:inline">Holidays &amp; Offs</span>{" "}
-                <span className="text-[11px] opacity-80">({standardAccordionDays.length})</span>
+                <span className="sm:hidden">{t.calendar.holidaysTabShort}</span>
+                <span className="hidden sm:inline">{t.calendar.holidaysAndOffsTab}</span>{" "}
+                <span className="text-[11px] opacity-80">
+                  ({isGujarati ? toGujaratiNumerals(standardAccordionDays.length) : standardAccordionDays.length})
+                </span>
               </span>
             </button>
 
@@ -1113,9 +1138,11 @@ export function ModernCalendar({
             >
               <Palmtree className="size-3.5 shrink-0 text-purple-500" />
               <span className="truncate">
-                <span className="sm:hidden">Optional</span>
-                <span className="hidden sm:inline">Optional Holidays</span>{" "}
-                <span className="text-[11px] opacity-80">({optionalAccordionDays.length})</span>
+                <span className="sm:hidden">{t.calendar.optionalTabShort}</span>
+                <span className="hidden sm:inline">{t.calendar.optionalHolidaysTab}</span>{" "}
+                <span className="text-[11px] opacity-80">
+                  ({isGujarati ? toGujaratiNumerals(optionalAccordionDays.length) : optionalAccordionDays.length})
+                </span>
               </span>
             </button>
 
@@ -1130,9 +1157,11 @@ export function ModernCalendar({
             >
               <CalendarOff className="size-3.5 shrink-0 text-emerald-500" />
               <span className="truncate">
-                <span className="sm:hidden">Leaves</span>
-                <span className="hidden sm:inline">Monthly Leaves</span>{" "}
-                <span className="text-[11px] opacity-80">({formatDays(monthLeaveDays)})</span>
+                <span className="sm:hidden">{t.calendar.leavesTabShort}</span>
+                <span className="hidden sm:inline">{t.calendar.monthlyLeavesTab}</span>{" "}
+                <span className="text-[11px] opacity-80">
+                  ({isGujarati ? toGujaratiNumerals(formatDays(monthLeaveDays)) : formatDays(monthLeaveDays)})
+                </span>
               </span>
             </button>
 
@@ -1147,9 +1176,11 @@ export function ModernCalendar({
             >
               <Briefcase className="size-3.5 shrink-0 text-indigo-500" />
               <span className="truncate">
-                <span className="sm:hidden">Duties</span>
-                <span className="hidden sm:inline">Duty Roster</span>{" "}
-                <span className="text-[11px] opacity-80">({monthDuties.length})</span>
+                <span className="sm:hidden">{t.calendar.dutiesTabShort}</span>
+                <span className="hidden sm:inline">{t.calendar.dutyRosterTab}</span>{" "}
+                <span className="text-[11px] opacity-80">
+                  ({isGujarati ? toGujaratiNumerals(monthDuties.length) : monthDuties.length})
+                </span>
               </span>
             </button>
           </div>
@@ -1161,7 +1192,7 @@ export function ModernCalendar({
               className="flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-purple-600 text-xs font-semibold text-white shadow-xs hover:bg-purple-500 transition-colors shrink-0"
             >
               <Plus className="size-3.5" />
-              <span>Apply Optional Leave</span>
+              <span>{t.calendar.applyOptionalLeave}</span>
             </Link>
           )}
           {bottomTab === "leaves" && (
@@ -1170,7 +1201,7 @@ export function ModernCalendar({
               className="flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-xs font-semibold text-white shadow-xs hover:opacity-90 transition-opacity shrink-0"
             >
               <Plus className="size-3.5" />
-              <span>Log Leave</span>
+              <span>{t.calendar.logLeave}</span>
             </Link>
           )}
           {bottomTab === "duties" && (
@@ -1179,7 +1210,7 @@ export function ModernCalendar({
               className="flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 text-xs font-semibold text-white shadow-xs hover:bg-indigo-500 transition-colors shrink-0"
             >
               <Plus className="size-3.5" />
-              <span>Log Duty</span>
+              <span>{t.calendar.logDuty}</span>
             </Link>
           )}
         </div>
@@ -1205,7 +1236,7 @@ export function ModernCalendar({
                 href="/leave/new?type=OH"
                 className="inline-flex items-center gap-1 font-semibold text-purple-600 dark:text-purple-400 hover:underline shrink-0"
               >
-                <span>Apply Optional Leave</span>
+                <span>{t.calendar.applyOptionalLeave}</span>
                 <span aria-hidden="true">&rarr;</span>
               </Link>
             </div>
@@ -1234,7 +1265,7 @@ export function ModernCalendar({
                           {d.name || "Optional Holiday"}
                         </span>
                         <span className="text-[11px] text-muted-foreground truncate">
-                          {formatSafeDateFull(date)} · {formatSafeWeekdayFull(date)}
+                          {formatSafeDateFull(date, isGujarati)} · {formatSafeWeekdayFull(date, isGujarati)}
                         </span>
                       </div>
                     </div>
@@ -1242,11 +1273,11 @@ export function ModernCalendar({
                     <div className="flex items-center gap-1.5 shrink-0">
                       {leaveOnDate ? (
                         <span className="inline-flex items-center gap-1 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
-                          Leave Taken
+                          {t.calendar.leaveTaken}
                         </span>
                       ) : d.worked ? (
                         <span className="inline-flex items-center gap-1 rounded-lg border border-slate-500/20 bg-slate-500/10 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                          Regular Duty
+                          {t.calendar.regularDuty}
                         </span>
                       ) : (
                         <Link
@@ -1254,7 +1285,7 @@ export function ModernCalendar({
                           className="inline-flex items-center gap-1 rounded-lg border border-purple-500/30 bg-purple-500/15 hover:bg-purple-500/25 px-2 py-1 text-[10px] font-semibold text-purple-700 dark:text-purple-300 transition-colors"
                         >
                           <Plus className="size-3" />
-                          <span>Take Leave</span>
+                          <span>{t.calendar.takeLeave}</span>
                         </Link>
                       )}
                     </div>
@@ -1343,9 +1374,15 @@ export function ModernCalendar({
                         Total Days
                       </span>
                       <span className="block font-black" style={{ color: leaveColor }}>
-                        {formatDays(
-                          leaveDayCount(leaveStartKey(l), leaveEndKey(l), Boolean(l.isHalfDay)),
-                        )}
+                        {isGujarati
+                          ? toGujaratiNumerals(
+                              formatDays(
+                                leaveDayCount(leaveStartKey(l), leaveEndKey(l), Boolean(l.isHalfDay)),
+                              ),
+                            )
+                          : formatDays(
+                              leaveDayCount(leaveStartKey(l), leaveEndKey(l), Boolean(l.isHalfDay)),
+                            )}
                       </span>
                     </div>
                   </div>
@@ -1380,11 +1417,11 @@ export function ModernCalendar({
                     <div className="flex flex-col truncate">
                       <div className="flex items-center gap-1.5">
                         <span className="text-xs font-bold text-foreground truncate">
-                          {d.title.replace("Duty: ", "")}
+                          {d.title.replace("Duty: ", "").replace("ફરજ: ", "")}
                         </span>
                         {isDutyOnHoliday && (
                           <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.2 rounded-md">
-                            Holiday Duty
+                            {lang === "gu" ? "રજાની ફરજ" : "Holiday Duty"}
                           </span>
                         )}
                       </div>

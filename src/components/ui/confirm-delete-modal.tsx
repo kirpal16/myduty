@@ -5,6 +5,7 @@ import { AlertTriangle, Trash2, X, Loader2 } from "lucide-react";
 import { ModalPortal, MODAL_Z } from "./modal-portal";
 import { useBodyScrollLock } from "@/lib/hooks/useBodyScrollLock";
 import { useModalBackClose } from "@/lib/hooks/useModalBackClose";
+import { useLanguage } from "@/lib/i18n/language-context";
 
 export interface ConfirmDeleteModalProps {
   isOpen: boolean;
@@ -20,11 +21,15 @@ export function ConfirmDeleteModal({
   isOpen,
   onClose,
   onConfirm,
-  title = "Confirm Deletion",
-  description = "Are you sure you want to delete this record? This action cannot be undone.",
-  confirmLabel = "Delete Record",
+  title,
+  description,
+  confirmLabel,
   isPending = false,
 }: ConfirmDeleteModalProps) {
+  const { dictionary } = useLanguage();
+  const modalTitle = title ?? dictionary.common.confirm;
+  const modalDesc = description ?? "Are you sure you want to delete this record? This action cannot be undone.";
+  const modalConfirmLabel = confirmLabel ?? dictionary.common.delete;
   // Reference-counted, so closing this modal while it sits over the open
   // mobile drawer no longer unlocks the page underneath.
   useBodyScrollLock(isOpen);
@@ -71,10 +76,10 @@ export function ConfirmDeleteModal({
         {/* Title and Description */}
         <div className="space-y-1.5">
           <h3 className="text-base sm:text-lg font-bold text-foreground">
-            {title}
+            {modalTitle}
           </h3>
           <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-            {description}
+            {modalDesc}
           </p>
         </div>
 
@@ -86,7 +91,7 @@ export function ConfirmDeleteModal({
             onClick={onClose}
             className="px-4 py-2 rounded-xl border border-border bg-card text-xs font-semibold text-foreground hover:bg-muted transition-colors disabled:opacity-50 cursor-pointer"
           >
-            Cancel
+            {dictionary.common.cancel}
           </button>
 
           <button
@@ -98,12 +103,12 @@ export function ConfirmDeleteModal({
             {isPending ? (
               <>
                 <Loader2 className="size-3.5 animate-spin" />
-                <span>Deleting...</span>
+                <span>{dictionary.common.deleting}</span>
               </>
             ) : (
               <>
                 <Trash2 className="size-3.5" />
-                <span>{confirmLabel}</span>
+                <span>{modalConfirmLabel}</span>
               </>
             )}
           </button>

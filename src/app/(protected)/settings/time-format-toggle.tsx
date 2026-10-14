@@ -4,18 +4,29 @@ import { useTransition } from "react";
 import { updateTimeFormat } from "@/actions/settings";
 import type { TimeFormat } from "@/types/database";
 import { Clock, Check, Loader2 } from "lucide-react";
-
-const OPTIONS: { value: TimeFormat; label: string; example: string }[] = [
-  { value: "24h", label: "24-Hour Military Format", example: "14:30 / 20:00" },
-  { value: "12h", label: "12-Hour Standard AM/PM", example: "2:30 PM / 8:00 PM" },
-];
+import { useLanguage } from "@/lib/i18n/language-context";
+import { toGujaratiNumerals } from "@/lib/reports/gujaratiReportUtils";
 
 export function TimeFormatToggle({ current }: { current: TimeFormat }) {
   const [isPending, startTransition] = useTransition();
+  const { isGujarati, t } = useLanguage();
+
+  const options: { value: TimeFormat; label: string; example: string }[] = [
+    {
+      value: "24h",
+      label: t.settings.format24hLabel,
+      example: isGujarati ? `${toGujaratiNumerals("14:30")} / ${toGujaratiNumerals("20:00")}` : "14:30 / 20:00",
+    },
+    {
+      value: "12h",
+      label: t.settings.format12hLabel,
+      example: isGujarati ? `${toGujaratiNumerals("2:30")} PM / ${toGujaratiNumerals("8:00")} PM` : "2:30 PM / 8:00 PM",
+    },
+  ];
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-lg">
-      {OPTIONS.map((opt) => {
+      {options.map((opt) => {
         const active = opt.value === current;
         return (
           <button
@@ -36,7 +47,8 @@ export function TimeFormatToggle({ current }: { current: TimeFormat }) {
             <div className="flex flex-col">
               <span className="font-semibold">{opt.label}</span>
               <span className="text-xs text-muted-foreground mt-0.5">
-                Example: {opt.example}
+                {t.settings.examplePrefix}
+                {opt.example}
               </span>
             </div>
             {isPending && active ? (

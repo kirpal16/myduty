@@ -22,6 +22,7 @@ import {
 import type { HolidayScope } from "@/types/database";
 import { getYearOptions, clampYear } from "@/lib/format/year";
 import { ActionForm } from "@/components/ui/action-form";
+import { getServerTranslations } from "@/lib/i18n/server";
 
 export default async function HolidaysPage({
   searchParams,
@@ -35,6 +36,7 @@ export default async function HolidaysPage({
     limit?: string;
   }>;
 }) {
+  const { lang, t } = await getServerTranslations();
   const { tab = "all", search, scope, year, page = "1", limit = "10" } = await searchParams;
   const currentPage = Math.max(1, parseInt(page, 10) || 1);
   const pageSize = Math.max(5, parseInt(limit, 10) || 10);
@@ -101,11 +103,11 @@ export default async function HolidaysPage({
     <main className="w-full px-4 sm:px-6 lg:px-8 py-6 max-w-7xl 2xl:max-w-full mx-auto space-y-6">
       {/* Amber/Gold Page Header */}
       <PageHeader
-        title="Official & Departmental Holidays"
-        subtitle="Manage public holidays and profile-specific non-working days."
+        title={t.holidays.pageTitle}
+        subtitle={t.holidays.pageSubtitle}
         badge={
           <Badge variant="warning" dot>
-            {totalItems} Holidays ({selectedYear})
+            {totalItems} {t.nav.holidays} ({selectedYear})
           </Badge>
         }
         actions={
@@ -114,7 +116,7 @@ export default async function HolidaysPage({
             className="flex items-center gap-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3.5 py-2 text-xs sm:text-sm font-semibold text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 shadow-2xs transition-colors"
           >
             <Palmtree className="size-4" />
-            <span>My Personal Holidays</span>
+            <span>{t.holidays.myPersonalHolidays}</span>
           </Link>
         }
       />
@@ -135,8 +137,8 @@ export default async function HolidaysPage({
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              <span className="hidden sm:inline">All Holidays</span>
-              <span className="sm:hidden">All</span>
+              <span className="hidden sm:inline">{t.holidays.allHolidays}</span>
+              <span className="sm:hidden">{t.holidays.allShort}</span>
             </Link>
             <Link
               href={`/holidays?${baseParams("gazetted")}`}
@@ -147,8 +149,8 @@ export default async function HolidaysPage({
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              <span className="hidden sm:inline">Gazetted Holidays (જાહેર)</span>
-              <span className="sm:hidden">Gazetted (જાહેર)</span>
+              <span className="hidden sm:inline">{t.holidays.gazettedTitle}</span>
+              <span className="sm:hidden">{t.holidays.gazettedBadge}</span>
             </Link>
             <Link
               href={`/holidays?${baseParams("optional")}`}
@@ -159,8 +161,8 @@ export default async function HolidaysPage({
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              <span className="hidden sm:inline">Optional Holidays (મરજિયાત)</span>
-              <span className="sm:hidden">Optional (મરજિયાત)</span>
+              <span className="hidden sm:inline">{t.holidays.optionalTitle}</span>
+              <span className="sm:hidden">{t.holidays.optionalBadge}</span>
             </Link>
           </div>
 
@@ -168,7 +170,7 @@ export default async function HolidaysPage({
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="w-full sm:max-w-xs">
                 <SearchInput
-                  placeholder="Search holidays..."
+                  placeholder={lang === "gu" ? "રજાઓ શોધો..." : "Search holidays..."}
                   defaultValue={search}
                 />
               </div>
@@ -198,7 +200,7 @@ export default async function HolidaysPage({
                       : "border-border bg-card text-muted-foreground hover:bg-muted"
                   }`}
                 >
-                  <span>Global</span>
+                  <span>{t.holidays.globalBadge}</span>
                 </Link>
                 <Link
                   href={
@@ -213,7 +215,7 @@ export default async function HolidaysPage({
                       : "border-border bg-card text-muted-foreground hover:bg-muted"
                   }`}
                 >
-                  <span>Profile</span>
+                  <span>{t.holidays.profileBadge}</span>
                 </Link>
 
                 {(search || scope || tab !== "all" || year) && (
@@ -222,7 +224,7 @@ export default async function HolidaysPage({
                     scroll={false}
                     className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-border bg-card px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                   >
-                    <span>Reset</span>
+                    <span>{t.common.reset}</span>
                   </Link>
                 )}
               </div>
@@ -235,12 +237,12 @@ export default async function HolidaysPage({
               <table className="w-full text-left text-xs sm:text-sm">
                 <thead className="bg-muted/50 border-b border-border text-muted-foreground uppercase text-[11px] font-semibold tracking-wider">
                   <tr>
-                    <th className="py-3.5 px-4 sm:px-6">Holiday Name</th>
-                    <th className="py-3.5 px-4">Date</th>
-                    <th className="py-3.5 px-4">Scope</th>
-                    <th className="py-3.5 px-4">Category</th>
+                    <th className="py-3.5 px-4 sm:px-6">{t.holidays.holidayName}</th>
+                    <th className="py-3.5 px-4">{t.holidays.holidayDate}</th>
+                    <th className="py-3.5 px-4">{t.holidays.scope}</th>
+                    <th className="py-3.5 px-4">{lang === "gu" ? "પ્રકાર" : "Category"}</th>
                     {(canCreate || canDelete) && (
-                      <th className="py-3.5 px-4 sm:px-6 text-right">Actions</th>
+                      <th className="py-3.5 px-4 sm:px-6 text-right">{t.common.actions}</th>
                     )}
                   </tr>
                 </thead>
@@ -263,24 +265,24 @@ export default async function HolidaysPage({
                         </td>
                         <td className="py-3.5 px-4 whitespace-nowrap">
                           {h.scope === "GLOBAL" ? (
-                            <Badge variant="info">Global</Badge>
+                            <Badge variant="info">{t.holidays.globalBadge}</Badge>
                           ) : (
                             <Badge variant="warning">
-                              {profileName ? `Profile: ${profileName}` : "Profile"}
+                              {profileName ? `${t.holidays.profileBadge}: ${profileName}` : t.holidays.profileBadge}
                             </Badge>
                           )}
                         </td>
                         <td className="py-3.5 px-4 whitespace-nowrap">
                           {h.is_optional ? (
                             <Badge variant="purple" dot>
-                              Optional (મરજિયાત)
+                              {t.holidays.optionalBadge}
                             </Badge>
                           ) : h.is_government ? (
                             <Badge variant="danger" dot>
-                              Gazetted (જાહેર)
+                              {t.holidays.gazettedBadge}
                             </Badge>
                           ) : (
-                            <Badge variant="outline">Regular</Badge>
+                            <Badge variant="outline">{t.holidays.regularBadge}</Badge>
                           )}
                         </td>
                         {(canCreate || canDelete) && (
@@ -315,11 +317,11 @@ export default async function HolidaysPage({
                         {h.name}
                       </span>
                       {h.is_optional ? (
-                        <Badge variant="purple" dot>Optional</Badge>
+                        <Badge variant="purple" dot>{t.holidays.optionalBadge}</Badge>
                       ) : h.is_government ? (
-                        <Badge variant="danger" dot>Govt</Badge>
+                        <Badge variant="danger" dot>{t.holidays.gazettedBadge}</Badge>
                       ) : (
-                        <Badge variant="outline">Regular</Badge>
+                        <Badge variant="outline">{t.holidays.regularBadge}</Badge>
                       )}
                     </div>
 
@@ -329,7 +331,7 @@ export default async function HolidaysPage({
                         {h.holiday_date}
                       </span>
                       <Badge variant={h.scope === "GLOBAL" ? "info" : "warning"}>
-                        {h.scope === "GLOBAL" ? "Global" : (profileName ? `Profile: ${profileName}` : "Profile")}
+                        {h.scope === "GLOBAL" ? t.holidays.globalBadge : (profileName ? `${t.holidays.profileBadge}: ${profileName}` : t.holidays.profileBadge)}
                       </Badge>
                     </div>
 
@@ -354,7 +356,7 @@ export default async function HolidaysPage({
                 <div className="flex flex-col items-center justify-center gap-2">
                   <Sun className="size-8 text-slate-300 dark:text-slate-700" />
                   <p className="text-sm font-medium text-foreground">
-                    No holidays found
+                    {t.holidays.noHolidaysFound}
                   </p>
                 </div>
               </div>
@@ -375,54 +377,54 @@ export default async function HolidaysPage({
             <Card className="p-6 lg:sticky lg:top-20">
               <h3 className="text-base font-bold text-foreground mb-1 flex items-center gap-2">
                 <Plus className="size-4.5 text-amber-500" />
-                <span>Add Official Holiday</span>
+                <span>{t.holidays.addOfficialHoliday}</span>
               </h3>
               <p className="text-xs text-muted-foreground mb-4">
-                Define a public gazetted or optional non-working day.
+                {t.holidays.addOfficialHolidaySubtitle}
               </p>
 
               <ActionForm
                 action={createGlobalOrProfileHoliday}
-                submitLabel="Add Holiday"
-                successMessage="Holiday added."
+                submitLabel={t.holidays.addHolidayButton}
+                successMessage={t.holidays.holidayAddedSuccess}
                 fields={[
                   {
                     name: "name",
-                    label: "Holiday Name",
+                    label: t.holidays.holidayName,
                     required: true,
-                    placeholder: "e.g. Republic Day or Jamshedi Navroz",
+                    placeholder: lang === "gu" ? "દા.ત. પ્રજાસત્તાક દિન અથવા જમશેદી નવરોઝ" : "e.g. Republic Day or Jamshedi Navroz",
                   },
                   {
                     name: "holidayDate",
-                    label: "Date",
+                    label: t.holidays.holidayDate,
                     type: "date",
                     required: true,
                   },
                   {
                     name: "scope",
-                    label: "Applies To",
+                    label: t.holidays.appliesTo,
                     type: "select",
                     required: true,
                     defaultValue: "GLOBAL",
                     options: [
-                      { value: "GLOBAL", label: "Everyone" },
-                      { value: "PROFILE", label: "One profile" },
+                      { value: "GLOBAL", label: t.holidays.everyone },
+                      { value: "PROFILE", label: t.holidays.oneProfile },
                     ],
                   },
                   {
                     name: "profileId",
-                    label: "Profile",
+                    label: t.holidays.profileBadge,
                     type: "select",
-                    placeholder: "Select a profile",
+                    placeholder: t.holidays.selectProfile,
                     options: (profiles ?? []).map((p) => ({
                       value: p.id,
                       label: p.name,
                     })),
-                    hint: "Only used when this applies to one profile.",
+                    hint: lang === "gu" ? "ફક્ત એક પ્રોફાઇલ માટે લાગુ પડતી હોય ત્યારે જ ઉપયોગ થાય છે." : "Only used when this applies to one profile.",
                   },
-                  { name: "isGovernment", label: "Government declared holiday", type: "checkbox" },
-                  { name: "isOptional", label: "Optional holiday (મરજિયાત રજા - max 2/yr choice)", type: "checkbox" },
-                  { name: "isRecurringYearly", label: "Repeats every year", type: "checkbox" },
+                  { name: "isGovernment", label: t.holidays.govtDeclared, type: "checkbox" },
+                  { name: "isOptional", label: t.holidays.optionalChoice, type: "checkbox" },
+                  { name: "isRecurringYearly", label: t.holidays.repeatsYearly, type: "checkbox" },
                 ]}
               />
             </Card>

@@ -46,6 +46,9 @@ import {
   RotateCcw,
   ListFilter,
 } from "lucide-react";
+import { useLanguage } from "@/lib/i18n/language-context";
+import { toGujaratiNumerals } from "@/lib/reports/gujaratiReportUtils";
+import { getPureGujaratiLeaveTypeName } from "@/lib/leave/leaveTranslation";
 
 export type ApprovalLeaveType = {
   id: string;
@@ -117,6 +120,7 @@ export function SpecialLeaveManager({
    *  lives here, so the URL is how the header reaches it. */
   autoOpenApply?: boolean;
 }) {
+  const { isGujarati, t } = useLanguage();
   const [applyModalOpen, setApplyModalOpen] = useState(autoOpenApply);
   const [applyPrefill, setApplyPrefill] = useState<ApplyPrefill | null>(null);
   const [approveTarget, setApproveTarget] = useState<SpecialLeaveAppItem | null>(null);
@@ -289,23 +293,23 @@ export function SpecialLeaveManager({
       : applications.filter((a) => a.status === statusFilter);
 
   const FILTERS: { value: "ALL" | SpecialLeaveApplicationStatus; label: string }[] = [
-    { value: "ALL", label: "All" },
-    { value: "PENDING", label: "Pending" },
-    { value: "APPROVED", label: "Approved" },
-    { value: "REJECTED", label: "Rejected" },
-    { value: "CANCELLED", label: "Cancelled" },
+    { value: "ALL", label: t.leave.filterAll },
+    { value: "PENDING", label: t.leave.filterPending },
+    { value: "APPROVED", label: t.leave.filterApproved },
+    { value: "REJECTED", label: t.leave.filterRejected },
+    { value: "CANCELLED", label: t.leave.filterCancelled },
   ];
 
   const getStatusBadge = (status: SpecialLeaveApplicationStatus) => {
     switch (status) {
       case "APPROVED":
-        return <Badge variant="success" dot>Approved</Badge>;
+        return <Badge variant="success" dot>{t.leave.statusApprovedBadge}</Badge>;
       case "PENDING":
-        return <Badge variant="warning" dot>Pending Approval</Badge>;
+        return <Badge variant="warning" dot>{t.leave.statusPendingApprovalBadge}</Badge>;
       case "REJECTED":
-        return <Badge variant="secondary">Rejected</Badge>;
+        return <Badge variant="secondary">{t.leave.filterRejected}</Badge>;
       case "CANCELLED":
-        return <Badge variant="secondary">Cancelled</Badge>;
+        return <Badge variant="secondary">{t.leave.filterCancelled}</Badge>;
       default:
         return <Badge>{status}</Badge>;
     }
@@ -334,23 +338,25 @@ export function SpecialLeaveManager({
         <Card className="p-2.5 sm:p-3.5 flex flex-col justify-between border-slate-200 dark:border-slate-800 bg-linear-to-br from-card to-card/60">
           <div>
             <div className="flex items-center justify-between gap-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
-              <span className="sm:hidden">Total Quota</span>
-              <span className="hidden sm:inline">Total Available Quota</span>
+              <span className="sm:hidden">{t.leave.totalQuota}</span>
+              <span className="hidden sm:inline">{t.leave.totalAvailableQuota}</span>
               <Scale className="size-3.5 text-indigo-500" />
             </div>
             <div className="flex items-baseline gap-2">
               <span className="text-xl sm:text-2xl font-bold text-foreground">
-                {balance.totalAvailable}
+                {isGujarati ? toGujaratiNumerals(balance.totalAvailable) : balance.totalAvailable}
               </span>
-              <span className="text-[11px] text-muted-foreground font-medium">days</span>
+              <span className="text-[11px] text-muted-foreground font-medium">{t.common.day}</span>
             </div>
           </div>
           <div className="mt-2 pt-1.5 sm:mt-2.5 sm:pt-2 border-t border-border/70 flex items-center justify-between gap-1 text-[11px]">
             <span className="text-muted-foreground">
-              <span className="sm:hidden">Used:</span>
-              <span className="hidden sm:inline">Used / Logged:</span>
+              <span className="sm:hidden">{t.leave.used}</span>
+              <span className="hidden sm:inline">{t.leave.usedLogged}</span>
             </span>
-            <span className="font-semibold text-foreground">{balance.used} days</span>
+            <span className="font-semibold text-foreground">
+              {isGujarati ? toGujaratiNumerals(balance.used) : balance.used} {t.common.day}
+            </span>
           </div>
         </Card>
 
@@ -358,27 +364,27 @@ export function SpecialLeaveManager({
         <Card className="col-span-2 order-last sm:order-none sm:col-span-1 p-2.5 sm:p-3.5 flex flex-col justify-between border-slate-200 dark:border-slate-800 bg-linear-to-br from-card to-card/60">
           <div>
             <div className="flex items-center justify-between gap-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
-              <span>FIFO Consumption</span>
+              <span>{t.leave.fifoConsumption}</span>
               <Layers className="size-3.5 text-emerald-500" />
             </div>
             <div className="flex gap-3 sm:block sm:space-y-1 text-[11px]">
               <div className="flex-1 flex justify-between items-center gap-1.5">
-                <span className="text-muted-foreground">Carry Forward:</span>
+                <span className="text-muted-foreground">{t.leave.carryForwardLabel}</span>
                 <span className="font-semibold text-foreground">
-                  {fifo.remainingCarryForward} / {balance.carriedIn} left
+                  {isGujarati ? toGujaratiNumerals(fifo.remainingCarryForward) : fifo.remainingCarryForward} / {isGujarati ? toGujaratiNumerals(balance.carriedIn) : balance.carriedIn} {t.leave.remaining}
                 </span>
               </div>
               <div className="flex-1 flex justify-between items-center gap-1.5">
-                <span className="text-muted-foreground">Current Year:</span>
+                <span className="text-muted-foreground">{t.leave.currentYearLabel}</span>
                 <span className="font-semibold text-foreground">
-                  {fifo.remainingCurrentYear} / {balance.allocated} left
+                  {isGujarati ? toGujaratiNumerals(fifo.remainingCurrentYear) : fifo.remainingCurrentYear} / {isGujarati ? toGujaratiNumerals(balance.allocated) : balance.allocated} {t.leave.remaining}
                 </span>
               </div>
             </div>
           </div>
           <p className="mt-4 pt-3 border-t border-border/70 text-[11px] text-muted-foreground hidden sm:flex items-center gap-1">
             <Sparkles className="size-3 text-emerald-500" />
-            <span>Carry forward is debited before current year</span>
+            <span>{t.leave.fifoNotice}</span>
           </p>
         </Card>
 
@@ -386,23 +392,25 @@ export function SpecialLeaveManager({
         <Card className="p-2.5 sm:p-3.5 flex flex-col justify-between border-slate-200 dark:border-slate-800 bg-linear-to-br from-indigo-500/5 to-purple-500/5">
           <div>
             <div className="flex items-center justify-between gap-1 text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-1.5">
-              <span className="sm:hidden">To Apply</span>
-              <span className="hidden sm:inline">Available to Apply</span>
+              <span className="sm:hidden">{t.leave.toApply}</span>
+              <span className="hidden sm:inline">{t.leave.availableToApply}</span>
               <ShieldCheck className="size-3.5 text-indigo-500" />
             </div>
             <div className="flex items-baseline gap-2">
               <span className="text-xl sm:text-2xl font-bold text-indigo-600 dark:text-indigo-400">
-                {availableToApply}
+                {isGujarati ? toGujaratiNumerals(availableToApply) : availableToApply}
               </span>
-              <span className="text-[11px] text-muted-foreground font-medium">uncommitted</span>
+              <span className="text-[11px] text-muted-foreground font-medium">{t.leave.uncommitted}</span>
             </div>
           </div>
           <div className="mt-2 pt-1.5 sm:mt-2.5 sm:pt-2 border-t border-border/70 flex items-center justify-between gap-1 text-[11px]">
             <span className="text-muted-foreground">
-              <span className="sm:hidden">Committed:</span>
-              <span className="hidden sm:inline">Committed / Pending:</span>
+              <span className="sm:hidden">{t.leave.committed}</span>
+              <span className="hidden sm:inline">{t.leave.committedPending}</span>
             </span>
-            <span className="font-semibold text-foreground">{committedDays} days</span>
+            <span className="font-semibold text-foreground">
+              {isGujarati ? toGujaratiNumerals(committedDays) : committedDays} {t.common.day}
+            </span>
           </div>
         </Card>
       </div>
@@ -410,9 +418,11 @@ export function SpecialLeaveManager({
       {/* Header & Apply Button */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-bold text-foreground">Leave Approvals & Sanctions (રજા મંજૂરી)</h2>
+          <h2 className="text-lg font-bold text-foreground">
+            {t.leave.leaveApprovalsTitle}
+          </h2>
           <p className="text-xs text-muted-foreground">
-            Official sanctions required before Special Leave or Binpagari Leave (બિનપગારી રજા) can be logged.
+            {t.leave.leaveApprovalsSubtitle}
           </p>
         </div>
       </div>
@@ -443,7 +453,7 @@ export function SpecialLeaveManager({
                   className={`rounded-full px-1.5 text-[10px] leading-4 ${active ? "bg-white/25" : "bg-muted text-foreground"
                     }`}
                 >
-                  {count}
+                  {isGujarati ? toGujaratiNumerals(count) : count}
                 </span>
               </button>
             );
@@ -513,12 +523,12 @@ export function SpecialLeaveManager({
                               style={{ backgroundColor: app.leave_type.color }}
                             />
                           )}
-                          <span>{app.leave_type.name}</span>
+                          <span>{isGujarati ? getPureGujaratiLeaveTypeName(app.leave_type.name) : app.leave_type.name}</span>
                         </span>
                       )}
                       {app.order_no && (
                         <span className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-muted text-muted-foreground border border-border">
-                          Order #{app.order_no}
+                          {isGujarati ? `ઓર્ડર નં. ${toGujaratiNumerals(app.order_no)}` : `Order #${app.order_no}`}
                         </span>
                       )}
                     </div>
@@ -526,12 +536,12 @@ export function SpecialLeaveManager({
                     {app.status === "APPROVED" && (
                       isExpired ? (
                         <Badge variant="danger" dot className="text-[10px]">
-                          Expired on {expiryDate}
+                          {isGujarati ? `મુદત પૂર્ણ: ${toGujaratiNumerals(expiryDate ?? "")}` : `Expired on ${expiryDate}`}
                         </Badge>
                       ) : (
                         expiryDate && (
                           <span className="inline-flex items-center text-[10px] font-medium px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
-                            Expires on {expiryDate}
+                            {isGujarati ? `મુદત: ${toGujaratiNumerals(expiryDate)} સુધી` : `Expires on ${expiryDate}`}
                           </span>
                         )
                       )
@@ -541,11 +551,15 @@ export function SpecialLeaveManager({
                   {/* Application Info: Applied Date & Validity */}
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
                     <span className="font-semibold text-foreground">
-                      Applied: <strong className="font-bold">{app.applied_days} day{app.applied_days === 1 ? "" : "s"}</strong> on {app.applied_date}
+                      {isGujarati
+                        ? `અરજી: ${toGujaratiNumerals(app.applied_days)} દિવસ (${toGujaratiNumerals(app.applied_date)})`
+                        : `Applied: ${app.applied_days} day${app.applied_days === 1 ? "" : "s"} on ${app.applied_date}`}
                     </span>
                     {app.valid_from && (
                       <span className="text-[11px] px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 font-medium">
-                        Valid: {app.valid_from} {app.valid_to ? `to ${app.valid_to}` : "onwards"}
+                        {isGujarati
+                          ? `માન્ય: ${toGujaratiNumerals(app.valid_from)} ${app.valid_to ? `થી ${toGujaratiNumerals(app.valid_to)}` : "આગળ"}`
+                          : `Valid: ${app.valid_from} ${app.valid_to ? `to ${app.valid_to}` : "onwards"}`}
                       </span>
                     )}
                   </div>
@@ -562,29 +576,30 @@ export function SpecialLeaveManager({
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                         <UserCheck className="size-3.5 text-emerald-500 shrink-0" />
                         <span className="truncate">
-                          Approved by: <strong className="text-foreground font-semibold">{app.approved_by}</strong> ({app.approved_date})
+                          {isGujarati ? "મંજૂર કરનાર: " : "Approved by: "}
+                          <strong className="text-foreground font-semibold">{app.approved_by}</strong> ({isGujarati ? toGujaratiNumerals(app.approved_date ?? "") : app.approved_date})
                         </span>
                       </div>
 
                       <div className="grid grid-cols-3 gap-1.5 p-2 rounded-xl bg-muted/40 dark:bg-muted/20 border border-border/60 text-center">
                         <div className="flex flex-col items-center justify-center">
-                          <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Approved</span>
+                          <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">{isGujarati ? "મંજૂર" : "Approved"}</span>
                           <span className="text-xs font-bold text-foreground">
-                            {app.approved_days} <span className="text-[10px] font-normal text-muted-foreground">days</span>
+                            {isGujarati ? toGujaratiNumerals(app.approved_days) : app.approved_days} <span className="text-[10px] font-normal text-muted-foreground">{isGujarati ? "દિવસ" : "days"}</span>
                           </span>
                         </div>
                         <div className="flex flex-col items-center justify-center border-x border-border/50">
-                          <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Taken</span>
+                          <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">{isGujarati ? "ભોગવેલ" : "Taken"}</span>
                           <span className="text-xs font-bold text-foreground">
-                            {app.logged_days} <span className="text-[10px] font-normal text-muted-foreground">days</span>
+                            {isGujarati ? toGujaratiNumerals(app.logged_days) : app.logged_days} <span className="text-[10px] font-normal text-muted-foreground">{isGujarati ? "દિવસ" : "days"}</span>
                           </span>
                         </div>
                         <div className="flex flex-col items-center justify-center">
-                          <span className="text-[10px] uppercase font-bold text-indigo-600 dark:text-indigo-400 tracking-wider">Remaining</span>
+                          <span className="text-[10px] uppercase font-bold text-indigo-600 dark:text-indigo-400 tracking-wider">{isGujarati ? "બાકી" : "Remaining"}</span>
                           <span className={`text-xs font-black ${isExpired ? "text-rose-500 line-through" : "text-indigo-600 dark:text-indigo-400"}`}>
-                            {remainingToTake} <span className="text-[10px] font-normal text-muted-foreground">days</span>
+                            {isGujarati ? toGujaratiNumerals(remainingToTake) : remainingToTake} <span className="text-[10px] font-normal text-muted-foreground">{isGujarati ? "દિવસ" : "days"}</span>
                           </span>
-                          {isExpired && <span className="text-[9px] text-rose-500 font-bold leading-none mt-0.5">(lapsed)</span>}
+                          {isExpired && <span className="text-[9px] text-rose-500 font-bold leading-none mt-0.5">{isGujarati ? "(રદ)" : "(lapsed)"}</span>}
                         </div>
                       </div>
                     </div>
@@ -604,29 +619,33 @@ export function SpecialLeaveManager({
                             style={{ backgroundColor: app.leave_type.color }}
                           />
                         )}
-                        <span>{app.leave_type.name}</span>
+                        <span>{isGujarati ? getPureGujaratiLeaveTypeName(app.leave_type.name) : app.leave_type.name}</span>
                       </span>
                     )}
                     <span className="text-xs font-bold text-foreground">
-                      Applied: {app.applied_days} day{app.applied_days === 1 ? "" : "s"} on {app.applied_date}
+                      {isGujarati
+                        ? `અરજી: ${toGujaratiNumerals(app.applied_days)} દિવસ (${toGujaratiNumerals(app.applied_date)})`
+                        : `Applied: ${app.applied_days} day${app.applied_days === 1 ? "" : "s"} on ${app.applied_date}`}
                     </span>
                     {app.order_no && (
                       <span className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-muted text-muted-foreground border border-border">
-                        Order #{app.order_no}
+                        {isGujarati ? `ઓર્ડર નં. ${toGujaratiNumerals(app.order_no)}` : `Order #${app.order_no}`}
                       </span>
                     )}
                     {app.valid_from && (
                       <span className="text-[11px] px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 font-medium">
-                        Valid: {app.valid_from} {app.valid_to ? `to ${app.valid_to}` : "onwards"}
+                        {isGujarati
+                          ? `માન્ય: ${toGujaratiNumerals(app.valid_from)} ${app.valid_to ? `થી ${toGujaratiNumerals(app.valid_to)}` : "આગળ"}`
+                          : `Valid: ${app.valid_from} ${app.valid_to ? `to ${app.valid_to}` : "onwards"}`}
                       </span>
                     )}
                     {app.status === "APPROVED" && (
                       isExpired ? (
-                        <Badge variant="danger" dot>Expired on {expiryDate}</Badge>
+                        <Badge variant="danger" dot>{isGujarati ? `મુદત પૂર્ણ: ${toGujaratiNumerals(expiryDate ?? "")}` : `Expired on ${expiryDate}`}</Badge>
                       ) : (
                         expiryDate && (
                           <span className="text-[11px] px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-medium">
-                            Expires on {expiryDate}
+                            {isGujarati ? `મુદત: ${toGujaratiNumerals(expiryDate)} સુધી` : `Expires on ${expiryDate}`}
                           </span>
                         )
                       )
@@ -645,21 +664,24 @@ export function SpecialLeaveManager({
                       <span className="flex items-center gap-1">
                         <UserCheck className="size-3.5 text-emerald-500 shrink-0" />
                         <span>
-                          Approved by: <strong className="text-foreground font-semibold">{app.approved_by}</strong> ({app.approved_date})
+                          {isGujarati ? "મંજૂર કરનાર: " : "Approved by: "}
+                          <strong className="text-foreground font-semibold">{app.approved_by}</strong> ({isGujarati ? toGujaratiNumerals(app.approved_date ?? "") : app.approved_date})
                         </span>
                       </span>
                       <span className="flex items-center gap-1">
                         <CheckCircle2 className="size-3.5 text-indigo-500 shrink-0" />
                         <span>
-                          Approved: <strong className="text-foreground font-semibold">{app.approved_days}</strong> days
+                          {isGujarati ? "મંજૂર: " : "Approved: "}
+                          <strong className="text-foreground font-semibold">{isGujarati ? toGujaratiNumerals(app.approved_days) : app.approved_days}</strong> {isGujarati ? "દિવસ" : "days"}
                           {" • "}
-                          Taken: <strong className="text-foreground font-semibold">{app.logged_days}</strong> days
+                          {isGujarati ? "ભોગવેલ: " : "Taken: "}
+                          <strong className="text-foreground font-semibold">{isGujarati ? toGujaratiNumerals(app.logged_days) : app.logged_days}</strong> {isGujarati ? "દિવસ" : "days"}
                           {" • "}
-                          Remaining to log:{" "}
+                          {isGujarati ? "નોંધવા બાકી: " : "Remaining to log: "}
                           <strong className={isExpired ? "text-rose-500 line-through" : "text-indigo-600 dark:text-indigo-400 font-bold"}>
-                            {remainingToTake}
+                            {isGujarati ? toGujaratiNumerals(remainingToTake) : remainingToTake}
                           </strong>{" "}
-                          days {isExpired && <span className="text-[11px] text-rose-500 font-semibold">(lapsed)</span>}
+                          {isGujarati ? "દિવસ" : "days"} {isExpired && <span className="text-[11px] text-rose-500 font-semibold">{isGujarati ? "(રદ)" : "(lapsed)"}</span>}
                         </span>
                       </span>
                     </div>
@@ -676,13 +698,13 @@ export function SpecialLeaveManager({
                       className="w-full md:w-auto inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500 transition-colors cursor-pointer"
                     >
                       <UserCheck className="size-3.5" />
-                      <span>Record Sanction</span>
+                      <span>{isGujarati ? "ઓર્ડર નોંધો" : "Record Sanction"}</span>
                     </button>
                   )}
 
                   {app.status === "APPROVED" && isExpired && (
                     <span className="text-center text-xs font-semibold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/50 px-2.5 py-1.5 md:py-1 rounded-lg border border-rose-200 dark:border-rose-800">
-                      Expired (6 Months Reached)
+                      {isGujarati ? "મુદત પૂર્ણ (૬ મહિના વીતી ગયા)" : "Expired (6 Months Reached)"}
                     </span>
                   )}
 
@@ -691,13 +713,13 @@ export function SpecialLeaveManager({
                       href={`/leave/new?leaveTypeId=${targetTypeId}&specialLeaveApplicationId=${app.id}`}
                       className="w-full md:w-auto inline-flex items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 transition-colors cursor-pointer"
                     >
-                      <span>Log Leave</span>
+                      <span>{isGujarati ? "રજા નોંધો" : "Log Leave"}</span>
                       <ArrowRight className="size-3.5" />
                     </Link>
                   )}
 
                   {isFullyTaken && (
-                    <Badge variant="secondary" className="justify-center py-1">Fully Taken</Badge>
+                    <Badge variant="secondary" className="justify-center py-1">{isGujarati ? "સંપૂર્ણ વપરાયેલ" : "Fully Taken"}</Badge>
                   )}
 
                   {(app.status === "REJECTED" || app.status === "CANCELLED") && (
@@ -708,7 +730,7 @@ export function SpecialLeaveManager({
                       className="w-full md:w-auto inline-flex items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 transition-colors cursor-pointer"
                     >
                       <RotateCcw className="size-3.5" />
-                      <span>Reapply</span>
+                      <span>{isGujarati ? "પુનઃ અરજી" : "Reapply"}</span>
                     </button>
                   )}
 
@@ -722,7 +744,7 @@ export function SpecialLeaveManager({
                         className="flex-1 md:flex-initial inline-flex items-center justify-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-rose-500 hover:border-rose-300 transition-colors cursor-pointer"
                       >
                         <Ban className="size-3.5" />
-                        <span>Cancel</span>
+                        <span>{isGujarati ? "રદ કરો" : "Cancel"}</span>
                       </button>
                     )}
 
@@ -734,7 +756,7 @@ export function SpecialLeaveManager({
                         className="flex-1 md:flex-initial inline-flex items-center justify-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-rose-500 hover:border-rose-300 transition-colors cursor-pointer"
                       >
                         <Ban className="size-3.5" />
-                        <span>Cancel</span>
+                        <span>{isGujarati ? "રદ કરો" : "Cancel"}</span>
                       </button>
                     )}
 
@@ -744,11 +766,11 @@ export function SpecialLeaveManager({
                         onClick={() => setEditTarget(app)}
                         disabled={isPending}
                         aria-label="Edit this sanction"
-                        title="Edit"
+                        title={isGujarati ? "ફેરફાર કરો" : "Edit"}
                         className="flex-1 md:flex-initial inline-flex items-center justify-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-indigo-600 hover:border-indigo-300 transition-colors cursor-pointer"
                       >
                         <Pencil className="size-3.5" />
-                        <span>Edit</span>
+                        <span>{isGujarati ? "ફેરફાર કરો" : "Edit"}</span>
                       </button>
                     )}
 
@@ -759,13 +781,13 @@ export function SpecialLeaveManager({
                       aria-label="Delete this sanction"
                       title={
                         app.logged_days > 0
-                          ? "Leave is already logged against this sanction"
-                          : "Delete"
+                          ? (isGujarati ? "આ મંજૂરી સામે રજા નોંધાયેલ હોવાથી કાઢી શકાશે નહીં" : "Leave is already logged against this sanction")
+                          : (isGujarati ? "કાઢી નાખો" : "Delete")
                       }
                       className="flex-1 md:flex-initial inline-flex items-center justify-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-rose-600 hover:border-rose-300 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-muted-foreground disabled:hover:border-border"
                     >
                       <Trash2 className="size-3.5" />
-                      <span>Delete</span>
+                      <span>{isGujarati ? "કાઢી નાખો" : "Delete"}</span>
                     </button>
                   </div>
                 </div>
@@ -783,12 +805,14 @@ export function SpecialLeaveManager({
               <div className="flex items-start justify-between gap-3 border-b border-border pb-3">
                 <div className="min-w-0">
                   <h3 className="text-sm sm:text-base font-bold text-foreground">
-                    {applyPrefill ? "Reapply for Leave Sanction" : "Apply / Record Leave Sanction"}
+                    {applyPrefill
+                      ? (isGujarati ? "રજા મંજૂરી માટે પુનઃ અરજી" : "Reapply for Leave Sanction")
+                      : (isGujarati ? "ખાસ રજા મંજૂરી અરજી / ઓર્ડર નોંધણી" : "Apply / Record Leave Sanction")}
                   </h3>
                   <p className="text-[11px] sm:text-xs text-muted-foreground">
                     {applyPrefill
-                      ? "Carried over from the earlier application. Change what you need, or submit as is."
-                      : "Submit application or record approved order for Special / Binpagari Leave."}
+                      ? (isGujarati ? "અગાઉની અરજીની વિગતો લાવેલ છે. જરૂરી ફેરફાર કરો અથવા સબમિટ કરો." : "Carried over from the earlier application. Change what you need, or submit as is.")
+                      : (isGujarati ? "ખાસ રજા અથવા બિનપગારી રજા માટે અરજી સબમિટ કરો અથવા મંજૂર ઓર્ડર નોંધો." : "Submit application or record approved order for Special / Binpagari Leave.")}
                   </p>
                 </div>
                 <button
@@ -1615,6 +1639,7 @@ function ApplyForm({
   prefill?: ApplyPrefill | null;
   onClose: () => void;
 }) {
+  const { isGujarati } = useLanguage();
   const [selectedLeaveTypeId, setSelectedLeaveTypeId] = useState<string>(() => {
     if (defaultLeaveTypeId) return defaultLeaveTypeId;
     const spl = approvalLeaveTypes.find((t) => t.code === "SPL");
@@ -1666,26 +1691,31 @@ function ApplyForm({
   const numApplied = parseFloat(appliedDaysVal);
   let appliedError: string | null = null;
   if (isNaN(numApplied) || numApplied <= 0) {
-    appliedError = "Applied days must be greater than 0.";
+    appliedError = isGujarati ? "અરજી કરેલ દિવસો ૦ કરતાં વધુ હોવા જોઈએ." : "Applied days must be greater than 0.";
   } else if (!isLwp && numApplied > availableToApply) {
-    appliedError = `Applied days (${numApplied}) exceeds available balance (${availableToApply} days).`;
+    appliedError = isGujarati
+      ? `અરજી કરેલ દિવસો (${toGujaratiNumerals(numApplied)}) ઉપલબ્ધ બેલેન્સ (${toGujaratiNumerals(availableToApply)} દિવસ) કરતાં વધુ છે.`
+      : `Applied days (${numApplied}) exceeds available balance (${availableToApply} days).`;
   }
 
   const numApproved = parseFloat(approvedDaysVal);
   let approvedError: string | null = null;
   if (hasSanction) {
     if (isNaN(numApproved) || numApproved <= 0) {
-      approvedError = "Approved days must be greater than 0.";
+      approvedError = isGujarati ? "મંજૂર દિવસો ૦ કરતાં વધુ હોવા જોઈએ." : "Approved days must be greater than 0.";
     } else if (!isNaN(numApplied) && numApproved > numApplied) {
-      approvedError = `Approved days (${numApproved}) cannot exceed applied days (${numApplied} days).`;
+      approvedError = isGujarati
+        ? `મંજૂર દિવસો (${toGujaratiNumerals(numApproved)}) અરજી કરેલ દિવસો (${toGujaratiNumerals(numApplied)}) કરતાં વધુ ન હોઈ શકે.`
+        : `Approved days (${numApproved}) cannot exceed applied days (${numApplied} days).`;
     }
   }
 
   // Advisory only — neither warning blocks the submit.
   const rangeMismatch = (n: number, error: string | null) =>
     !error && rangeDays !== null && !isNaN(n) && n !== rangeDays
-      ? `Sanction range spans ${rangeDays} day${rangeDays === 1 ? "" : "s"} (${validFrom} to ${validTo}) but ${n} day${n === 1 ? "" : "s"
-      } ${n === 1 ? "is" : "are"} entered.`
+      ? (isGujarati
+          ? `મંજૂરી તારીખ ગાળો ${toGujaratiNumerals(rangeDays)} દિવસ (${toGujaratiNumerals(validFrom)} થી ${toGujaratiNumerals(validTo)}) છે પરંતુ ${toGujaratiNumerals(n)} દિવસ દાખલ કરેલ છે.`
+          : `Sanction range spans ${rangeDays} day${rangeDays === 1 ? "" : "s"} (${validFrom} to ${validTo}) but ${n} day${n === 1 ? "" : "s"} ${n === 1 ? "is" : "are"} entered.`)
       : null;
   const appliedRangeWarning = rangeMismatch(numApplied, appliedError);
   const approvedRangeWarning = hasSanction
@@ -1694,12 +1724,12 @@ function ApplyForm({
 
   const byError =
     hasSanction && submitted && !approvedBy.trim()
-      ? "Please enter sanctioning authority / office."
+      ? (isGujarati ? "કૃપા કરીને મંજૂર કરનાર સત્તાધિકારી / કચેરી દાખલ કરો." : "Please enter sanctioning authority / office.")
       : null;
 
   const dateRangeError =
     validFrom && validTo && validTo < validFrom
-      ? "'Valid To' date cannot be before 'Valid From' date."
+      ? (isGujarati ? "'સુધી' તારીખ 'થી' તારીખ પહેલાંની ન હોઈ શકે." : "'Valid To' date cannot be before 'Valid From' date.")
       : null;
 
   const isValid =
@@ -1722,9 +1752,11 @@ function ApplyForm({
       {approvalLeaveTypes.length > 0 && (
         <div className="space-y-1.5">
           <label htmlFor="leaveTypeId" className="text-xs font-semibold text-foreground flex items-center justify-between">
-            <span>Leave Classification</span>
+            <span>{isGujarati ? "રજા વર્ગીકરણ" : "Leave Classification"}</span>
             <span className="text-[11px] text-muted-foreground font-normal">
-              {isLwp ? "Unpaid Leave (બિનપગારી)" : `Quota left: ${availableToApply} days`}
+              {isLwp
+                ? (isGujarati ? "બિનપગારી રજા (LWP)" : "Unpaid Leave (બિનપગારી)")
+                : (isGujarati ? `બાકી કોટા: ${toGujaratiNumerals(availableToApply)} દિવસ` : `Quota left: ${availableToApply} days`)}
             </span>
           </label>
           <input type="hidden" name="leaveTypeId" value={selectedLeaveTypeId} />
@@ -1732,16 +1764,18 @@ function ApplyForm({
             id="leaveTypeId"
             value={selectedLeaveTypeId}
             onChange={(val) => setSelectedLeaveTypeId(val)}
-            placeholder="Select leave classification"
+            placeholder={isGujarati ? "રજા વર્ગીકરણ પસંદ કરો" : "Select leave classification"}
             options={approvalLeaveTypes.map((t) => ({
               value: t.id,
-              label: `${t.name} (${t.code})`,
+              label: `${isGujarati ? getPureGujaratiLeaveTypeName(t.name) : t.name} (${t.code})`,
               color: t.color,
             }))}
           />
           {isLwp && (
             <p className="text-[11px] text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-lg p-2 leading-tight">
-              Binpagari Leave (બિનપગારી રજા / LWP) is Unpaid Leave. No salary, TA, or allowances are payable during this period.
+              {isGujarati
+                ? "બિનપગારી રજા (LWP) વિનાવેતન રજા છે. આ સમયગાળા દરમિયાન કોઈ પગાર, TA કે ભથ્થા મળવાપાત્ર નથી."
+                : "Binpagari Leave (બિનપગારી રજા / LWP) is Unpaid Leave. No salary, TA, or allowances are payable during this period."}
             </p>
           )}
         </div>
@@ -1750,7 +1784,7 @@ function ApplyForm({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <label htmlFor="appliedDate" className="text-xs font-semibold text-foreground">
-            Application Date
+            {isGujarati ? "અરજી તારીખ" : "Application Date"}
           </label>
           <input
             id="appliedDate"
@@ -1765,7 +1799,9 @@ function ApplyForm({
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
             <label htmlFor="appliedDays" className="text-xs font-semibold text-foreground">
-              Days Applied {isLwp ? "(count)" : `(max ${availableToApply})`}
+              {isGujarati
+                ? `અરજી કરેલ દિવસો ${isLwp ? "(સંખ્યા)" : `(મહત્તમ ${toGujaratiNumerals(availableToApply)})`}`
+                : `Days Applied ${isLwp ? "(count)" : `(max ${availableToApply})`}`}
             </label>
           </div>
           <input
@@ -1798,14 +1834,20 @@ function ApplyForm({
       {/* Optional Date Range */}
       <div className="space-y-1.5">
         <label className="text-xs font-semibold text-foreground flex items-center justify-between gap-2">
-          <span>{hasSanction ? "Sanction Date Range (Optional)" : "Leave Date Range (Optional)"}</span>
+          <span>
+            {hasSanction
+              ? (isGujarati ? "મંજૂરી તારીખ ગાળો (વૈકલ્પિક)" : "Sanction Date Range (Optional)")
+              : (isGujarati ? "રજા તારીખ ગાળો (વૈકલ્પિક)" : "Leave Date Range (Optional)")}
+          </span>
           <span className="text-[10px] text-muted-foreground font-normal text-right">
-            {hasSanction ? "The window fixed by the order" : "Proposed or ordered dates"}
+            {hasSanction
+              ? (isGujarati ? "ઓર્ડર મુજબ નિર્ધારિત તારીખો" : "The window fixed by the order")
+              : (isGujarati ? "પ્રસ્તાવિત અથવા નિર્ધારિત તારીખો" : "Proposed or ordered dates")}
           </span>
         </label>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <div>
-            <label htmlFor="validFrom" className="text-[10px] text-muted-foreground">From</label>
+            <label htmlFor="validFrom" className="text-[10px] text-muted-foreground">{isGujarati ? "થી" : "From"}</label>
             <input
               id="validFrom"
               name="validFrom"
@@ -1816,7 +1858,7 @@ function ApplyForm({
             />
           </div>
           <div>
-            <label htmlFor="validTo" className="text-[10px] text-muted-foreground">To</label>
+            <label htmlFor="validTo" className="text-[10px] text-muted-foreground">{isGujarati ? "સુધી" : "To"}</label>
             <input
               id="validTo"
               name="validTo"
@@ -1833,14 +1875,14 @@ function ApplyForm({
 
       <div className="space-y-1.5">
         <label htmlFor="reason" className="text-xs font-semibold text-foreground">
-          Reason / Subject (Optional)
+          {isGujarati ? "કારણ / વિષય (વૈકલ્પિક)" : "Reason / Subject (Optional)"}
         </label>
         <textarea
           id="reason"
           name="reason"
           rows={2}
           defaultValue={prefill?.reason ?? ""}
-          placeholder="e.g. Official special duty assignment, family event, medical sanction"
+          placeholder={isGujarati ? "દા.ત. ખાસ સરકારી ફરજ, પારિવારિક પ્રસંગ, તબીબી કારણ" : "e.g. Official special duty assignment, family event, medical sanction"}
           className="w-full rounded-xl border border-border bg-card px-3.5 py-2 text-sm shadow-xs focus:border-indigo-500 focus:outline-hidden resize-none"
         />
       </div>
@@ -1860,7 +1902,7 @@ function ApplyForm({
             className="rounded border-border text-indigo-600 focus:ring-indigo-500"
           />
           <span className="text-xs font-semibold text-foreground">
-            I already have the official sanction order
+            {isGujarati ? "મારી પાસે પહેલેથી જ સત્તાવાર મંજૂરી ઓર્ડર છે" : "I already have the official sanction order"}
           </span>
         </label>
 
@@ -1869,7 +1911,7 @@ function ApplyForm({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <label htmlFor="approvedDate" className="text-xs font-semibold text-foreground">
-                  Sanction Date
+                  {isGujarati ? "મંજૂરી તારીખ" : "Sanction Date"}
                 </label>
                 <input
                   id="approvedDate"
@@ -1884,7 +1926,7 @@ function ApplyForm({
 
               <div className="space-y-1.5">
                 <label htmlFor="approvedDays" className="text-xs font-semibold text-foreground">
-                  Approved Days
+                  {isGujarati ? "મંજૂર દિવસો" : "Approved Days"}
                 </label>
                 <input
                   id="approvedDays"
@@ -1912,7 +1954,7 @@ function ApplyForm({
 
             <div className="space-y-1.5">
               <label htmlFor="approvedBy" className="text-xs font-semibold text-foreground">
-                Sanctioned By (Office / Officer)
+                {isGujarati ? "મંજૂર કરનાર (કચેરી / અધિકારી)" : "Sanctioned By (Office / Officer)"}
               </label>
               <input
                 id="approvedBy"
@@ -1939,21 +1981,21 @@ function ApplyForm({
               <div className="flex items-center justify-between gap-2">
                 <span className="text-muted-foreground flex items-center gap-1.5">
                   <Calendar className="size-3.5 text-indigo-500 shrink-0" />
-                  <span>Sanction date range</span>
+                  <span>{isGujarati ? "મંજૂર તારીખ ગાળો" : "Sanction date range"}</span>
                 </span>
                 {validFrom || validTo ? (
                   <span className="font-semibold text-foreground text-right">
-                    {validFrom || "…"} to {validTo || "onwards"}
-                    {rangeDays !== null && ` (${rangeDays} day${rangeDays === 1 ? "" : "s"})`}
+                    {isGujarati ? toGujaratiNumerals(validFrom || "…") : (validFrom || "…")} {isGujarati ? "થી" : "to"} {isGujarati ? toGujaratiNumerals(validTo || "") : (validTo || "onwards")}
+                    {rangeDays !== null && ` (${isGujarati ? toGujaratiNumerals(rangeDays) : rangeDays} ${isGujarati ? "દિવસ" : (rangeDays === 1 ? "day" : "days")})`}
                   </span>
                 ) : (
-                  <span className="text-muted-foreground">Not set</span>
+                  <span className="text-muted-foreground">{isGujarati ? "નક્કી કરેલ નથી" : "Not set"}</span>
                 )}
               </div>
               <p className="text-[10px] text-muted-foreground">
                 {validFrom || validTo
-                  ? "Taken from the date range above. Edit it there to change it."
-                  : "No window set above, so this sanction may be logged on any date until it expires."}
+                  ? (isGujarati ? "ઉપર આપેલ તારીખ ગાળા પરથી લીધેલ છે. તેને બદલવા ઉપર ફેરફાર કરો." : "Taken from the date range above. Edit it there to change it.")
+                  : (isGujarati ? "કોઈ ચોક્કસ તારીખ ગાળો નથી, આ મંજૂરી મુદત પૂર્ણ થાય ત્યાં સુધી કોઈપણ તારીખે વાપરી શકાય છે." : "No window set above, so this sanction may be logged on any date until it expires.")}
               </p>
             </div>
 
@@ -1962,23 +2004,25 @@ function ApplyForm({
               <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-700 dark:text-amber-300 space-y-1">
                 <div className="flex items-center gap-1.5 font-semibold">
                   <Clock className="size-3.5 text-amber-500 shrink-0" />
-                  <span>6-Month Validity Rule</span>
+                  <span>{isGujarati ? "૬ મહિનાની મુદત નિયમ" : "6-Month Validity Rule"}</span>
                 </div>
                 <p className="text-[11px] text-amber-600/90 dark:text-amber-400/90">
-                  This sanction will automatically expire on <strong>{sanctionExpiryPreview}</strong>. Any unlogged days after 6 months will lapse and expire.
+                  {isGujarati
+                    ? `આ મંજૂરી આપમેળે ${toGujaratiNumerals(sanctionExpiryPreview)} ના રોજ સમાપ્ત થશે. ૬ મહિના પછી બાકી રહેલ દિવસો આપમેળે રદ થશે.`
+                    : <>This sanction will automatically expire on <strong>{sanctionExpiryPreview}</strong>. Any unlogged days after 6 months will lapse and expire.</>}
                 </p>
               </div>
             )}
 
             <div className="space-y-1.5">
               <label htmlFor="orderNo" className="text-xs font-semibold text-foreground">
-                Order / Dispatch Number (Optional)
+                {isGujarati ? "ઓર્ડર / જાવક નંબર (વૈકલ્પિક)" : "Order / Dispatch Number (Optional)"}
               </label>
               <input
                 id="orderNo"
                 name="orderNo"
                 type="text"
-                placeholder="e.g. DSP/LEAVE/2026/102"
+                placeholder={isGujarati ? "દા.ત. DSP/LEAVE/2026/102" : "e.g. DSP/LEAVE/2026/102"}
                 className="w-full rounded-xl border border-border bg-card px-3.5 py-2 text-sm shadow-xs focus:border-indigo-500 focus:outline-hidden"
               />
             </div>
@@ -1992,7 +2036,7 @@ function ApplyForm({
           onClick={onClose}
           className="rounded-xl border border-border px-4 py-2 text-xs font-medium hover:bg-muted cursor-pointer"
         >
-          Cancel
+          {isGujarati ? "રદ કરો" : "Cancel"}
         </button>
         <button
           type="submit"
@@ -2005,7 +2049,11 @@ function ApplyForm({
           className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-all"
         >
           {pending && <Loader2 className="size-3.5 animate-spin" />}
-          <span>{hasSanction ? "Record Approved Sanction" : "Submit Application"}</span>
+          <span>
+            {hasSanction
+              ? (isGujarati ? "મંજૂર ઓર્ડર સાચવો" : "Record Approved Sanction")
+              : (isGujarati ? "અરજી સબમિટ કરો" : "Submit Application")}
+          </span>
         </button>
       </div>
     </form>

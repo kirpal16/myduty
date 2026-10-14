@@ -36,31 +36,52 @@ import {
   formatDays,
   summariseBreakdown,
 } from "@/lib/leave/leaveDays";
+import { toGujaratiNumerals } from "@/lib/reports/gujaratiReportUtils";
+import { getPureGujaratiLeaveTypeName } from "@/lib/leave/leaveTranslation";
 
 type ChargedEntry = { code: string; days: number; color: string | null };
 
 /** "Charged as ● 3 CL ● 2 HL" — each type in its own leave colour. */
-function ChargedAs({ entries, label }: { entries: ChargedEntry[] | null; label?: string }) {
+function ChargedAs({
+  entries,
+  label,
+  isGu = false,
+}: {
+  entries: ChargedEntry[] | null;
+  label?: string;
+  isGu?: boolean;
+}) {
   if (!entries) return null;
   return (
     <span className="inline-flex items-center gap-1 whitespace-nowrap text-[10px] font-medium text-muted-foreground">
       {label && <span>{label}</span>}
-      {entries.map((e) => (
-        <span
-          key={e.code}
-          className="inline-flex items-center gap-1 rounded-md border border-border/70 bg-card px-1.5 py-0.5 font-semibold text-foreground whitespace-nowrap"
-        >
-          <ColorDot color={e.color} label={e.code} />
-          {Number.isInteger(e.days) ? e.days : e.days.toFixed(1)} {e.code}
-        </span>
-      ))}
+      {entries.map((e) => {
+        const valStr = Number.isInteger(e.days) ? String(e.days) : e.days.toFixed(1);
+        const dayDisplay = isGu ? toGujaratiNumerals(valStr) : valStr;
+        return (
+          <span
+            key={e.code}
+            className="inline-flex items-center gap-1 rounded-md border border-border/70 bg-card px-1.5 py-0.5 font-semibold text-foreground whitespace-nowrap"
+          >
+            <ColorDot color={e.color} label={e.code} />
+            {dayDisplay} {e.code}
+          </span>
+        );
+      })}
     </span>
   );
 }
 
+import { getServerTranslations } from "@/lib/i18n/server";
+
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
+];
+
+const GUJARATI_MONTH_NAMES = [
+  "જાન્યુઆરી", "ફેબ્રુઆરી", "માર્ચ", "એપ્રિલ", "મે", "જૂન",
+  "જુલાઈ", "ઓગસ્ટ", "સપ્ટેમ્બર", "ઓક્ટોબર", "નવેમ્બર", "ડિસેમ્બર",
 ];
 
 export default async function LeavePage({
@@ -81,6 +102,10 @@ export default async function LeavePage({
     apply?: string;
   }>;
 }) {
+  const { lang, t } = await getServerTranslations();
+  const isGu = lang === "gu";
+  const monthNames = isGu ? GUJARATI_MONTH_NAMES : MONTH_NAMES;
+
   const {
     tab = "logs",
     search,
@@ -123,7 +148,11 @@ export default async function LeavePage({
   const me = await getCurrentUser();
   const isSuperAdmin = me?.role === "SUPER_ADMIN";
 
-  const yearOptions = getYearOptions(3, 1);
+  const rawYearOptions = getYearOptions(3, 1);
+  const yearOptions = rawYearOptions.map((yo) => ({
+    value: yo.value,
+    label: isGu ? toGujaratiNumerals(yo.label) : yo.label,
+  }));
 
   // Fetch leave types, users, and Special Leave data
   const [
@@ -343,65 +372,40 @@ export default async function LeavePage({
 
   return (
     <main className="w-full px-4 sm:px-6 lg:px-8 py-6 max-w-7xl 2xl:max-w-full mx-auto space-y-6">
-      {/* Top Header with Emerald / Teal Theme */}
+      {/* Top Header */}
       <PageHeader
-        title={isSuperAdmin ? "Officer Leave Records" : "Leave Log Book"}
-        subtitle={
-          isSuperAdmin
-            ? "Master register of all officer leave applications, absence records, and sessions."
-            : "Manage and track officer absence requests, entitlements, and sessions."
-        }
+        title={isSuperAdmin ? t.nav.leaveRecords : t.leave.leaveLog}
+        subtitle={t.leave.pageSubtitle}
         badge={
-          /* The badge describes whatever the tab is showing. "Total Leaves"
-             counts days off from the leave logs, which says nothing about a
-             list of sanction applications -- on that tab it read as a day
-             count of records that are not days at all. */
           tab === "special" ? (
-            /* Badge is whitespace-nowrap inside a shrink-0 wrapper, so it can
-               neither wrap nor shrink: a long string here runs off a narrow
-               phone rather than reflowing. The pending half is dropped below
-               `sm`, where the tab's own badge already carries that count. */
             <Badge variant="info" dot>
-              {specialLeaveAppsWithLogged.length}{" "}
-              {specialLeaveAppsWithLogged.length === 1 ? "Sanction" : "Sanctions"}
+              {isGu ? toGujaratiNumerals(specialLeaveAppsWithLogged.length) : specialLeaveAppsWithLogged.length} {t.leave.specialLeave}
               {pendingSplCount > 0 && (
                 <span className="hidden sm:inline">
-                  {/* &nbsp;, not a plain space: JSX trims the whitespace at
-                      the start of a line, which ran this straight into the
-                      word before it. */}
-                  &nbsp;&middot; {pendingSplCount} pending
+                  &nbsp;&middot; {isGu ? toGujaratiNumerals(pendingSplCount) : pendingSplCount} {t.leave.pending}
                 </span>
               )}
             </Badge>
           ) : (
             <Badge variant="success" dot>
-              Total Leaves: {formatDays(totalLeaveDays)}
+              {t.dashboard.totalLeaves}: {formatDays(totalLeaveDays, isGu)}
             </Badge>
           )
         }
         compactActions
         actions={
-          /* Both buttons ride on the title's row, so the label shortens on a
-             phone rather than the pair wrapping to a row of their own. */
           <div className="flex items-center gap-1.5 sm:gap-2.5">
             {!isSuperAdmin && (
               <Link
                 href="/leave/balance"
-                aria-label="My Leave Balance"
-                title="My Leave Balance"
+                aria-label={t.nav.leaveBalance}
+                title={t.nav.leaveBalance}
                 className="flex items-center gap-1.5 whitespace-nowrap rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-2 text-xs font-semibold text-emerald-700 shadow-2xs transition-colors hover:bg-emerald-500/20 dark:text-emerald-300 sm:gap-2 sm:px-3.5 sm:py-2.5 sm:text-sm"
               >
                 <Scale className="size-4 shrink-0" />
-                {/* Icon only on a phone. Measured: even the short label
-                    "Balance" left the title 4px too little room and pushed
-                    "Leave Log Book" onto a second line. The name is carried by
-                    aria-label/title so it is neither silent to a screen reader
-                    nor a guess on hover. */}
-                <span className="hidden sm:inline">My Leave Balance</span>
+                <span className="hidden sm:inline">{t.nav.leaveBalance}</span>
               </Link>
             )}
-            {/* The primary action follows the tab: logging leave belongs to
-                the records tab, recording a sanction to the approvals tab. */}
             {tab === "special" ? (
               <Link
                 href={`/leave?tab=special&year=${selectedYear}&apply=1`}
@@ -409,8 +413,7 @@ export default async function LeavePage({
                 className="flex items-center gap-1.5 whitespace-nowrap rounded-xl border border-transparent bg-gradient-to-r from-indigo-600 to-violet-600 px-2.5 py-2 text-xs font-semibold text-white shadow-md shadow-indigo-600/30 transition-all hover:from-indigo-500 hover:to-violet-500 sm:gap-2 sm:px-4 sm:py-2.5 sm:text-sm"
               >
                 <Plus className="size-4 shrink-0" />
-                <span className="sm:hidden">Sanction</span>
-                <span className="hidden sm:inline">Apply for Sanction</span>
+                <span>{t.leave.applySpecialLeave}</span>
               </Link>
             ) : (
               <Link
@@ -418,7 +421,7 @@ export default async function LeavePage({
                 className="flex items-center gap-1.5 whitespace-nowrap rounded-xl border border-transparent bg-gradient-to-r from-emerald-600 to-teal-600 px-2.5 py-2 text-xs font-semibold text-white shadow-md shadow-emerald-600/30 transition-all hover:from-emerald-500 hover:to-teal-500 sm:gap-2 sm:px-4 sm:py-2.5 sm:text-sm"
               >
                 <Plus className="size-4 shrink-0" />
-                <span>Log Leave</span>
+                <span>{t.leave.applyLeave}</span>
               </Link>
             )}
           </div>
@@ -439,12 +442,12 @@ export default async function LeavePage({
               tab hides -- so the year was fixed at whatever it happened to be. */}
           <div className="flex items-center justify-end gap-2">
             <span className="text-xs font-medium text-muted-foreground">
-              Sanction year
+              {t.leave.sanctionYear}
             </span>
             <div className="w-32">
               <FilterSelect
                 paramName="year"
-                placeholder={String(selectedYear)}
+                placeholder={isGu ? toGujaratiNumerals(selectedYear) : String(selectedYear)}
                 value={String(selectedYear)}
                 icon="calendar"
                 clearable={false}
@@ -482,7 +485,7 @@ export default async function LeavePage({
             }
             searchSlot={
               <SearchInput
-                placeholder="Search by reason..."
+                placeholder={isGu ? "કારણ દ્વારા શોધો..." : "Search by reason..."}
                 defaultValue={search}
               />
             }
@@ -491,9 +494,9 @@ export default async function LeavePage({
                 <Link
                   href="/leave"
                   className="h-9 inline-flex items-center justify-center rounded-xl border border-rose-500/20 bg-rose-500/10 px-3 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 transition-colors shrink-0"
-                  title="Reset all filters"
+                  title={t.common.resetFilters}
                 >
-                  Reset Filters
+                  {t.common.resetFilters}
                 </Link>
               ) : null
             }
@@ -504,7 +507,7 @@ export default async function LeavePage({
                 <div className="w-full sm:w-44">
                   <FilterSelect
                     paramName="userId"
-                    placeholder="All Officers"
+                    placeholder={t.profile.officerName}
                     icon="user"
                     options={(usersList ?? []).map((u) => ({
                       value: u.id,
@@ -519,27 +522,27 @@ export default async function LeavePage({
                 <div className="w-full sm:w-36">
                   <FilterSelect
                     paramName="leaveTypeId"
-                    placeholder="All Types"
+                    placeholder={t.leave.selectLeaveType}
                     icon="calendar"
                     options={(leaveTypes ?? []).map((lt) => ({
                       value: lt.id,
-                      label: lt.name,
+                      label: isGu ? getPureGujaratiLeaveTypeName(lt.name) : lt.name,
                     }))}
                   />
                 </div>
               )}
 
-              {/* Month Filter - defaults to current month */}
+              {/* Month Filter */}
               <div className="w-full sm:w-36">
                 <FilterSelect
                   paramName="month"
-                  placeholder="Whole year"
+                  placeholder={t.dashboard.wholeYear}
                   value={monthParam}
                   icon="calendar"
                   clearable={true}
                   options={[
-                    { value: "all", label: "Whole year" },
-                    ...MONTH_NAMES.map((m, i) => ({ value: String(i + 1), label: m })),
+                    { value: "all", label: t.dashboard.wholeYear },
+                    ...monthNames.map((m, i) => ({ value: String(i + 1), label: m })),
                   ]}
                 />
               </div>
@@ -548,7 +551,7 @@ export default async function LeavePage({
               <div className="w-full sm:w-28">
                 <FilterSelect
                   paramName="year"
-                  placeholder={String(selectedYear)}
+                  placeholder={isGu ? toGujaratiNumerals(selectedYear) : String(selectedYear)}
                   value={hasExplicitRange && !year ? undefined : String(selectedYear)}
                   icon="calendar"
                   clearable={false}
@@ -561,7 +564,7 @@ export default async function LeavePage({
                 <DateRangeFilter
                   fromParamName="from"
                   toParamName="to"
-                  label="Date Range"
+                  label={isGu ? "તારીખ ગાળો" : "Date Range"}
                 />
               </div>
             </div>
@@ -574,13 +577,13 @@ export default async function LeavePage({
           <table className="w-full text-left text-xs sm:text-sm">
             <thead className="bg-muted/50 border-b border-border text-muted-foreground uppercase text-[11px] font-semibold tracking-wider">
               <tr>
-                <th className="py-3.5 px-4 sm:px-6">Officer</th>
-                <th className="py-3.5 px-4">Leave Type</th>
-                <th className="py-3.5 px-4">Period / Dates</th>
-                <th className="py-3.5 px-4">Days</th>
-                <th className="py-3.5 px-4">Session</th>
-                <th className="py-3.5 px-4">Reason / Notes</th>
-                <th className="py-3.5 px-4 sm:px-6 text-right">Actions</th>
+                <th className="py-3.5 px-4 sm:px-6">{t.profile.officerName}</th>
+                <th className="py-3.5 px-4">{t.leave.leaveType}</th>
+                <th className="py-3.5 px-4">{t.common.date}</th>
+                <th className="py-3.5 px-4">{t.leave.daysCount}</th>
+                <th className="py-3.5 px-4">{t.leave.session}</th>
+                <th className="py-3.5 px-4">{t.leave.reason}</th>
+                <th className="py-3.5 px-4 sm:px-6 text-right">{t.common.actions}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/60">
@@ -590,6 +593,9 @@ export default async function LeavePage({
                   name: string;
                   color: string | null;
                 } | null;
+                const leaveTypeName = isGu
+                  ? getPureGujaratiLeaveTypeName(leaveType?.name ?? "Leave")
+                  : (leaveType?.name ?? "Leave");
                 const isOwn = l.user_id === me?.id;
                 const breakdown = breakdownFor(l.id);
                 const isMultiType = breakdown && breakdown.length > 1;
@@ -610,47 +616,47 @@ export default async function LeavePage({
                         <Badge
                           variant="secondary"
                           className="border-indigo-500/30 bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 font-semibold inline-flex items-center gap-1.5"
-                          title={`Multi-Type: ${breakdown.map((b) => `${b.days} ${b.code}`).join(", ")}`}
+                          title={`Multi-Type: ${breakdown.map((b) => `${isGu ? toGujaratiNumerals(b.days) : b.days} ${b.code}`).join(", ")}`}
                         >
                           <Sparkles className="size-3 text-indigo-500 shrink-0" />
-                          <span>Multi-Type</span>
+                          <span>{t.leave.multiType}</span>
                         </Badge>
                       ) : (
                         <Badge variant="secondary">
                           <ColorDot
                             color={leaveType?.color}
-                            label={leaveType?.name ?? "Leave"}
+                            label={leaveTypeName}
                           />
-                          {leaveType?.name ?? "Leave"}
+                          {leaveTypeName}
                         </Badge>
                       )}
                       {l.special_leave_application_id && (
                         <Badge variant="info" className="ml-1.5 text-[10px]">
-                          Sanctioned
+                          {t.leave.sanctioned}
                         </Badge>
                       )}
                     </td>
                     <td className="py-3.5 px-4 font-medium text-foreground whitespace-nowrap">
                       <div className="flex items-center gap-1.5">
                         <Calendar className="size-3.5 text-slate-400" />
-                        <span>{formatDateRange(l.start_date, l.end_date)}</span>
+                        <span>{formatDateRange(l.start_date, l.end_date, isGu ? "gu" : "en-US")}</span>
                       </div>
                     </td>
                     <td className="py-3.5 px-4 whitespace-nowrap">
                       <div className="flex items-center gap-2 whitespace-nowrap">
                         <Badge variant="info">
-                          {formatDays(leaveDayCount(l.start_date, l.end_date, l.is_half_day))}
+                          {formatDays(leaveDayCount(l.start_date, l.end_date, l.is_half_day), isGu)}
                         </Badge>
-                        <ChargedAs entries={breakdown} />
+                        <ChargedAs entries={breakdown} isGu={isGu} />
                       </div>
                     </td>
                     <td className="py-3.5 px-4 whitespace-nowrap">
                       {l.is_half_day ? (
                         <Badge variant="warning">
-                          {l.half_day_session} Half-Day
+                          {l.half_day_session} {t.leave.halfDay}
                         </Badge>
                       ) : (
-                        <Badge variant="outline">Full Day</Badge>
+                        <Badge variant="outline">{t.leave.fullDay}</Badge>
                       )}
                     </td>
                     <td className="py-3.5 px-4 text-muted-foreground">
@@ -666,7 +672,7 @@ export default async function LeavePage({
                             className="inline-flex items-center gap-1 rounded-lg border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted transition-colors shadow-2xs"
                           >
                             <Edit2 className="size-3" />
-                            <span>Edit</span>
+                            <span>{t.common.edit}</span>
                           </Link>
                           <DeleteLeaveButton id={l.id} />
                         </div>
@@ -689,6 +695,9 @@ export default async function LeavePage({
               name: string;
               color: string | null;
             } | null;
+            const leaveTypeName = isGu
+              ? getPureGujaratiLeaveTypeName(leaveType?.name ?? "Leave")
+              : (leaveType?.name ?? "Leave");
             const isOwn = l.user_id === me?.id;
             const breakdown = breakdownFor(l.id);
             const isMultiType = breakdown && breakdown.length > 1;
@@ -704,40 +713,40 @@ export default async function LeavePage({
                     {isMultiType ? (
                       <span className="mt-0.5 inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400">
                         <Sparkles className="size-3 text-indigo-500 shrink-0" />
-                        <span className="truncate">Multi-Type ({breakdown.map((b) => `${b.days} ${b.code}`).join(", ")})</span>
+                        <span className="truncate">{t.leave.multiType} ({breakdown.map((b) => `${isGu ? toGujaratiNumerals(b.days) : b.days} ${b.code}`).join(", ")})</span>
                       </span>
                     ) : (
                       <span className="mt-0.5 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                         <ColorDot
                           color={leaveType?.color}
-                          label={leaveType?.name ?? "Leave"}
+                          label={leaveTypeName}
                         />
-                        <span className="truncate">{leaveType?.name ?? "Leave"}</span>
+                        <span className="truncate">{leaveTypeName}</span>
                       </span>
                     )}
                     {l.special_leave_application_id && (
                       <Badge variant="info" className="mt-1 text-[10px] py-0 px-1">
-                        Sanctioned SPL
+                        {t.leave.sanctioned}
                       </Badge>
                     )}
                   </div>
                   {l.is_half_day ? (
-                    <Badge variant="warning" className="shrink-0">{l.half_day_session} Half-Day</Badge>
+                    <Badge variant="warning" className="shrink-0">{l.half_day_session} {t.leave.halfDay}</Badge>
                   ) : (
-                    <Badge variant="outline" className="shrink-0">Full Day</Badge>
+                    <Badge variant="outline" className="shrink-0">{t.leave.fullDay}</Badge>
                   )}
                 </div>
 
                 <div className="flex items-center justify-between gap-2 text-xs font-medium text-foreground bg-muted/40 px-3 py-1.5 rounded-lg border border-border/50">
                   <div className="flex items-center gap-1.5 min-w-0">
                     <Calendar className="size-3.5 text-emerald-500 shrink-0" />
-                    <span className="truncate">{formatDateRange(l.start_date, l.end_date)}</span>
+                    <span className="truncate">{formatDateRange(l.start_date, l.end_date, isGu ? "gu" : "en-US")}</span>
                   </div>
                   <Badge variant="info" className="text-[11px] font-semibold py-0.5 px-2 shrink-0">
-                    {formatDays(leaveDayCount(l.start_date, l.end_date, l.is_half_day))}
+                    {formatDays(leaveDayCount(l.start_date, l.end_date, l.is_half_day), isGu)}
                   </Badge>
                 </div>
-                <ChargedAs entries={breakdownFor(l.id)} label="Charged as" />
+                <ChargedAs entries={breakdownFor(l.id)} label={isGu ? "ચાર્જ કરેલ" : "Charged as"} isGu={isGu} />
 
                 {l.reason && (
                   <p className="text-xs text-muted-foreground bg-muted/20 px-2.5 py-1.5 rounded-lg border border-border/40 italic">
@@ -752,7 +761,7 @@ export default async function LeavePage({
                       className="flex-1 flex items-center justify-center gap-1.5 rounded-lg border border-border bg-card py-1.5 text-xs font-semibold text-foreground hover:bg-muted/70 shadow-2xs transition-colors"
                     >
                       <Edit2 className="size-3" />
-                      <span>Edit</span>
+                      <span>{t.common.edit}</span>
                     </Link>
                     <DeleteLeaveButton id={l.id} size="sm" className="flex-1 py-1.5 rounded-lg" />
                   </div>
@@ -767,10 +776,10 @@ export default async function LeavePage({
             <div className="flex flex-col items-center justify-center gap-2">
               <CalendarOff className="size-8 text-slate-300 dark:text-slate-700" />
               <p className="text-sm font-medium text-foreground">
-                No leave entries recorded
+                {t.leave.noLeavesFound}
               </p>
               <p className="text-xs text-muted-foreground">
-                Try modifying your search or log a new leave entry.
+                {t.leave.noLeavesHelp}
               </p>
             </div>
           </div>

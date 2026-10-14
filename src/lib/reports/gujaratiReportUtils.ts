@@ -279,6 +279,8 @@ export const DUTY_TRANSLATIONS: Record<string, string> = {
   holiday: "જાહેર રજા",
   "public holiday": "જાહેર રજા",
   "government holiday": "સરકારી રજા",
+  duty: "ફરજ",
+  "standard duty": "સામાન્ય ફરજ",
 };
 
 export function translateDutyTypeToGujarati(val: string | null | undefined): string {

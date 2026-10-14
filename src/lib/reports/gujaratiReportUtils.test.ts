@@ -122,6 +122,8 @@ describe("gujaratiReportUtils", () => {
       expect(translateDutyTypeToGujarati("NAKABANDI")).toBe("નાકાબંધી");
       expect(translateDutyTypeToGujarati("Combing")).toBe("કોમ્બિંગ");
       expect(translateDutyTypeToGujarati("COMBING")).toBe("કોમ્બિંગ");
+      expect(translateDutyTypeToGujarati("Standard Duty")).toBe("સામાન્ય ફરજ");
+      expect(translateDutyTypeToGujarati("Duty")).toBe("ફરજ");
     });
   });
 

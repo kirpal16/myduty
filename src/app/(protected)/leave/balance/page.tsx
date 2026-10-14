@@ -22,6 +22,9 @@ import {
   ArrowRight,
   Sparkles,
 } from "lucide-react";
+import { getServerTranslations } from "@/lib/i18n/server";
+import { getTranslatedLeaveTypeName } from "@/lib/leave/leaveTranslation";
+import { toGujaratiNumerals } from "@/lib/reports/gujaratiReportUtils";
 
 export default async function LeaveBalancePage({
   searchParams,
@@ -31,12 +34,19 @@ export default async function LeaveBalancePage({
   const supabase = await createClient();
   const user = await getCurrentUser();
   const { year: rawYear } = await searchParams;
+  const { lang, t } = await getServerTranslations();
+  const isGu = lang === "gu";
+  const num = (n: number | string | null | undefined) =>
+    isGu ? toGujaratiNumerals(n) : String(n ?? 0);
 
   // The window lives in one place now (src/lib/format/year.ts) and matches
   // what leave_balance_view materialises. This page used to declare its own
   // -3..+1, which was a fourth window in an app that already had three.
   const selectedYear = clampYear(rawYear);
-  const yearOptions = getYearOptions(-YEAR_MIN_OFFSET, YEAR_MAX_OFFSET);
+  const yearOptions = getYearOptions(-YEAR_MIN_OFFSET, YEAR_MAX_OFFSET).map((opt) => ({
+    ...opt,
+    label: isGu ? toGujaratiNumerals(opt.label) : opt.label,
+  }));
 
   if (!user) redirect("/login");
 
@@ -175,48 +185,34 @@ export default async function LeaveBalancePage({
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="size-3.5" />
-          <span>Back to Leave Log</span>
+          <span>{t.common.back}</span>
         </Link>
       </div>
 
       <PageHeader
-        /* The year is dropped from the title: the picker beside it and the
-           "Allowance Ledger (2026)" heading below both state it, and at 375px
-           "(2026)" was what pushed this onto a second line. `title` is a
-           string prop, so this is all-or-nothing rather than width-dependent. */
-        title="My Leave Balance"
-        subtitle="Annual quota entitlement and utilized days across all leave classifications."
+        title={t.leave.leaveBalanceTitle}
+        subtitle={t.leave.leaveBalanceSubtitle}
         compactActions
         actions={
           <div className="flex items-center gap-2">
-            {/* Past and future years, not just today's. Everything on the
-                page -- the ledger, the holiday count, the worked-holiday
-                tally -- reads the same `selectedYear`, so they cannot
-                disagree with the title. */}
-            {/* The trigger spends ~90px on its icon, clear "x" and chevron
-                before the label gets any room, so at w-20 the year itself was
-                invisible — a year picker showing no year. */}
             <div className="w-28">
               <FilterSelect
                 paramName="year"
-                placeholder={String(selectedYear)}
+                placeholder={isGu ? toGujaratiNumerals(selectedYear) : String(selectedYear)}
                 value={String(selectedYear)}
                 icon="calendar"
                 options={yearOptions}
-                /* No clear "x": the page always needs a year, so clearing
-                   only returns to the current one — and the 24px it takes is
-                   what pushed "2026" out of the trigger on a phone. */
                 clearable={false}
               />
             </div>
             <Link
               href="/settings?tab=leave"
-              aria-label="Settings"
-              title="Settings"
+              aria-label={t.nav.settings}
+              title={t.nav.settings}
               className="flex items-center gap-1.5 whitespace-nowrap rounded-xl bg-indigo-600 px-2.5 py-2 text-xs font-semibold text-white shadow-md shadow-indigo-600/30 transition-colors hover:bg-indigo-500 sm:gap-2 sm:px-4 sm:py-2.5 sm:text-sm"
             >
               <Settings className="size-4 shrink-0" />
-              <span className="hidden sm:inline">Settings</span>
+              <span className="hidden sm:inline">{t.nav.settings}</span>
             </Link>
           </div>
         }
@@ -227,11 +223,6 @@ export default async function LeaveBalancePage({
           and why working a holiday does not spend it. */}
       {holidayLeaveType && !isHolidayDisabled && (
         <Card className="border-amber-500/30 bg-amber-500/5 p-4 sm:p-5">
-          {/* On a phone the icon, heading and the remaining figure share the
-              top line, and the explanation sits underneath. Previously the
-              right-hand block wrapped below a full-width paragraph but kept
-              `text-right`, so the number floated against the edge with
-              nothing above it -- the misalignment in the report. */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
             <div className="flex items-start gap-3">
               <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
@@ -241,35 +232,33 @@ export default async function LeaveBalancePage({
               <div className="min-w-0 flex-1">
                 <div className="flex items-start justify-between gap-3">
                   <h2 className="text-sm font-bold text-foreground">
-                    Holiday Leave — derived from your calendar
+                    {t.leave.holidayLeaveCardTitle}
                   </h2>
                   {/* The figure, on the heading's row. Hidden from `sm` up,
                       where the column below takes over. */}
                   <div className="shrink-0 text-right sm:hidden">
                     <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Remaining
+                      {t.leave.remaining}
                     </p>
                     <p className="text-xl font-bold leading-tight text-foreground">
-                      {holidayLeaveBalance?.remaining ?? holidayCount}
+                      {num(holidayLeaveBalance?.remaining ?? holidayCount)}
                     </p>
                   </div>
                 </div>
 
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {holidayCount} holidays in {selectedYear} ·{" "}
-                  {holidaysTaken} taken as leave ·{" "}
-                  {holidaysWorked ?? 0} worked duties
+                  {isGu
+                    ? `${num(holidayCount)} રજાઓ ${num(selectedYear)} માં · ${num(holidaysTaken)} રજા તરીકે લીધેલ · ${num(holidaysWorked ?? 0)} કામ કરેલ ફરજો`
+                    : `${holidayCount} holidays in ${selectedYear} · ${holidaysTaken} taken as leave · ${holidaysWorked ?? 0} worked duties`}
                 </p>
                 <p className="mt-1.5 text-[11px] text-muted-foreground">
-                  Sundays, 2nd and 4th Saturdays and gazetted festivals all
-                  count. Working on a holiday or taking Holiday Leave consumes
-                  from your quota; removing a duty or leave restores it.
+                  {t.leave.holidayLeaveExplanation}
                 </p>
                 <Link
                   href="/settings?tab=holidays"
                   className="mt-2 inline-block text-[11px] font-semibold text-indigo-600 hover:underline dark:text-indigo-400 sm:hidden"
                 >
-                  Edit holidays
+                  {t.leave.editHolidays}
                 </Link>
               </div>
             </div>
@@ -277,43 +266,38 @@ export default async function LeaveBalancePage({
             {/* The same figure as its own column from `sm` up. */}
             <div className="hidden shrink-0 text-right sm:block">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Remaining
+                {t.leave.remaining}
               </p>
               <p className="text-2xl font-bold text-foreground">
-                {holidayLeaveBalance?.remaining ?? holidayCount}
+                {num(holidayLeaveBalance?.remaining ?? holidayCount)}
               </p>
               <Link
                 href="/settings?tab=holidays"
                 className="text-[11px] font-semibold text-indigo-600 hover:underline dark:text-indigo-400"
               >
-                Edit holidays
+                {t.leave.editHolidays}
               </Link>
             </div>
           </div>
         </Card>
       )}
 
-      {/* One row per leave type.
-          This used to be two blocks stacked on top of each other: a card grid,
-          then an "Allowance Ledger Details" table on desktop with a card list
-          on mobile. Same numbers, three treatments, and every leave type
-          appeared twice on the page. One row now carries all of it, laid out
-          differently at each width rather than duplicated. */}
+      {/* One row per leave type. */}
       <Card className="overflow-hidden p-0">
         <div className="flex items-center justify-between gap-3 border-b border-border/80 p-4 sm:p-5">
           <div>
             <h3 className="text-sm font-bold text-foreground">
-              Allowance Ledger ({selectedYear})
+              {t.leave.allowanceLedger} ({num(selectedYear)})
             </h3>
             <p className="text-[11px] text-muted-foreground">
-              Entitlement, days taken and what is left
+              {t.leave.allowanceLedgerSubtitle}
             </p>
           </div>
           <Link
             href="/settings?tab=leave"
             className="shrink-0 text-[11px] font-semibold text-indigo-600 hover:underline dark:text-indigo-400"
           >
-            Adjust
+            {t.leave.adjust}
           </Link>
         </div>
 
@@ -321,13 +305,13 @@ export default async function LeaveBalancePage({
           <div className="flex flex-col items-center gap-2 p-10 text-center">
             <Scale className="size-8 text-slate-300 dark:text-slate-700" />
             <p className="text-sm font-medium text-foreground">
-              No allowance set for this year yet
+              {t.leave.noAllowanceSet}
             </p>
             <Link
               href="/settings?tab=leave"
               className="text-xs font-semibold text-indigo-600 hover:underline"
             >
-              Set your allowances in Settings
+              {t.leave.setAllowanceInSettings}
             </Link>
           </div>
         ) : (
@@ -354,6 +338,8 @@ export default async function LeaveBalancePage({
                   ? Math.min(100, Math.round(((isHL ? totalHlUsed : used) / totalAvailable) * 100))
                   : 0;
 
+              const translatedName = getTranslatedLeaveTypeName(name, isGu);
+
               return (
                 <li
                   key={b.leave_type_id}
@@ -362,18 +348,24 @@ export default async function LeaveBalancePage({
                   {/* Category identity and status badge */}
                   <div className="flex min-w-0 flex-col gap-1.5 sm:w-60 lg:w-72 shrink-0">
                     <div className="flex items-center gap-2">
-                      <ColorDot color={type?.color} label={name} />
-                      <span className="text-sm font-bold text-foreground truncate" title={name}>
-                        {name}
+                      <ColorDot color={type?.color} label={translatedName} />
+                      <span className="text-sm font-bold text-foreground truncate" title={translatedName}>
+                        {translatedName}
                       </span>
                     </div>
                     <div className="flex flex-wrap items-center gap-1.5">
                       <Badge variant={isOver ? "danger" : "success"}>
-                        {isOver ? `Over by ${Math.abs(remaining)}d` : `${remaining}d left`}
+                        {isOver
+                          ? isGu
+                            ? `${num(Math.abs(remaining))} ${t.leave.daysOver}`
+                            : `${t.leave.daysOver} ${Math.abs(remaining)}d`
+                          : isGu
+                            ? `${num(remaining)} ${t.leave.daysLeft}`
+                            : `${remaining}d ${t.leave.daysLeft}`}
                       </Badge>
                       {approvedInfo && approvedInfo.approvedTotal > 0 && (
                         <Badge variant="info">
-                          {approvedInfo.approvedTotal}d sanctioned
+                          {num(approvedInfo.approvedTotal)} {t.leave.daysSanctioned}
                         </Badge>
                       )}
                     </div>
@@ -383,68 +375,76 @@ export default async function LeaveBalancePage({
                   <div className="grid grid-cols-3 gap-2 rounded-xl border border-border/60 bg-muted/40 p-2.5 text-center sm:min-h-[48px] sm:flex-1 sm:border-0 sm:bg-transparent sm:p-0 sm:text-left">
                     <div>
                       <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        Allocated
+                        {t.leave.allocated}
                       </span>
-                      {/* The total the officer can actually take, with what
-                          carried over from last year folded in: "23 (incl. 8 carried)". */}
+                      {/* The total the officer can actually take */}
                       <span className="text-sm font-bold text-foreground">
-                        {carriedIn > 0 ? totalAvailable || allocated + carriedIn : allocated}
+                        {num(carriedIn > 0 ? totalAvailable || allocated + carriedIn : allocated)}
                       </span>
                       {approvedInfo && approvedInfo.approvedTotal > 0 && (
                         <span className="block text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 leading-tight">
-                          {approvedInfo.approvedTotal}d approved ({approvedInfo.remainingTotal} to log)
+                          {isGu
+                            ? `${num(approvedInfo.approvedTotal)} દિવસ મંજૂર (${num(approvedInfo.remainingTotal)} નોંધણી બાકી)`
+                            : `${approvedInfo.approvedTotal}d approved (${approvedInfo.remainingTotal} to log)`}
                         </span>
                       )}
                       {carriedIn > 0 && (
                         <span className="block text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 leading-tight">
-                          incl. {carriedIn} carried
+                          {isGu ? `${num(carriedIn)} આગળ લાવેલ સહિત` : `incl. ${carriedIn} carried`}
                         </span>
                       )}
                       {cappedAway > 0 && (
                         <span
                           className="block text-[10px] font-medium text-amber-600 dark:text-amber-400 leading-tight"
-                          title={`${cappedAway}d above your ${b.max_accumulated}-day maximum were not carried.`}
+                          title={
+                            isGu
+                              ? `તમારી મહત્તમ ${num(b.max_accumulated)} દિવસની મર્યાદાથી વધુ ${num(cappedAway)} દિવસ આગળ લાવ્યા નથી.`
+                              : `${cappedAway}d above your ${b.max_accumulated}-day maximum were not carried.`
+                          }
                         >
-                          ({cappedAway}d capped)
+                          ({isGu ? `${num(cappedAway)} દિવસ મર્યાદિત` : `${cappedAway}d capped`})
                         </span>
                       )}
                     </div>
 
                     <div>
                       <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        Used
+                        {t.leave.used}
                       </span>
                       <span className="text-sm font-bold text-foreground">
-                        {isHL ? totalHlUsed : used}
+                        {num(isHL ? totalHlUsed : used)}
                       </span>
                       {isHL && totalHlWorked > 0 && (
                         <span className="block text-[10px] font-semibold text-amber-600 dark:text-amber-400 leading-tight">
-                          {holidaysTaken} leave + {totalHlWorked} {totalHlWorked === 1 ? "duty worked" : "duties worked"}
+                          {isGu
+                            ? `${num(holidaysTaken)} રજા + ${num(totalHlWorked)} કામ કરેલ ફરજો`
+                            : `${holidaysTaken} leave + ${totalHlWorked} ${totalHlWorked === 1 ? "duty worked" : "duties worked"}`}
                         </span>
                       )}
                     </div>
 
                     <div>
                       <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        Remaining
+                        {t.leave.remaining}
                       </span>
                       <span
                         className={`text-sm font-bold ${
                           isOver ? "text-rose-600 dark:text-rose-400" : "text-foreground"
                         }`}
                       >
-                        {remaining}
+                        {num(remaining)}
                       </span>
                       {approvedInfo && approvedInfo.approvedTotal > 0 && (
                         <span className="block text-[10px] font-semibold text-sky-600 dark:text-sky-400 leading-tight">
-                          {approvedInfo.remainingTotal} to log
+                          {isGu
+                            ? `${num(approvedInfo.remainingTotal)} નોંધણી બાકી`
+                            : `${approvedInfo.remainingTotal} to log`}
                         </span>
                       )}
                     </div>
                   </div>
 
-                  {/* Usage bar: full width on a phone, a fixed column beside
-                      the figures on wider screens. */}
+                  {/* Usage bar */}
                   <div className="sm:w-44 sm:shrink-0">
                     <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                       <div
@@ -459,17 +459,25 @@ export default async function LeaveBalancePage({
                         {totalAvailable > 0
                           ? isHL && (holidaysWorked ?? 0) > 0
                             ? holidaysTaken > 0
-                              ? `${percentUsed}% of ${totalAvailable}d (${holidaysTaken} leave + ${holidaysWorked} duty)`
-                              : `${percentUsed}% of ${totalAvailable}d (${holidaysWorked} ${(holidaysWorked ?? 0) === 1 ? "duty" : "duties"} worked)`
-                            : `${percentUsed}% of ${totalAvailable}d used`
-                          : "No allowance set"}
+                              ? isGu
+                                ? `${num(percentUsed)}% (${num(totalAvailable)} દિવસમાંથી) (${num(holidaysTaken)} રજા + ${num(holidaysWorked)} ફરજ)`
+                                : `${percentUsed}% of ${totalAvailable}d (${holidaysTaken} leave + ${holidaysWorked} duty)`
+                              : isGu
+                                ? `${num(percentUsed)}% (${num(totalAvailable)} દિવસમાંથી) (${num(holidaysWorked)} ${(holidaysWorked ?? 0) === 1 ? "ફરજ" : "ફરજો"} કામ કરેલ)`
+                                : `${percentUsed}% of ${totalAvailable}d (${holidaysWorked} ${(holidaysWorked ?? 0) === 1 ? "duty" : "duties"} worked)`
+                            : isGu
+                              ? `${num(percentUsed)}% (${num(totalAvailable)} દિવસમાંથી) વપરાયેલ`
+                              : `${percentUsed}% of ${totalAvailable}d used`
+                          : isGu
+                            ? "કોઈ ક્વોટા સેટ નથી"
+                            : "No allowance set"}
                       </span>
                       {(type?.code === "SPL" || type?.code === "LWP") && (
                         <Link
                           href={`/leave?tab=special&year=${selectedYear}`}
                           className="inline-flex items-center gap-1 font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
                         >
-                          <span>Sanctions</span>
+                          <span>{t.leave.sanctions}</span>
                           <ArrowRight className="size-2.5" />
                         </Link>
                       )}

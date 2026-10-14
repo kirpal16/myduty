@@ -7,7 +7,7 @@
  * called from the server — it is only ever a component or a prop — so keeping
  * the pure part here is what lets both sides share it.
  */
-export type TabIconName = "user" | "calendar" | "sparkles" | "scale" | "printer";
+export type TabIconName = "user" | "calendar" | "sparkles" | "scale" | "printer" | "globe";
 
 export type TabDef = {
   /** Appears in the URL as ?tab=<id>. */

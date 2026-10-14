@@ -12,6 +12,7 @@ import { ArrowLeft, Briefcase } from "lucide-react";
 import { getUserSettings } from "@/lib/settings/getUserSettings";
 import { isoToLocalInput, toDateKey } from "@/lib/format/datetime";
 import type { HolidayRecord } from "@/lib/holidays/resolveHoliday";
+import { getServerTranslations } from "@/lib/i18n/server";
 
 export default async function EditDutyPage({
   params,
@@ -24,7 +25,7 @@ export default async function EditDutyPage({
 
   const settings = await getUserSettings();
 
-  const [{ data: duty }, { data: dutyTypes }, { data: attachment }, canAccessStorage] = await Promise.all([
+  const [{ data: duty }, { data: dutyTypes }, { data: attachment }, canAccessStorage, translations] = await Promise.all([
     supabase
       .from("duties")
       .select(
@@ -46,7 +47,10 @@ export default async function EditDutyPage({
       .limit(1)
       .maybeSingle(),
     user?.role === "SUPER_ADMIN" ? true : hasPermission(PERMISSIONS.STORAGE_VIEW_ALL),
+    getServerTranslations(),
   ]);
+
+  const { t } = translations;
 
   if (!duty) notFound();
   // Only the owner edits their own entry (RLS would reject the write anyway).
@@ -70,14 +74,18 @@ export default async function EditDutyPage({
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="size-3.5" />
-          <span>Back to Duty Details</span>
+          <span>{t.duty.backToDutyDetails}</span>
         </Link>
       </div>
 
       <PageHeader
-        title="Edit Duty Entry"
-        subtitle="Update timing, location assignments, or travelling allowance calculations."
-        badge={<Badge variant="warning" dot>Edit Mode</Badge>}
+        title={t.duty.editDutyEntry}
+        subtitle={t.duty.editDutySubtitle}
+        badge={
+          <Badge variant="warning" dot>
+            {t.duty.editMode}
+          </Badge>
+        }
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -124,15 +132,19 @@ export default async function EditDutyPage({
         <div className="space-y-6">
           <Card className="p-5 space-y-4">
             <CardHeader
-              title="Shift Record Information"
-              description="Who owns this record, and what changing it affects"
+              title={t.duty.shiftRecordInfoTitle}
+              description={t.duty.shiftRecordInfoDesc}
             />
             <div className="space-y-3 text-xs text-muted-foreground">
               <div className="flex items-start gap-2.5 p-3 rounded-xl bg-muted/40 border border-border/60">
                 <Briefcase className="size-4 text-indigo-500 shrink-0 mt-0.5" />
                 <div>
-                  <span className="font-semibold text-foreground block">Duty Modification</span>
-                  <span>Changing the date re-checks whether this shift falls on a holiday, which decides its extra pay.</span>
+                  <span className="font-semibold text-foreground block">
+                    {t.duty.dutyModificationTitle}
+                  </span>
+                  <span>
+                    {t.duty.dutyModificationDesc}
+                  </span>
                 </div>
               </div>
             </div>

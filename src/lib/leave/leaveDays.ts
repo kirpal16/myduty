@@ -1,4 +1,5 @@
 import { datesInRange } from "./holidayLeaveRules";
+import { toGujaratiNumerals } from "@/lib/reports/gujaratiReportUtils";
 
 /**
  * How many days a leave entry covers.
@@ -36,9 +37,12 @@ export function leaveDaysWithin(
   return leaveDayCount(s, e, isHalfDay);
 }
 
-/** "1 Day", "0.5 Day", "12 Days". */
-export function formatDays(n: number): string {
+/** "1 Day", "0.5 Day", "12 Days" or "૧ દિવસ", "૧૨ દિવસ". */
+export function formatDays(n: number, isGujarati = false): string {
   const value = Number.isInteger(n) ? String(n) : n.toFixed(1);
+  if (isGujarati) {
+    return `${toGujaratiNumerals(value)} દિવસ`;
+  }
   return `${value} ${n <= 1 ? "Day" : "Days"}`;
 }
 

@@ -24,6 +24,8 @@ import { DutyHolidayBadge, DutyTaBadge } from "@/components/duty/duty-badges";
 import { formatSafeDateFull, formatSafeTime } from "@/lib/format/safeDate";
 import { useBodyScrollLock } from "@/lib/hooks/useBodyScrollLock";
 import { useModalBackClose } from "@/lib/hooks/useModalBackClose";
+import { useLanguage } from "@/lib/i18n/language-context";
+import { toGujaratiNumerals } from "@/lib/reports/gujaratiReportUtils";
 import type { CalendarEvent } from "./modern-calendar";
 
 export interface DayDetailsModalProps {
@@ -38,6 +40,9 @@ const cleanHolidayTitle = (title: string) =>
     .replace(/^Holiday:\s*/i, "")
     .replace(/^My holiday:\s*/i, "")
     .replace(/^Optional Holiday:\s*/i, "")
+    .replace(/^જાહેર રજા:\s*/i, "")
+    .replace(/^મારી રજા:\s*/i, "")
+    .replace(/^મરજિયાત રજા:\s*/i, "")
     .replace(/\s*-\s*કૃષ્ણ જન્મોત્સવ/gi, "")
     .trim();
 
@@ -49,6 +54,7 @@ export function DayDetailsModal({
 }: DayDetailsModalProps) {
   useBodyScrollLock(isOpen);
   useModalBackClose(isOpen, onClose);
+  const { t, isGujarati } = useLanguage();
 
   if (!isOpen) return null;
 
@@ -56,7 +62,7 @@ export function DayDetailsModal({
   const dateStr = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 
   // Format date display
-  const formattedDate = formatSafeDateFull(date);
+  const formattedDate = formatSafeDateFull(date, isGujarati);
 
   const isToday =
     new Date().toDateString() === date.toDateString();
@@ -93,19 +99,19 @@ export function DayDetailsModal({
                 </h3>
                 {isToday && (
                   <span className="text-[10px] font-bold uppercase tracking-wider bg-indigo-600 text-white px-2 py-0.5 rounded-full">
-                    Today
+                    {t.calendar.today}
                   </span>
                 )}
                 {isWeekend && !isToday && (
                   <span className="text-[10px] font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full">
-                    Weekend
+                    {t.calendar.weekendBadge}
                   </span>
                 )}
               </div>
               <p className="text-xs text-muted-foreground">
                 {dayEvents.length === 0
-                  ? "No duties, leaves, or holidays logged for this day."
-                  : `${dayEvents.length} scheduled item${dayEvents.length > 1 ? "s" : ""}`}
+                  ? t.calendar.noEventsThisDay
+                  : `${isGujarati ? toGujaratiNumerals(dayEvents.length) : dayEvents.length} ${dayEvents.length > 1 ? t.calendar.scheduledItemPlural : t.calendar.scheduledItemSingular}`}
               </p>
             </div>
           </div>
@@ -126,7 +132,9 @@ export function DayDetailsModal({
             <div className="space-y-2">
               <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
                 <Sparkles className="size-3.5 text-rose-500" />
-                <span>Holidays & Off-Days ({holidays.length})</span>
+                <span>
+                  {t.calendar.holidaysAndOffsSection} ({isGujarati ? toGujaratiNumerals(holidays.length) : holidays.length})
+                </span>
               </span>
               <div className="space-y-2">
                 {holidays.map((h) => {
@@ -157,12 +165,12 @@ export function DayDetailsModal({
                             }`}
                           >
                             {isOptional
-                              ? "Optional Holiday (મરજિયાત)"
+                              ? t.calendar.optionalHolidayBadge
                               : h.type === "holiday-global"
-                              ? "Public Holiday"
+                              ? t.calendar.publicHolidayBadge
                               : h.type === "holiday-profile"
-                              ? "Role Holiday"
-                              : "Personal Off-Day"}
+                              ? t.calendar.roleHolidayBadge
+                              : t.calendar.personalOffDayBadge}
                           </span>
                         </div>
                       {h.details && (
@@ -183,7 +191,9 @@ export function DayDetailsModal({
             <div className="space-y-2">
               <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
                 <Briefcase className="size-3.5 text-indigo-500" />
-                <span>Duty Shifts ({duties.length})</span>
+                <span>
+                  {t.calendar.dutyShiftsSection} ({isGujarati ? toGujaratiNumerals(duties.length) : duties.length})
+                </span>
               </span>
               <div className="space-y-2">
                 {duties.map((d) => (
@@ -193,7 +203,7 @@ export function DayDetailsModal({
                   >
                     <div className="flex items-start justify-between gap-2">
                       <span className="text-xs font-bold text-foreground">
-                        {d.title.replace("Duty: ", "")}
+                        {d.title.replace("Duty: ", "").replace("ફરજ: ", "")}
                       </span>
                       <div className="flex items-center gap-1.5 shrink-0">
                         {/* Same badges as the duty log and the agenda list,
@@ -208,7 +218,7 @@ export function DayDetailsModal({
                         />
                         <DutyTaBadge duty={{ ta_amount: d.taAmount }} iconOnly />
                         <span className="text-[10px] font-semibold px-2 py-0.5 rounded-lg border border-indigo-500/20 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
-                          Active Shift
+                          {t.calendar.activeShiftBadge}
                         </span>
                         <DeleteDutyButton id={d.id} iconOnly size="sm" />
                       </div>
@@ -242,7 +252,9 @@ export function DayDetailsModal({
             <div className="space-y-2">
               <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
                 <CalendarOff className="size-3.5 text-emerald-500" />
-                <span>Leaves & Absences ({leaves.length})</span>
+                <span>
+                  {t.calendar.leavesAndAbsencesSection} ({isGujarati ? toGujaratiNumerals(leaves.length) : leaves.length})
+                </span>
               </span>
               <div className="space-y-2">
                 {leaves.map((l) => (
@@ -261,14 +273,14 @@ export function DayDetailsModal({
                       </span>
                       <div className="flex items-center gap-1.5 shrink-0">
                         <span className="text-[10px] font-semibold px-2 py-0.5 rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                          Approved Leave
+                          {t.calendar.approvedLeaveBadge}
                         </span>
                         <DeleteLeaveButton id={l.logId ?? l.id.replace(/^leave-/, "")} iconOnly size="sm" />
                       </div>
                     </div>
                     {l.details && (
                       <p className="text-xs text-muted-foreground">
-                        Reason: {l.details}
+                        {t.calendar.reason}: {l.details}
                       </p>
                     )}
                   </div>
@@ -283,10 +295,10 @@ export function DayDetailsModal({
                 <Calendar className="size-6" />
               </div>
               <p className="text-xs sm:text-sm font-semibold text-foreground">
-                No events or off-days on this date
+                {t.calendar.noEventsOnThisDate}
               </p>
               <p className="text-[11px] text-muted-foreground">
-                Use the actions below to log a shift, record an absence, or declare an off-day.
+                {t.calendar.noEventsActionsHint}
               </p>
             </div>
           )}
@@ -300,7 +312,7 @@ export function DayDetailsModal({
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-xs font-semibold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 shadow-2xs transition-colors"
             >
               <CalendarOff className="size-3.5" />
-              <span>Log Leave</span>
+              <span>{t.calendar.logLeave}</span>
             </Link>
 
             <Link
@@ -308,7 +320,7 @@ export function DayDetailsModal({
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 text-white text-xs font-semibold shadow-md shadow-indigo-600/30 hover:bg-indigo-500 transition-colors"
             >
               <Plus className="size-3.5" />
-              <span>Log Duty</span>
+              <span>{t.calendar.logDuty}</span>
             </Link>
           </div>
         </div>

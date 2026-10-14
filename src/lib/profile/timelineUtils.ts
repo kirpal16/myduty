@@ -1,4 +1,7 @@
 import type { OfficerTimelineEventType } from "@/types/database";
+import { toGujaratiNumerals } from "@/lib/reports/gujaratiReportUtils";
+import { en } from "@/lib/i18n/dictionaries/en";
+import { gu } from "@/lib/i18n/dictionaries/gu";
 
 export interface TimelineEventMeta {
   label: string;
@@ -90,13 +93,31 @@ const MONTHS = [
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
 ];
 
-export function formatTimelineDate(dateStr: string, includeDay = false): string {
+const MONTHS_GUJARATI = [
+  "જાન્યુઆરી", "ફેબ્રુઆરી", "માર્ચ", "એપ્રિલ", "મે", "જૂન",
+  "જુલાઈ", "ઓગસ્ટ", "સપ્ટેમ્બર", "ઓક્ટોબર", "નવેમ્બર", "ડિસેમ્બર"
+];
+
+export function formatTimelineDate(
+  dateStr: string,
+  includeDay = false,
+  isGujarati = false
+): string {
   if (!dateStr) return "";
   const parts = dateStr.split("-").map(Number);
   if (parts.length < 3 || isNaN(parts[0]) || isNaN(parts[1]) || isNaN(parts[2])) {
     return dateStr;
   }
   const [year, month, day] = parts;
+  if (isGujarati) {
+    const monthName = MONTHS_GUJARATI[month - 1] ?? "";
+    const dayGu = toGujaratiNumerals(day);
+    const yearGu = toGujaratiNumerals(year);
+    if (includeDay) {
+      return `${dayGu} ${monthName}, ${yearGu}`;
+    }
+    return `${monthName} ${yearGu}`;
+  }
   const monthName = MONTHS[month - 1] ?? "";
   if (includeDay) {
     return `${monthName} ${day}, ${year}`;
@@ -107,7 +128,8 @@ export function formatTimelineDate(dateStr: string, includeDay = false): string 
 export function calculateTimelineDuration(
   startDateStr: string,
   endDateStr: string | null | undefined,
-  isCurrent: boolean
+  isCurrent: boolean,
+  isGujarati = false
 ): string {
   if (!startDateStr) return "";
   const start = new Date(startDateStr);
@@ -130,12 +152,18 @@ export function calculateTimelineDuration(
   }
 
   if (years <= 0 && months <= 0) {
-    return "< 1 mo";
+    const dict = isGujarati ? gu : en;
+    return dict.profile.lessThanOneMonth;
   }
 
   const parts: string[] = [];
-  if (years > 0) parts.push(`${years} ${years === 1 ? "yr" : "yrs"}`);
-  if (months > 0) parts.push(`${months} ${months === 1 ? "mo" : "mos"}`);
+  if (isGujarati) {
+    if (years > 0) parts.push(`${toGujaratiNumerals(years)} વર્ષ`);
+    if (months > 0) parts.push(`${toGujaratiNumerals(months)} મહિના`);
+  } else {
+    if (years > 0) parts.push(`${years} ${years === 1 ? "yr" : "yrs"}`);
+    if (months > 0) parts.push(`${months} ${months === 1 ? "mo" : "mos"}`);
+  }
 
   return parts.join(" ");
 }
@@ -143,18 +171,20 @@ export function calculateTimelineDuration(
 export function formatTimelineSpan(
   startDateStr: string,
   endDateStr: string | null | undefined,
-  isCurrent: boolean
+  isCurrent: boolean,
+  isGujarati = false
 ): { dateRange: string; duration: string } {
-  const start = formatTimelineDate(startDateStr, true);
+  const start = formatTimelineDate(startDateStr, true, isGujarati);
   let end = "";
   if (isCurrent) {
-    end = "Present";
+    const dict = isGujarati ? gu : en;
+    end = dict.profile.present;
   } else if (endDateStr) {
-    end = formatTimelineDate(endDateStr, true);
+    end = formatTimelineDate(endDateStr, true, isGujarati);
   }
 
   const dateRange = end ? `${start} – ${end}` : start;
-  const duration = calculateTimelineDuration(startDateStr, endDateStr, isCurrent);
+  const duration = calculateTimelineDuration(startDateStr, endDateStr, isCurrent, isGujarati);
 
   return { dateRange, duration };
 }

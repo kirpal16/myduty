@@ -477,7 +477,7 @@ type SavedPrintConfig = {
               <h2 className="text-xs sm:text-base font-bold text-foreground flex items-center gap-1.5 truncate">
                 <span className="truncate">
                   <span className="sm:hidden">પ્રિન્ટ / એડિટ</span>
-                  <span className="hidden sm:inline">પ્રિન્ટ રિવ્યુ અને એડિટ (Print &amp; Edit Report)</span>
+                  <span className="hidden sm:inline">પ્રિન્ટ રિવ્યુ અને એડિટ</span>
                 </span>
                 <span className="text-[10px] bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 px-1.5 py-0.5 rounded-full font-semibold shrink-0">
                   {initialReport.periodLabel}

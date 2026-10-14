@@ -17,6 +17,9 @@ import {
   computeSpecialLeaveExpiry,
   isSpecialLeaveSanctionExpired,
 } from "@/lib/leave/specialLeaveRules";
+import { getServerTranslations } from "@/lib/i18n/server";
+import { getTranslatedLeaveTypeName } from "@/lib/leave/leaveTranslation";
+import { toGujaratiNumerals } from "@/lib/reports/gujaratiReportUtils";
 
 export default async function NewLeavePage({
   searchParams,
@@ -45,6 +48,7 @@ export default async function NewLeavePage({
     canAccessStorage,
     disabledTypeIds,
     userSettings,
+    translations,
   ] = await Promise.all([
     supabase
       .from("leave_types")
@@ -67,7 +71,11 @@ export default async function NewLeavePage({
     user?.role === "SUPER_ADMIN" ? true : hasPermission(PERMISSIONS.STORAGE_VIEW_ALL),
     getUserDisabledLeaveTypeIds(user?.id),
     getUserSettings(),
+    getServerTranslations(),
   ]);
+
+  const { lang, t } = translations;
+  const isGu = lang === "gu";
 
   // Exclude any leave types the officer has disabled for their account
   const enabledLeaveTypes = (leaveTypes ?? []).filter(
@@ -175,16 +183,16 @@ export default async function NewLeavePage({
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="size-3.5" />
-          <span>Back to Leave Log</span>
+          <span>{t.leave.backToLeaveLog}</span>
         </Link>
       </div>
 
       <PageHeader
-        title="Log Leave Request"
-        subtitle="Submit a new absence period, statutory leave entitlement, or half-day session."
+        title={t.leave.logLeaveRequest}
+        subtitle={t.leave.logLeaveSubtitle}
         badge={
           <Badge variant="success" dot>
-            Year {currentYear}
+            {t.common.year} {isGu ? toGujaratiNumerals(currentYear) : currentYear}
           </Badge>
         }
       />
@@ -222,8 +230,8 @@ export default async function NewLeavePage({
           {/* Allowance Balance Summary Card */}
           <Card className="p-5 space-y-4">
             <CardHeader
-              title={`Leave Allowances (${currentYear})`}
-              description="Your remaining quota for active categories"
+              title={t.leave.allowancesCardTitle.replace("{year}", isGu ? toGujaratiNumerals(currentYear) : String(currentYear))}
+              description={t.leave.allowancesCardSubtitle}
             />
 
             <div className="space-y-2.5">
@@ -241,6 +249,7 @@ export default async function NewLeavePage({
                 const quota = totalAvailable > 0 ? totalAvailable : allocated;
                 const used = Number(bal?.used ?? 0);
                 const percent = quota > 0 ? Math.max(0, Math.min(100, Math.round((used / quota) * 100))) : 0;
+                const translatedName = getTranslatedLeaveTypeName(lt.name, isGu);
 
                 return (
                   <div
@@ -249,23 +258,26 @@ export default async function NewLeavePage({
                   >
                     <div className="flex items-center justify-between text-xs">
                       <span className="flex min-w-0 items-center gap-1.5 font-semibold text-foreground">
-                        <ColorDot color={lt.color} label={lt.name} />
-                        <span className="truncate">{lt.name}</span>
+                        <ColorDot color={lt.color} label={translatedName} />
+                        <span className="truncate">{translatedName}</span>
                       </span>
                       <div className="text-right shrink-0">
                         {sanctionOnly ? (
                           <span className="font-medium text-muted-foreground">
-                            <strong className="text-foreground">{sanction?.left ?? 0}</strong> /{" "}
-                            {sanction?.sanctioned ?? 0} days sanctioned
+                            <strong className="text-foreground">{isGu ? toGujaratiNumerals(sanction?.left ?? 0) : (sanction?.left ?? 0)}</strong> /{" "}
+                            {isGu ? toGujaratiNumerals(sanction?.sanctioned ?? 0) : (sanction?.sanctioned ?? 0)} {t.leave.daysSanctioned}
                           </span>
                         ) : (
                           <>
                             <span className="font-medium text-muted-foreground">
-                              <strong className="text-foreground">{remaining}</strong> / {quota} days left
+                              <strong className="text-foreground">{isGu ? toGujaratiNumerals(remaining) : remaining}</strong> / {isGu ? toGujaratiNumerals(quota) : quota}{" "}
+                              {t.leave.daysLeft}
                             </span>
                             {carriedIn > 0 && (
                               <span className="block text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold leading-none mt-0.5">
-                                {quota} days (incl. {carriedIn} carried)
+                                {t.leave.daysInclCarried
+                                  .replace("{days}", isGu ? toGujaratiNumerals(quota) : String(quota))
+                                  .replace("{carried}", isGu ? toGujaratiNumerals(carriedIn) : String(carriedIn))}
                               </span>
                             )}
                           </>
@@ -287,8 +299,7 @@ export default async function NewLeavePage({
                       <div className="flex items-center gap-1.5 text-[10px] text-sky-600 dark:text-sky-400 font-semibold">
                         <ShieldCheck className="size-3 shrink-0" />
                         <span>
-                          Sanctioned {sanction.sanctioned} d · Logged {sanction.logged} d ·
-                          Left {sanction.left} d
+                          {t.leave.sanctioned} {isGu ? toGujaratiNumerals(sanction.sanctioned) : sanction.sanctioned} {t.common.day} · {t.leave.taken} {isGu ? toGujaratiNumerals(sanction.logged) : sanction.logged} {t.common.day} · {t.leave.remaining} {isGu ? toGujaratiNumerals(sanction.left) : sanction.left} {t.common.day}
                         </span>
                       </div>
                     )}
@@ -302,16 +313,16 @@ export default async function NewLeavePage({
           <Card className="p-5 bg-gradient-to-br from-indigo-900/10 via-slate-900/5 to-slate-900/10 border-indigo-500/20 space-y-3">
             <div className="flex items-center gap-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
               <Info className="size-4" />
-              <span>Leave Policy Highlights</span>
+              <span>{t.leave.policyHighlightsTitle}</span>
             </div>
             <ul className="space-y-2 text-xs text-muted-foreground">
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="size-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                <span>Half-day leaves can be logged for either morning (AM) or afternoon (PM) duties.</span>
+                <span>{t.leave.policyHighlightHalfDay}</span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="size-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                <span>Duty rosters are automatically cross-checked against registered leave periods.</span>
+                <span>{t.leave.policyHighlightRosterCheck}</span>
               </li>
             </ul>
           </Card>

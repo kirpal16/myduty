@@ -9,6 +9,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AttachmentCardList } from "@/components/ui/attachment-card-list";
 import { DeleteDutyButton } from "@/components/duty/delete-duty-button";
+import { getServerTranslations } from "@/lib/i18n/server";
+import { formatDutyTypeDropdownLabel, toGujaratiNumerals } from "@/lib/reports/gujaratiReportUtils";
 import {
   ArrowLeft,
   Calendar,
@@ -33,7 +35,7 @@ export default async function DutyDetailPage({
   const user = await getCurrentUser();
   const supabase = await createClient();
 
-  const [{ data: duty }, { data: attachments }] = await Promise.all([
+  const [{ data: duty }, { data: attachments }, translations] = await Promise.all([
     supabase
       .from("duties")
       .select(
@@ -46,7 +48,11 @@ export default async function DutyDetailPage({
       .select("id, original_filename, mime_type, size_bytes, created_at, description")
       .eq("related_entity_type", "duties")
       .eq("related_entity_id", id),
+    getServerTranslations(),
   ]);
+
+  const isGu = translations.lang === "gu";
+  const { t } = translations;
 
   // A missing row is almost always one just deleted from this page: the
   // delete's revalidation re-renders the route before the client navigates
@@ -73,6 +79,13 @@ export default async function DutyDetailPage({
 
   const totalExtraClaim = (duty.ta_amount ?? 0) + holidayExtraPay;
 
+  const statusLabel =
+    duty.status === "COMPLETED"
+      ? t.duty.completed
+      : duty.status === "CANCELLED"
+        ? t.duty.cancelled
+        : t.duty.scheduled;
+
   return (
     <main className="w-full px-4 sm:px-6 lg:px-8 py-6 max-w-7xl 2xl:max-w-full mx-auto space-y-6">
       <div className="flex items-center gap-2">
@@ -81,23 +94,34 @@ export default async function DutyDetailPage({
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="size-3.5" />
-          <span>Back to Duty Log</span>
+          <span>{t.duty.backToDutyLog}</span>
         </Link>
       </div>
 
       <PageHeader
-        title={dutyType?.name ?? "Duty Details"}
-        subtitle={`Recorded shift for ${officer?.full_name ?? "Officer"}`}
+        title={
+          dutyType?.name
+            ? isGu
+              ? formatDutyTypeDropdownLabel(dutyType.name)
+              : dutyType.name
+            : t.duty.dutyDetails
+        }
+        subtitle={
+          t.duty.recordedShiftFor.replace(
+            "{officer}",
+            officer?.full_name ?? (isGu ? "અધિકારી" : "Officer"),
+          )
+        }
         badge={
           <div className="flex items-center gap-2">
-            <Badge variant="purple">{duty.status ?? "SCHEDULED"}</Badge>
+            <Badge variant="purple">{statusLabel}</Badge>
             {isHolidayShift && (
               <Badge variant="warning">
-                ✨ Worked Holiday (રજાની ફરજ)
+                ✨ {t.duty.badgeWorkedHoliday}
               </Badge>
             )}
             {isManualClaim && (
-              <Badge variant="secondary">Holiday claim</Badge>
+              <Badge variant="secondary">{t.duty.badgeHolidayClaim}</Badge>
             )}
           </div>
         }
@@ -109,9 +133,14 @@ export default async function DutyDetailPage({
                 className="flex items-center gap-1.5 rounded-xl border border-border bg-card px-3.5 py-2 text-xs font-semibold text-foreground hover:bg-muted shadow-2xs transition-colors"
               >
                 <Edit2 className="size-3.5" />
-                <span>Edit Entry</span>
+                <span>{t.common.edit}</span>
               </Link>
-              <DeleteDutyButton id={duty.id} size="md" redirectTo="/duty" />
+              <DeleteDutyButton
+                id={duty.id}
+                size="md"
+                redirectTo="/duty"
+                label={t.common.delete}
+              />
             </div>
           ) : null
         }
@@ -123,13 +152,13 @@ export default async function DutyDetailPage({
           <Card className="p-6">
             <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-4 flex items-center gap-2">
               <Clock className="size-4 text-indigo-500" />
-              <span>Shift Information</span>
+              <span>{t.duty.shiftInformation}</span>
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs sm:text-sm">
               <div className="rounded-xl border border-border/80 bg-muted/20 p-3.5">
                 <span className="text-muted-foreground text-xs block mb-1">
-                  Assigned Officer
+                  {t.duty.assignedOfficer}
                 </span>
                 <span className="font-semibold text-foreground flex items-center gap-1.5">
                   <User className="size-4 text-slate-400" />
@@ -139,29 +168,33 @@ export default async function DutyDetailPage({
 
               <div className="rounded-xl border border-border/80 bg-muted/20 p-3.5">
                 <span className="text-muted-foreground text-xs block mb-1">
-                  Duty Classification
+                  {t.duty.dutyClassification}
                 </span>
                 <span className="font-semibold text-foreground flex items-center gap-1.5">
                   <Shield className="size-4 text-indigo-500" />
-                  {dutyType?.name ?? "Standard"}
+                  {dutyType?.name
+                    ? isGu
+                      ? formatDutyTypeDropdownLabel(dutyType.name)
+                      : dutyType.name
+                    : t.duty.standard}
                 </span>
               </div>
 
               <div className="rounded-xl border border-border/80 bg-muted/20 p-3.5">
                 <span className="text-muted-foreground text-xs block mb-1">
-                  Starts At
+                  {t.duty.startsAtLabel}
                 </span>
                 <span className="font-medium text-foreground">
-                  {formatDateTime(duty.starts_at, timeFormat)}
+                  {formatDateTime(duty.starts_at, timeFormat, isGu ? "gu" : "en-US")}
                 </span>
               </div>
 
               <div className="rounded-xl border border-border/80 bg-muted/20 p-3.5">
                 <span className="text-muted-foreground text-xs block mb-1">
-                  Ends At
+                  {t.duty.endsAtLabel}
                 </span>
                 <span className="font-medium text-foreground">
-                  {formatDateTime(duty.ends_at, timeFormat)}
+                  {formatDateTime(duty.ends_at, timeFormat, isGu ? "gu" : "en-US")}
                 </span>
               </div>
             </div>
@@ -169,18 +202,20 @@ export default async function DutyDetailPage({
             <div className="mt-4 pt-4 border-t border-border/80 space-y-3">
               <div>
                 <span className="text-xs font-semibold text-muted-foreground block mb-1">
-                  Location / Station
+                  {t.duty.stationLocationLabel}
                 </span>
                 <div className="flex items-center gap-1.5 text-xs sm:text-sm text-foreground">
                   <MapPin className="size-4 text-rose-500 shrink-0" />
-                  <span>{duty.location || "No specific station specified"}</span>
+                  <span>
+                    {duty.location || t.duty.noSpecificStation}
+                  </span>
                 </div>
               </div>
 
               {cleanNotes && (
                 <div>
                   <span className="text-xs font-semibold text-muted-foreground block mb-1">
-                    Operational Notes
+                    {t.duty.operationalNotesLabel}
                   </span>
                   <p className="text-xs sm:text-sm text-foreground bg-muted/40 p-3 rounded-xl border border-border/60 whitespace-pre-wrap">
                     {cleanNotes}
@@ -196,7 +231,7 @@ export default async function DutyDetailPage({
           <Card className="p-6 space-y-4">
             <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
               <IndianRupee className="size-4 text-emerald-500" />
-              <span>Allowances & Compensation</span>
+              <span>{t.duty.allowancesCompensation}</span>
             </h3>
 
             <div className="space-y-3 text-xs sm:text-sm">
@@ -205,29 +240,38 @@ export default async function DutyDetailPage({
                 <div className="rounded-xl border border-sky-500/20 bg-sky-500/5 p-3.5 space-y-2">
                   <div className="flex items-center gap-1.5 text-sky-700 dark:text-sky-300 font-bold text-xs">
                     <Compass className="size-3.5" />
-                    <span>Travelling Allowance (TA)</span>
+                    <span>{t.duty.taClaimTitle}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
-                      <span className="text-[11px] text-muted-foreground block">Route</span>
+                      <span className="text-[11px] text-muted-foreground block">
+                        {t.duty.routeLabel}
+                      </span>
                       <span className="font-semibold text-foreground">
                         {duty.ta_from_place || "?"} → {duty.ta_to_place || "?"}
                       </span>
                     </div>
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-sky-500/10 text-sky-700 dark:text-sky-300 border border-sky-500/20">
-                      {duty.ta_vehicle_type === "govt" ? "સરકારી વાહન (સ.વા.)" : "ખાનગી વાહન (ખ.વા.)"}
+                      {duty.ta_vehicle_type === "govt"
+                        ? t.duty.govtVehicle
+                        : t.duty.privateVehicle}
                     </span>
                   </div>
                   <div className="flex justify-between items-center text-xs pt-1 border-t border-sky-500/20">
-                    <span className="text-muted-foreground">Distance / Amount:</span>
+                    <span className="text-muted-foreground">
+                      {t.duty.distanceAmount}
+                    </span>
                     <span className="font-bold text-foreground">
-                      {duty.ta_distance_km ? `${duty.ta_distance_km} km • ` : ""}{formatCurrency(duty.ta_amount)}
+                      {duty.ta_distance_km
+                        ? `${isGu ? toGujaratiNumerals(duty.ta_distance_km) : duty.ta_distance_km} ${t.duty.kmUnit} • `
+                        : ""}
+                      {formatCurrency(duty.ta_amount)}
                     </span>
                   </div>
                 </div>
               ) : (
                 <div className="text-[11px] text-muted-foreground">
-                  No Travelling Allowance (TA) claimed.
+                  {t.duty.noTaClaimed}
                 </div>
               )}
 
@@ -236,10 +280,12 @@ export default async function DutyDetailPage({
                 <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3.5 space-y-1">
                   <div className="flex items-center gap-1.5 text-amber-700 dark:text-amber-300 font-bold text-xs">
                     <Sparkles className="size-3.5 text-amber-500" />
-                    <span>Holiday Duty Extra Pay (રજાનું ભથ્થું)</span>
+                    <span>{t.duty.holidayDutyExtraPayTitle}</span>
                   </div>
                   <div className="flex justify-between items-center text-xs pt-1">
-                    <span className="text-muted-foreground">Extra Salary Pay:</span>
+                    <span className="text-muted-foreground">
+                      {t.duty.extraSalaryPay}
+                    </span>
                     <Badge variant="warning" className="font-bold text-xs">
                       {formatCurrency(holidayExtraPay)}
                     </Badge>
@@ -250,7 +296,9 @@ export default async function DutyDetailPage({
               {/* Total Extra Claim */}
               {totalExtraClaim > 0 && (
                 <div className="flex justify-between items-center pt-3 border-t border-border font-bold">
-                  <span className="text-xs text-foreground">Total Extra Claim:</span>
+                  <span className="text-xs text-foreground">
+                    {t.duty.totalExtraClaim}
+                  </span>
                   <Badge variant="success" className="text-sm font-bold">
                     {formatCurrency(totalExtraClaim)}
                   </Badge>
@@ -266,7 +314,9 @@ export default async function DutyDetailPage({
         <Card className="p-6 space-y-4">
           <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
             <FileText className="size-4 text-indigo-500" />
-            <span>Attached Documentation ({(attachments ?? []).length})</span>
+            <span>
+              {t.duty.attachedDocumentation} ({isGu ? toGujaratiNumerals((attachments ?? []).length) : (attachments ?? []).length})
+            </span>
           </h3>
 
           <AttachmentCardList attachments={attachments ?? []} canDelete={isOwn} />

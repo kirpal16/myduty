@@ -8,10 +8,14 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Badge } from "@/components/ui/badge";
 import { NavLink as Link } from "@/components/ui/nav-link";
 import { Plus, CalendarOff, Palmtree } from "lucide-react";
+import { getServerTranslations } from "@/lib/i18n/server";
+import { translateDutyTypeToGujarati, toGujaratiNumerals } from "@/lib/reports/gujaratiReportUtils";
 
 export default async function CalendarPage() {
   const supabase = await createClient();
   const user = await getCurrentUser();
+  const { lang, t } = await getServerTranslations();
+  const isGu = lang === "gu";
 
   const [
     { data: duties },
@@ -80,7 +84,7 @@ export default async function CalendarPage() {
       leaveEvents.push({
         id: `leave-${l.id}`,
         logId: l.id,
-        title: `Leave: ${typeName} — ${officer}${l.is_half_day ? ` (${l.half_day_session ?? "Half-Day"})` : ""}`,
+        title: `${t.calendar.prefixLeave} ${typeName} — ${officer}${l.is_half_day ? ` (${l.half_day_session ?? t.leave.halfDay})` : ""}`,
         start: l.start_date,
         end: l.end_date,
         allDay: true,
@@ -113,7 +117,7 @@ export default async function CalendarPage() {
           leaveEvents.push({
             id: `leave-${l.id}-${currentSeg.startDate}`,
             logId: l.id,
-            title: `Leave: ${currentSeg.typeName} — ${officer}${l.is_half_day ? ` (${l.half_day_session ?? "Half-Day"})` : ""}`,
+            title: `${t.calendar.prefixLeave} ${currentSeg.typeName} — ${officer}${l.is_half_day ? ` (${l.half_day_session ?? t.leave.halfDay})` : ""}`,
             start: currentSeg.startDate,
             end: currentSeg.endDate,
             allDay: true,
@@ -135,7 +139,7 @@ export default async function CalendarPage() {
       leaveEvents.push({
         id: `leave-${l.id}-${currentSeg.startDate}`,
         logId: l.id,
-        title: `Leave: ${currentSeg.typeName} — ${officer}${l.is_half_day ? ` (${l.half_day_session ?? "Half-Day"})` : ""}`,
+        title: `${t.calendar.prefixLeave} ${currentSeg.typeName} — ${officer}${l.is_half_day ? ` (${l.half_day_session ?? t.leave.halfDay})` : ""}`,
         start: currentSeg.startDate,
         end: currentSeg.endDate,
         allDay: true,
@@ -150,11 +154,14 @@ export default async function CalendarPage() {
 
   const events: CalendarEvent[] = [
     ...(duties ?? []).map((d) => {
-      const typeName = (d.duty_types as unknown as { name: string } | null)?.name ?? "Duty";
+      const rawTypeName = (d.duty_types as unknown as { name: string } | null)?.name ?? "Duty";
+      const typeName = isGu
+        ? (rawTypeName !== "Duty" ? translateDutyTypeToGujarati(rawTypeName) : "ફરજ")
+        : rawTypeName;
       const officer = (d.users as unknown as { full_name: string } | null)?.full_name ?? "";
       return {
         id: `duty-${d.id}`,
-        title: `Duty: ${typeName} — ${officer}`,
+        title: `${t.calendar.prefixDuty} ${typeName} — ${officer}`,
         start: d.starts_at,
         end: d.ends_at,
         type: "duty" as const,
@@ -164,7 +171,7 @@ export default async function CalendarPage() {
         isHolidayDuty: d.is_holiday_duty,
         manualHolidayClaim: d.manual_holiday_claim,
         taAmount: d.ta_amount,
-        details: d.location ? `Station: ${d.location}${d.notes ? ` • ${d.notes}` : ""}` : d.notes || undefined,
+        details: d.location ? `${t.calendar.prefixStation}: ${d.location}${d.notes ? ` • ${d.notes}` : ""}` : d.notes || undefined,
       };
     }),
     ...leaveEvents,
@@ -172,10 +179,10 @@ export default async function CalendarPage() {
       id: `holiday-${h.id}`,
       title: `${
         h.is_optional
-          ? "Optional Holiday"
+          ? t.calendar.badgeOptionalHoliday
           : h.scope === "USER"
-            ? "My holiday"
-            : "Holiday"
+            ? t.calendar.badgeMyHoliday
+            : t.calendar.badgePublicHoliday
       }: ${h.name}`,
       start: h.holiday_date,
       allDay: true,
@@ -194,36 +201,29 @@ export default async function CalendarPage() {
   return (
     <main className="w-full px-4 sm:px-6 lg:px-8 py-6 max-w-7xl 2xl:max-w-full mx-auto space-y-6">
       <PageHeader
-        title="Interactive Duty & Roster Calendar"
-        subtitle="Live month schedule tracking officer shifts, leaves, weekend off-patterns, and festivals."
-        badge={<Badge variant="purple" dot>{events.length} Events Total</Badge>}
+        title={t.calendar.pageTitle}
+        subtitle={t.calendar.pageSubtitle}
+        badge={
+          <Badge variant="purple" dot>
+            {isGu ? toGujaratiNumerals(events.length) : events.length} {t.common.records}
+          </Badge>
+        }
         actions={
           <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:flex-nowrap lg:gap-2.5">
-            {/* Icon only, at every width. The name is carried by the tooltip
-                below, by `title` (so it also appears on a long-press) and by
-                `aria-label` — an unlabelled icon would otherwise be silent to
-                a screen reader and a guess for everyone else.
-                `shrink-0` rather than `flex-1`: a square button stretched
-                across a third of a phone row looked like a mistake, and the
-                two labelled buttons put the freed width to better use. */}
             <div className="group relative shrink-0">
               <Link
                 href="/settings?tab=holidays"
-                aria-label="Personal Holidays"
-                title="Personal Holidays"
+                aria-label={t.holidays.optionalTitle}
+                title={t.holidays.optionalTitle}
                 className="flex items-center justify-center gap-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 px-2.5 py-2 text-xs font-semibold text-amber-700 shadow-2xs transition-colors hover:bg-amber-500/20 dark:text-amber-300 sm:py-2.5 sm:text-sm"
               >
                 <Palmtree className="size-4 shrink-0" />
               </Link>
-              {/* Fades in on hover. Kept to opacity + pointer-events-none
-                  rather than a hover-media query: an arbitrary variant that
-                  silently compiles to nothing has bitten this file before,
-                  and on a touch screen the tap navigates away regardless. */}
               <span
                 role="tooltip"
                 className="pointer-events-none absolute left-1/2 top-full z-20 mt-1.5 -translate-x-1/2 whitespace-nowrap rounded-lg bg-slate-900 px-2 py-1 text-[11px] font-medium text-white opacity-0 shadow-md transition-opacity duration-150 group-hover:opacity-100 dark:bg-slate-700"
               >
-                Personal Holidays
+                {t.holidays.optionalTitle}
               </span>
             </div>
             <Link
@@ -231,14 +231,14 @@ export default async function CalendarPage() {
               className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-700 shadow-2xs transition-colors hover:bg-emerald-500/20 dark:text-emerald-300 lg:flex-none sm:px-3.5 sm:text-sm"
             >
               <CalendarOff className="size-4 shrink-0 text-emerald-500" />
-              <span>Log Leave</span>
+              <span>{t.leave.applyLeave}</span>
             </Link>
             <Link
               href="/duty/new"
               className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-transparent bg-indigo-600 px-3 py-2 text-xs font-semibold text-white shadow-md shadow-indigo-600/30 transition-colors hover:bg-indigo-500 lg:flex-none sm:px-4 sm:text-sm"
             >
               <Plus className="size-4 shrink-0" />
-              <span>Log Duty</span>
+              <span>{t.duty.addDuty}</span>
             </Link>
           </div>
         }

@@ -6,10 +6,11 @@ import { Trash2 } from "lucide-react";
 import { deleteDuty } from "@/actions/duty";
 import { ConfirmDeleteModal } from "@/components/ui/confirm-delete-modal";
 import { useToast } from "@/components/ui/toast";
+import { useLanguage } from "@/lib/i18n/language-context";
 
 export function DeleteDutyButton({
   id,
-  label = "Delete",
+  label,
   iconOnly = false,
   size = "sm",
   className = "",
@@ -30,6 +31,8 @@ export function DeleteDutyButton({
   const [isOpen, setIsOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
+  const { t } = useLanguage();
+  const displayLabel = label ?? t.common.delete;
   // `isPending` only disables the button after a re-render, so a fast
   // double-click could send the same delete twice; the second then failed
   // with "That record no longer exists."
@@ -43,7 +46,7 @@ export function DeleteDutyButton({
       try {
         await deleteDuty(id);
         setIsOpen(false);
-        toast("Duty deleted.");
+        toast(t.duty.dutyDeletedSuccess);
         if (redirectTo) router.replace(redirectTo);
         else router.refresh();
       } catch (error) {
@@ -53,7 +56,7 @@ export function DeleteDutyButton({
         toast(
           error instanceof Error && error.message
             ? error.message
-            : "That could not be deleted. Please try again.",
+            : t.duty.deleteFailed,
           "error",
         );
       } finally {
@@ -75,19 +78,19 @@ export function DeleteDutyButton({
             ? "px-2.5 py-1 text-xs font-semibold"
             : "px-3.5 py-2 text-xs sm:text-sm font-semibold"
         } ${className}`}
-        title="Delete Duty Entry"
+        title={t.duty.deleteDuty}
       >
         <Trash2 className="size-3.5" />
-        {!iconOnly && <span>{label}</span>}
+        {!iconOnly && <span>{displayLabel}</span>}
       </button>
 
       <ConfirmDeleteModal
         isOpen={isOpen}
         onClose={() => setIsOpen(false)}
         onConfirm={handleConfirm}
-        title="Delete Duty Shift Record"
-        description="Are you sure you want to delete this shift entry? Travelling allowance claims attached to this shift will also be removed."
-        confirmLabel="Delete Shift"
+        title={t.duty.deleteDutyShiftTitle}
+        description={t.duty.deleteDutyShiftDesc}
+        confirmLabel={t.duty.deleteShiftConfirm}
         isPending={isPending}
       />
     </>

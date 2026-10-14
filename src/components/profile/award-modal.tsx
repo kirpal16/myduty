@@ -32,6 +32,7 @@ import {
   updateTimelineEventAction,
 } from "@/actions/profile";
 import type { TimelineEventItem } from "./timeline-event-modal";
+import { useLanguage } from "@/lib/i18n/language-context";
 
 interface AwardModalProps {
   isOpen: boolean;
@@ -165,6 +166,7 @@ function AwardModalContent({
   eventToEdit,
   onSuccess,
 }: Omit<AwardModalProps, "isOpen">) {
+  const { t, isGujarati } = useLanguage();
   const initial = useMemo(() => getInitialValues(eventToEdit), [eventToEdit]);
 
   const [title, setTitle] = useState(initial.title);
@@ -200,12 +202,12 @@ function AwardModalContent({
 
     const trimmedTitle = title.trim();
     if (!trimmedTitle) {
-      setErrorMsg("Please enter the name of the honour or award.");
+      setErrorMsg(t.awards.nameRequiredError);
       return;
     }
 
     if (!awardDate) {
-      setErrorMsg("Please select the date the award was presented.");
+      setErrorMsg(t.awards.dateRequiredError);
       return;
     }
 
@@ -237,7 +239,7 @@ function AwardModalContent({
           onSuccess?.();
           onClose();
         } else {
-          setErrorMsg(res?.message || "Failed to save honour. Please check the details.");
+          setErrorMsg(res?.message || t.awards.saveFailedError);
         }
       } catch (err: unknown) {
         setErrorMsg(err instanceof Error ? err.message : "An unexpected error occurred.");
@@ -266,13 +268,15 @@ function AwardModalContent({
               </div>
               <div>
                 <h2 className="text-base font-bold text-foreground flex items-center gap-2">
-                  <span>{eventToEdit ? "Edit Honour / Award" : "Add Honour / Award"}</span>
+                  <span>
+                    {eventToEdit ? t.awards.editAward : t.awards.addAward}
+                  </span>
                   <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-700 dark:text-amber-300 text-[10px] font-bold uppercase tracking-wider">
-                    Official Record
+                    {t.awards.officialRecord}
                   </span>
                 </h2>
                 <p className="text-xs text-muted-foreground">
-                  Record medals, DGP commendation rolls, citations, and awards.
+                  {t.awards.awardSubtitle}
                 </p>
               </div>
             </div>
@@ -301,12 +305,12 @@ function AwardModalContent({
 
             {/* Quick Suggestions */}
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center justify-between">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
                   <Sparkles className="size-3 text-amber-500" />
-                  <span>Common Police Honours (Tap to select)</span>
+                  <span>{t.awards.commonHonours}</span>
                 </span>
-                <span className="text-[10px] text-muted-foreground lowercase">tap to fill</span>
+                <span className="text-[10px] text-muted-foreground lowercase">{t.awards.tapToFill}</span>
               </label>
               <div className="flex items-center gap-1.5 flex-wrap max-h-28 overflow-y-auto pr-1 p-0.5">
                 {AWARD_SUGGESTIONS.map((suggestion) => (
@@ -346,7 +350,7 @@ function AwardModalContent({
             {/* Award Name */}
             <div>
               <label className="block text-xs font-semibold text-foreground mb-1">
-                Honour / Award Name <span className="text-rose-500">*</span>
+                {t.awards.awardName} <span className="text-rose-500">*</span>
               </label>
               <div className="relative">
                 <Trophy className="absolute left-3.5 top-3 size-4 text-amber-500 pointer-events-none" />
@@ -355,7 +359,7 @@ function AwardModalContent({
                   required
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. Good Service Ticket (GST) or DGP Commendation Disc"
+                  placeholder={t.awards.awardNamePlaceholder}
                   className="w-full rounded-xl border border-border bg-background py-2.5 pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-amber-500 focus:outline-hidden focus:ring-1 focus:ring-amber-500 font-medium"
                 />
               </div>
@@ -363,9 +367,9 @@ function AwardModalContent({
 
             {/* Category Pills */}
             <div>
-              <label className="block text-xs font-semibold text-foreground mb-1.5 flex items-center justify-between">
-                <span>Award Category</span>
-                <span className="text-[10px] text-muted-foreground">{AWARD_CATEGORIES.length} Categories</span>
+              <label className="text-xs font-semibold text-foreground mb-1.5 flex items-center justify-between">
+                <span>{t.awards.awardCategory}</span>
+                <span className="text-[10px] text-muted-foreground">{AWARD_CATEGORIES.length} {t.awards.categoriesCount}</span>
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-56 overflow-y-auto pr-1 p-0.5">
                 {AWARD_CATEGORIES.map((cat) => {
@@ -399,7 +403,7 @@ function AwardModalContent({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-foreground mb-1">
-                  Date Awarded / Presented <span className="text-rose-500">*</span>
+                  {t.awards.dateAwarded} <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
                   <Calendar className="absolute left-3.5 top-3 size-4 text-muted-foreground pointer-events-none" />
@@ -415,7 +419,7 @@ function AwardModalContent({
 
               <div>
                 <label className="block text-xs font-semibold text-foreground mb-1">
-                  Rank / Designation When Awarded
+                  {t.awards.rankWhenAwarded}
                 </label>
                 <div className="relative">
                   <BadgeCheck className="absolute left-3.5 top-3 size-4 text-muted-foreground pointer-events-none" />
@@ -423,7 +427,7 @@ function AwardModalContent({
                     type="text"
                     value={designation}
                     onChange={(e) => setDesignation(e.target.value)}
-                    placeholder="e.g. Police Inspector, PSI, HC"
+                    placeholder={t.awards.rankPlaceholder}
                     className="w-full rounded-xl border border-border bg-background py-2.5 pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-amber-500 focus:outline-hidden focus:ring-1 focus:ring-amber-500"
                   />
                 </div>
@@ -434,7 +438,7 @@ function AwardModalContent({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-foreground mb-1">
-                  Issuing Authority / Presenter
+                  {t.awards.issuingAuthority}
                 </label>
                 <div className="relative">
                   <Building2 className="absolute left-3.5 top-3 size-4 text-muted-foreground pointer-events-none" />
@@ -442,7 +446,7 @@ function AwardModalContent({
                     type="text"
                     value={issuingAuthority}
                     onChange={(e) => setIssuingAuthority(e.target.value)}
-                    placeholder="e.g. CP Ahmedabad / DGP Gujarat / SP"
+                    placeholder={t.awards.issuingAuthorityPlaceholder}
                     className="w-full rounded-xl border border-border bg-background py-2.5 pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-amber-500 focus:outline-hidden focus:ring-1 focus:ring-amber-500"
                   />
                 </div>
@@ -450,7 +454,7 @@ function AwardModalContent({
 
               <div>
                 <label className="block text-xs font-semibold text-foreground mb-1">
-                  Station / Division / District
+                  {t.awards.stationDivision}
                 </label>
                 <div className="relative">
                   <MapPin className="absolute left-3.5 top-3 size-4 text-muted-foreground pointer-events-none" />
@@ -458,7 +462,7 @@ function AwardModalContent({
                     type="text"
                     value={stationUnit}
                     onChange={(e) => setStationUnit(e.target.value)}
-                    placeholder="e.g. Crime Branch, Ahmedabad"
+                    placeholder={t.awards.stationPlaceholder}
                     className="w-full rounded-xl border border-border bg-background py-2.5 pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-amber-500 focus:outline-hidden focus:ring-1 focus:ring-amber-500"
                   />
                 </div>
@@ -467,9 +471,9 @@ function AwardModalContent({
 
             {/* GST / Ticket Number or Cash Reward */}
             <div>
-              <label className="block text-xs font-semibold text-foreground mb-1 flex items-center justify-between">
-                <span>GST / Ticket No. or Cash Reward Amount</span>
-                <span className="text-[11px] text-muted-foreground font-normal">Optional</span>
+              <label className="text-xs font-semibold text-foreground mb-1 flex items-center justify-between">
+                <span>{t.awards.ticketNoOrCash}</span>
+                <span className="text-[11px] text-muted-foreground font-normal">{t.common.optional}</span>
               </label>
               <div className="relative">
                 <BadgeCheck className="absolute left-3.5 top-3 size-4 text-emerald-600 dark:text-emerald-400 pointer-events-none" />
@@ -477,7 +481,7 @@ function AwardModalContent({
                   type="text"
                   value={ticketNo}
                   onChange={(e) => setTicketNo(e.target.value)}
-                  placeholder="e.g. GST No. 142/2023 or Cash Reward of ₹2,000"
+                  placeholder={t.awards.ticketNoPlaceholder}
                   className="w-full rounded-xl border border-border bg-background py-2.5 pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-amber-500 focus:outline-hidden focus:ring-1 focus:ring-amber-500"
                 />
               </div>
@@ -486,13 +490,13 @@ function AwardModalContent({
             {/* Citation / Merit Reason */}
             <div>
               <label className="block text-xs font-semibold text-foreground mb-1">
-                Citation &amp; Commendation Reason
+                {t.awards.citationReason}
               </label>
               <textarea
                 rows={3}
                 value={citation}
                 onChange={(e) => setCitation(e.target.value)}
-                placeholder="Detail the case, investigation, or exemplary conduct for which this honour was bestowed (e.g. Awarded for solving interstate robbery gang in record 48 hours)..."
+                placeholder={t.awards.citationPlaceholder}
                 className="w-full rounded-xl border border-border bg-background p-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-amber-500 focus:outline-hidden focus:ring-1 focus:ring-amber-500 leading-relaxed"
               />
             </div>
@@ -506,7 +510,7 @@ function AwardModalContent({
               onClick={onClose}
               className="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50 cursor-pointer"
             >
-              Cancel
+              {t.common.cancel}
             </button>
 
             <button
@@ -518,12 +522,14 @@ function AwardModalContent({
               {isPending ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
-                  <span>Saving Honour...</span>
+                  <span>{t.awards.savingAward}</span>
                 </>
               ) : (
                 <>
                   <Check className="size-4" />
-                  <span>{eventToEdit ? "Update Honour" : "Save Honour to Record"}</span>
+                  <span>
+                    {eventToEdit ? t.awards.updateAward : t.awards.saveAward}
+                  </span>
                 </>
               )}
             </button>

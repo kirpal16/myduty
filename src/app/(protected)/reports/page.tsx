@@ -41,10 +41,18 @@ import {
   type PrintOfficer,
 } from "@/lib/reports/printReport";
 import type { SanctionItem, DbLeaveTypeItem } from "@/lib/reports/reportTemplates";
+import { getServerTranslations } from "@/lib/i18n/server";
+import type { Translations } from "@/lib/i18n/types";
+import { translateDutyTypeToGujarati, toGujaratiNumerals } from "@/lib/reports/gujaratiReportUtils";
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
+];
+
+const GUJARATI_MONTH_NAMES = [
+  "જાન્યુઆરી", "ફેબ્રુઆરી", "માર્ચ", "એપ્રિલ", "મે", "જૂન",
+  "જુલાઈ", "ઑગસ્ટ", "સપ્ટેમ્બર", "ઓક્ટોબર", "નવેમ્બર", "ડિસેમ્બર",
 ];
 
 /**
@@ -67,11 +75,48 @@ const MONTH_NAMES = [
  * the two separately is how they drift, and a row that reads differently
  * depending on screen width is worse than no badge at all.
  */
+function getColumnLabel(c: ColumnDef, t: Translations): string {
+  const map: Record<string, string> = {
+    officer: t.reports.columns.officer,
+    duty_type: t.reports.columns.dutyType,
+    date: t.reports.columns.date,
+    shift_time: t.reports.columns.time,
+    location: t.reports.columns.location,
+    day_type: c.label === "Holiday Type" ? t.reports.columns.holidayType : t.reports.columns.dayType,
+    status: t.reports.columns.status,
+    ta_distance_km: t.reports.columns.distance,
+    ta_amount: t.reports.columns.ta,
+    holiday_allowance: c.label === "Extra Pay" ? t.reports.columns.extraPay : t.reports.columns.holidayPay,
+    ta_from: t.reports.columns.from,
+    ta_to: t.reports.columns.to,
+    start_date: t.reports.columns.from,
+    end_date: t.reports.columns.to,
+    leave_type: t.reports.columns.leaveType,
+    days: t.reports.columns.days,
+    reason: t.reports.columns.reason,
+  };
+  return map[c.key] ?? c.label;
+}
+
+function translateDayType(dayTypeStr: string, t?: Translations, isGu?: boolean): string {
+  if (!isGu) return dayTypeStr;
+  const lower = dayTypeStr.toLowerCase().trim();
+  if (lower === "working day") return t?.reports.dayTypes.workingDay ?? "કાર્યકારી દિવસ";
+  if (lower === "weekend off") return t?.reports.dayTypes.weekendOff ?? "વીકેન્ડ ઑફ";
+  if (lower === "public holiday") return t?.reports.dayTypes.publicHoliday ?? "જાહેર રજા";
+  if (lower === "optional holiday") return t?.reports.dayTypes.optionalHoliday ?? "મરજિયાત રજા";
+  if (lower === "day off") return t?.reports.dayTypes.dayOff ?? "ઑફ દિવસ";
+  if (lower === "working day (optional holiday)") return t?.reports.dayTypes.workingDayOptional ?? "કાર્યકારી દિવસ (મરજિયાત રજા)";
+  return dayTypeStr;
+}
+
 function ReportCell({
   column,
   value,
   color,
   compact = false,
+  isGu = false,
+  t,
 }: {
   column: ColumnDef;
   value: string | number | null;
@@ -82,6 +127,8 @@ function ReportCell({
    * the figure already appears as its own row below.
    */
   compact?: boolean;
+  isGu?: boolean;
+  t?: Translations;
 }) {
   if (column.key === "date") {
     const raw = String(value ?? "").trim();
@@ -90,33 +137,39 @@ function ReportCell({
       const [start, end] = raw.split(" to ");
       return (
         <span className="inline-flex items-center gap-1.5 flex-wrap">
-          <span className="font-semibold text-foreground">{start}</span>
+          <span className="font-semibold text-foreground">{isGu ? toGujaratiNumerals(start) : start}</span>
           <span className="text-muted-foreground/60 text-[10px] font-bold">→</span>
-          <span className="font-semibold text-foreground">{end}</span>
+          <span className="font-semibold text-foreground">{isGu ? toGujaratiNumerals(end) : end}</span>
           <Badge
             variant="outline"
             className="text-[10px] px-1.5 py-0 font-bold border-amber-500/40 text-amber-700 dark:text-amber-300 bg-amber-500/10"
           >
-            Next Day
+            {t?.reports.nextDay ?? "Next Day"}
           </Badge>
         </span>
       );
     }
-    return <>{raw}</>;
+    return <>{isGu ? toGujaratiNumerals(raw) : raw}</>;
   }
 
-  const text = formatReportCell(column, value);
-  if (!column.badge || text === "—") return <>{text}</>;
+  let text = formatReportCell(column, value);
+  if (isGu && (column.key === "duty_type" || column.key === "duty") && text !== "—") {
+    text = translateDutyTypeToGujarati(text);
+  }
+  if (!column.badge || text === "—") {
+    return <>{isGu && column.numeric && typeof value === "number" ? toGujaratiNumerals(text) : text}</>;
+  }
 
   // Status reuses the duty log's own badge, so the report and the log agree
   // on what COMPLETED and CANCELLED look like instead of inventing colours.
-  if (column.badge === "status") return <DutyStatusBadge status={String(value)} />;
+  if (column.badge === "status") return <DutyStatusBadge status={String(value)} isGujarati={isGu} />;
 
   if (column.badge === "ta") {
+    const displayAmount = isGu ? toGujaratiNumerals(text) : text;
     return (
-      <Badge variant="success" aria-label={`TA ${text}`} title={`TA ${text}`}>
+      <Badge variant="success" aria-label={`TA ${displayAmount}`} title={`TA ${displayAmount}`}>
         <Route className="size-3" />
-        {!compact && text}
+        {!compact && displayAmount}
       </Badge>
     );
   }
@@ -124,14 +177,16 @@ function ReportCell({
   if (column.badge === "holiday") {
     const amount = Number(value ?? 0);
     if (!amount) return <>—</>;
+    const displayAmount = isGu ? toGujaratiNumerals(text) : text;
+    const holidayLabel = `${t?.reports.columns.holidayPay ?? "Holiday Pay"} ${displayAmount}`;
     return (
       <Badge
         variant="warning"
-        aria-label={`Holiday Pay ${text}`}
-        title={`Holiday Pay ${text}`}
+        aria-label={holidayLabel}
+        title={holidayLabel}
       >
         <Sparkles className="size-3" />
-        {!compact && text}
+        {!compact && displayAmount}
       </Badge>
     );
   }
@@ -139,6 +194,9 @@ function ReportCell({
   if (column.badge === "distance") {
     const km = Number(value ?? 0);
     if (!km) return <>—</>;
+    const kmStr = isGu
+      ? `${toGujaratiNumerals(km.toLocaleString())} ${t?.reports.km ?? "કિમી"}`
+      : `${km.toLocaleString()} km`;
     return (
       <Badge
         variant="info"
@@ -146,7 +204,7 @@ function ReportCell({
         title={`Distance ${km} km`}
       >
         <Compass className="size-3" />
-        {!compact && `${km.toLocaleString()} km`}
+        {!compact && kmStr}
       </Badge>
     );
   }
@@ -155,19 +213,20 @@ function ReportCell({
     // dayTypeOf() returns "Working Day", "Working Day (Optional Holiday)",
     // or a holiday-kind label. Both working-day forms are styled as work.
     const isWorkingDay = text.startsWith("Working Day");
+    const localizedText = translateDayType(text, t, isGu);
     if (compact && isWorkingDay) {
-      return <Badge variant="secondary">{text}</Badge>;
+      return <Badge variant="secondary">{localizedText}</Badge>;
     }
     if (compact) {
       // Icon alone, matching the duty log's holiday mark. The name is on
       // aria-label/title so it is neither silent nor a guess.
       return (
-        <Badge variant="warning" aria-label={text} title={text}>
+        <Badge variant="warning" aria-label={localizedText} title={localizedText}>
           <Sparkles className="size-3" />
         </Badge>
       );
     }
-    return <Badge variant={isWorkingDay ? "secondary" : "warning"}>{text}</Badge>;
+    return <Badge variant={isWorkingDay ? "secondary" : "warning"}>{localizedText}</Badge>;
   }
 
   if (column.badge === "time") {
@@ -183,19 +242,22 @@ function ReportCell({
 
     if (!start) return <>—</>;
 
+    const displayStart = isGu ? toGujaratiNumerals(start) : start;
+    const displayEnd = end ? (isGu ? toGujaratiNumerals(end) : end) : null;
+
     return (
       <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/60 dark:bg-muted/40 border border-border/60 text-xs font-medium text-foreground shadow-2xs">
         <Clock className="size-3 text-muted-foreground shrink-0" />
-        <span className="font-semibold text-foreground">{start}</span>
-        {end ? (
+        <span className="font-semibold text-foreground">{displayStart}</span>
+        {displayEnd ? (
           <>
             <span className="text-muted-foreground/60 text-[10px] font-bold">→</span>
-            <span className="font-semibold text-foreground">{end}</span>
+            <span className="font-semibold text-foreground">{displayEnd}</span>
           </>
         ) : null}
         {isNextDay && (
           <span className="inline-flex items-center text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-500/15 px-1.5 py-0.2 rounded border border-amber-500/30">
-            Next Day
+            {t?.reports.nextDay ?? "Next Day"}
           </span>
         )}
       </span>
@@ -222,6 +284,7 @@ export default async function ReportsPage({
     limit?: string;
   }>;
 }) {
+  const { lang, t } = await getServerTranslations();
   const params = await searchParams;
   const user = await getCurrentUser();
   const [canViewAll, canExport] = await Promise.all([
@@ -391,14 +454,21 @@ export default async function ReportsPage({
       })
     : null;
 
+  const isGu = lang === "gu";
+  const periodDisplay = isGu
+    ? month
+      ? `${GUJARATI_MONTH_NAMES[month - 1]} ${toGujaratiNumerals(year)}`
+      : toGujaratiNumerals(year)
+    : report.periodLabel;
+
   return (
     <main className="w-full px-4 sm:px-6 lg:px-8 py-6 max-w-7xl 2xl:max-w-full mx-auto space-y-6 print:max-w-none print:p-0">
       {/* Everything on screen; the printer gets ReportPrintView instead. */}
       <div className="space-y-6 print:hidden">
       <PageHeader
-        title="Monthly Reports"
-        subtitle="Duty, travelling allowance, holiday and leave records for any month or year."
-        badge={<Badge variant="purple" dot>{report.periodLabel}</Badge>}
+        title={t.reports.pageTitle}
+        subtitle={t.reports.pageSubtitle}
+        badge={<Badge variant="purple" dot>{periodDisplay}</Badge>}
         actions={
           <div className="flex items-center gap-2 w-full sm:w-auto pt-2 lg:pt-0">
             <div className="flex-1 sm:flex-none">
@@ -422,10 +492,10 @@ export default async function ReportsPage({
               <a
                 href={`/api/reports/export?${exportQuery}`}
                 className="flex-none flex items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-border bg-card px-3 py-2.5 text-xs sm:text-sm font-semibold text-foreground shadow-2xs transition-colors hover:bg-muted active:scale-[0.98]"
-                title="Export CSV"
+                title={t.reports.exportCsv}
               >
                 <Download className="size-4 shrink-0 text-muted-foreground" />
-                <span className="hidden sm:inline">Export CSV</span>
+                <span className="hidden sm:inline">{t.reports.exportCsv}</span>
                 <span className="sm:hidden">CSV</span>
               </a>
             )}
@@ -439,40 +509,56 @@ export default async function ReportsPage({
           <div className="w-full sm:w-48">
             <FilterSelect
               paramName="type"
-              placeholder={REPORT_TYPES.find((t) => t.value === type)?.label}
+              placeholder={
+                type === "duty"
+                  ? t.reports.reportTypeAllDuty
+                  : type === "ta"
+                  ? t.reports.reportTypeTa
+                  : type === "holiday"
+                  ? t.reports.reportTypeHoliday
+                  : t.reports.reportTypeLeave
+              }
               value={type}
               clearable={false}
               icon="briefcase"
-              options={REPORT_TYPES.map((t) => ({ value: t.value, label: t.label }))}
+              options={[
+                { value: "duty", label: t.reports.reportTypeAllDuty },
+                { value: "ta", label: t.reports.reportTypeTa },
+                { value: "holiday", label: t.reports.reportTypeHoliday },
+                { value: "leave", label: t.reports.reportTypeLeave },
+              ]}
             />
           </div>
           <div className="w-full sm:w-36">
             <FilterSelect
               paramName="month"
-              placeholder="Whole year"
+              placeholder={t.reports.wholeYear}
               value={month ? String(month) : "all"}
               icon="calendar"
               options={[
-                { value: "all", label: "Whole year" },
-                ...MONTH_NAMES.map((m, i) => ({ value: String(i + 1), label: m })),
+                { value: "all", label: t.reports.wholeYear },
+                ...(lang === "gu" ? GUJARATI_MONTH_NAMES : MONTH_NAMES).map((m, i) => ({ value: String(i + 1), label: m })),
               ]}
             />
           </div>
           <div className="w-full sm:w-28">
             <FilterSelect
               paramName="year"
-              placeholder={String(year)}
+              placeholder={isGu ? toGujaratiNumerals(year) : String(year)}
               value={String(year)}
               clearable={false}
               icon="calendar"
-              options={getYearOptions(4, 1)}
+              options={getYearOptions(4, 1).map((opt) => ({
+                ...opt,
+                label: isGu ? toGujaratiNumerals(opt.label) : opt.label,
+              }))}
             />
           </div>
           {canViewAll && (usersList ?? []).length > 0 && (
             <div className="w-full sm:w-44">
               <FilterSelect
                 paramName="userId"
-                placeholder="All Officers"
+                placeholder={t.reports.allOfficers}
                 icon="user"
                 options={(usersList ?? []).map((u) => ({
                   value: u.id,
@@ -483,7 +569,7 @@ export default async function ReportsPage({
           )}
           {!canViewAll && (
             <span className="text-[11px] text-muted-foreground">
-              Showing your own records.
+              {t.reports.showingOwnRecords}
             </span>
           )}
         </div>
@@ -501,10 +587,10 @@ export default async function ReportsPage({
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <h3 className="text-xs sm:text-sm font-bold text-foreground">
-                    Monthly Pay Breakdown
+                    {t.reports.monthlyPayBreakdown}
                   </h3>
                   <span className="rounded-md border border-border/80 bg-muted/50 px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
-                    {report.periodLabel}
+                    {periodDisplay}
                   </span>
                 </div>
               </div>
@@ -516,13 +602,13 @@ export default async function ReportsPage({
               <div className="flex flex-col justify-center rounded-lg border border-indigo-500/20 bg-indigo-500/5 px-2.5 py-1.5 xl:min-w-24">
                 <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-300 truncate flex items-center gap-1">
                   <Briefcase className="size-3 text-indigo-600 dark:text-indigo-400 shrink-0" />
-                  {isHolidayReport ? "Holiday Duties" : type === "ta" ? "TA Records" : "Duty Records"}
+                  {isHolidayReport ? t.reports.holidayDuties : type === "ta" ? t.reports.taRecords : t.reports.dutyRecords}
                 </span>
                 <span className="text-xs sm:text-sm font-black text-indigo-600 dark:text-indigo-400">
-                  {report.totals.rowCount}
+                  {isGu ? toGujaratiNumerals(report.totals.rowCount) : report.totals.rowCount}
                 </span>
                 <span className="text-[9px] text-muted-foreground truncate">
-                  Logged in month
+                  {t.reports.loggedInMonth}
                 </span>
               </div>
 
@@ -533,13 +619,15 @@ export default async function ReportsPage({
               <div className="flex flex-col justify-center rounded-lg border border-emerald-500/20 bg-emerald-500/[0.04] px-2.5 py-1.5 xl:min-w-28">
                 <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 truncate flex items-center gap-1">
                   <Route className="size-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                  TA Claimed
+                  {t.reports.taClaim}
                 </span>
                 <span className="text-xs sm:text-sm font-black text-emerald-600 dark:text-emerald-400">
-                  {formatCurrency(report.totals.taAmount ?? 0)}
+                  {isGu ? toGujaratiNumerals(formatCurrency(report.totals.taAmount ?? 0)) : formatCurrency(report.totals.taAmount ?? 0)}
                 </span>
                 <span className="text-[9px] text-muted-foreground truncate">
-                  {(report.totals.taDistance ?? 0).toLocaleString()} km
+                  {isGu
+                    ? `${toGujaratiNumerals((report.totals.taDistance ?? 0).toLocaleString())} ${t.reports.km}`
+                    : `${(report.totals.taDistance ?? 0).toLocaleString()} km`}
                 </span>
               </div>
 
@@ -550,13 +638,13 @@ export default async function ReportsPage({
               <div className="flex flex-col justify-center rounded-lg border border-amber-500/20 bg-amber-500/[0.04] px-2.5 py-1.5 xl:min-w-28">
                 <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300 truncate flex items-center gap-1">
                   <Sparkles className="size-3 text-amber-600 dark:text-amber-400 shrink-0" />
-                  Holiday Pay
+                  {t.reports.holidayPay}
                 </span>
                 <span className="text-xs sm:text-sm font-black text-amber-600 dark:text-amber-400">
-                  {formatCurrency(report.totals.holidayExtraPay ?? 0)}
+                  {isGu ? toGujaratiNumerals(formatCurrency(report.totals.holidayExtraPay ?? 0)) : formatCurrency(report.totals.holidayExtraPay ?? 0)}
                 </span>
                 <span className="text-[9px] text-muted-foreground truncate">
-                  {report.totals.holidaysWorked ?? 0} worked
+                  {isGu ? `${toGujaratiNumerals(report.totals.holidaysWorked ?? 0)} ${t.reports.dutyWorked}` : `${report.totals.holidaysWorked ?? 0} ${t.reports.dutyWorked}`}
                 </span>
               </div>
 
@@ -567,16 +655,23 @@ export default async function ReportsPage({
               <div className="flex flex-col justify-center rounded-lg border border-indigo-500/30 bg-indigo-500/[0.08] dark:bg-indigo-500/15 px-2.5 py-1.5 xl:min-w-32 shadow-2xs">
                 <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-300 truncate flex items-center gap-1">
                   <IndianRupee className="size-3 text-indigo-600 dark:text-indigo-400 shrink-0" />
-                  Total Extra Pay
+                  {t.reports.totalExtraPay}
                 </span>
                 <span className="text-xs sm:text-sm font-black text-indigo-600 dark:text-indigo-400">
-                  {formatCurrency(
-                    report.totals.totalExtraPay ??
-                      ((report.totals.taAmount ?? 0) + (report.totals.holidayExtraPay ?? 0))
-                  )}
+                  {isGu
+                    ? toGujaratiNumerals(
+                        formatCurrency(
+                          report.totals.totalExtraPay ??
+                            ((report.totals.taAmount ?? 0) + (report.totals.holidayExtraPay ?? 0))
+                        )
+                      )
+                    : formatCurrency(
+                        report.totals.totalExtraPay ??
+                          ((report.totals.taAmount ?? 0) + (report.totals.holidayExtraPay ?? 0))
+                      )}
                 </span>
                 <span className="text-[9px] text-muted-foreground truncate">
-                  TA + Holiday
+                  {t.reports.taPlusHoliday}
                 </span>
               </div>
 
@@ -592,17 +687,17 @@ export default async function ReportsPage({
                   <div className="col-span-2 sm:col-span-4 xl:col-span-1 flex flex-col justify-center rounded-lg border border-rose-500/30 bg-rose-500/[0.06] px-2.5 py-1.5 xl:min-w-28">
                     <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-rose-700 dark:text-rose-300 truncate flex items-center gap-1">
                       <CalendarOff className="size-3 text-rose-600 dark:text-rose-400 shrink-0" />
-                      Binpagari
+                      {t.reports.binpagari}
                     </span>
                     <span className="text-xs sm:text-sm font-black text-rose-600 dark:text-rose-400">
                       {dailySalaryRate > 0
-                        ? `-${formatCurrency(binpagariDeduction)}`
-                        : formatDays(binpagariDays)}
+                        ? `-${isGu ? toGujaratiNumerals(formatCurrency(binpagariDeduction)) : formatCurrency(binpagariDeduction)}`
+                        : (isGu ? toGujaratiNumerals(formatDays(binpagariDays)) : formatDays(binpagariDays))}
                     </span>
                     <span className="text-[9px] text-muted-foreground truncate">
                       {dailySalaryRate > 0
-                        ? `${formatDays(binpagariDays)} unpaid`
-                        : "Set daily rate in Settings"}
+                        ? `${isGu ? toGujaratiNumerals(formatDays(binpagariDays)) : formatDays(binpagariDays)} ${t.reports.unpaid}`
+                        : t.reports.setDailyRateInSettings}
                     </span>
                   </div>
                 </>
@@ -653,7 +748,7 @@ export default async function ReportsPage({
                     key={c.key}
                     className={`px-4 py-3.5 whitespace-nowrap ${c.numeric ? "text-right" : ""}`}
                   >
-                    {c.label}
+                    {getColumnLabel(c, t)}
                   </th>
                 ))}
               </tr>
@@ -672,6 +767,8 @@ export default async function ReportsPage({
                         column={c}
                         value={row[c.key]}
                         color={c.colorKey ? (row[c.colorKey] as string | null) : null}
+                        isGu={lang === "gu"}
+                        t={t}
                       />
                     </td>
                   ))}
@@ -683,46 +780,52 @@ export default async function ReportsPage({
                 <tr>
                   {report.columns.map((c, index) => {
                     if (c.key === "holiday_allowance") {
+                      const amount = formatCurrency(report.totals.holidayExtraPay ?? 0);
                       return (
                         <td
                           key={c.key}
                           className="px-4 py-3 text-right font-extrabold text-amber-600 dark:text-amber-400"
                         >
-                          {formatCurrency(report.totals.holidayExtraPay ?? 0)}
+                          {isGu ? toGujaratiNumerals(amount) : amount}
                         </td>
                       );
                     }
                     if (c.key === "ta_amount") {
+                      const amount = formatCurrency(report.totals.taAmount ?? 0);
                       return (
                         <td
                           key={c.key}
                           className="px-4 py-3 text-right font-extrabold text-emerald-600 dark:text-emerald-400"
                         >
-                          {formatCurrency(report.totals.taAmount ?? 0)}
+                          {isGu ? toGujaratiNumerals(amount) : amount}
                         </td>
                       );
                     }
                     if (c.key === "ta_distance_km") {
+                      const dist = (report.totals.taDistance ?? 0).toLocaleString();
                       return (
                         <td key={c.key} className="px-4 py-3 text-right font-bold">
-                          {(report.totals.taDistance ?? 0).toLocaleString()} km
+                          {isGu ? `${toGujaratiNumerals(dist)} ${t.reports.km}` : `${dist} km`}
                         </td>
                       );
                     }
                     if (c.key === "days") {
+                      const dCount = report.totals.leaveDays ?? 0;
                       return (
                         <td key={c.key} className="px-4 py-3 text-right font-bold text-rose-600 dark:text-rose-400">
-                          {report.totals.leaveDays ?? 0}d
+                          {isGu ? `${toGujaratiNumerals(dCount)}d` : `${dCount}d`}
                         </td>
                       );
                     }
                     if (index === 0) {
+                      const countStr = isGu ? toGujaratiNumerals(report.rows.length) : report.rows.length;
+                      const entryStr = report.rows.length === 1 ? t.reports.entry : t.reports.entries;
                       return (
                         <td
                           key={c.key}
                           className="px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground"
                         >
-                          Total ({report.rows.length} {report.rows.length === 1 ? "entry" : "entries"})
+                          {t.reports.total} ({countStr} {entryStr})
                         </td>
                       );
                     }
@@ -776,7 +879,11 @@ export default async function ReportsPage({
                     not share the line the cluster drops below it whole. */}
                 <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
                   <span className="text-sm font-bold text-foreground">
-                    {headColumn ? formatReportCell(headColumn, row[headColumn.key]) : ""}
+                    {headColumn
+                      ? lang === "gu" && headColumn.key === "duty_type"
+                        ? translateDutyTypeToGujarati(formatReportCell(headColumn, row[headColumn.key]))
+                        : formatReportCell(headColumn, row[headColumn.key])
+                      : ""}
                   </span>
                   {badgeColumns.length > 0 && (
                     <div className="ml-auto flex flex-wrap items-center gap-1.5">
@@ -787,6 +894,8 @@ export default async function ReportsPage({
                           value={row[c.key]}
                           color={c.colorKey ? (row[c.colorKey] as string | null) : null}
                           compact
+                          isGu={lang === "gu"}
+                          t={t}
                         />
                       ))}
                     </div>
@@ -801,13 +910,15 @@ export default async function ReportsPage({
                         className="flex items-center justify-between gap-3"
                       >
                         <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                          {c.label}
+                          {getColumnLabel(c, t)}
                         </span>
                         <div className="text-right text-xs font-medium text-foreground">
                           <ReportCell
                             column={c}
                             value={row[c.key]}
                             color={c.colorKey ? (row[c.colorKey] as string | null) : null}
+                            isGu={lang === "gu"}
+                            t={t}
                           />
                         </div>
                       </div>
@@ -822,7 +933,7 @@ export default async function ReportsPage({
         {pageRows.length === 0 && (
           <div className="p-10 text-center text-xs text-muted-foreground">
             <FileSpreadsheet className="mx-auto mb-3 size-8 text-slate-300 dark:text-slate-700" />
-            No records for {report.periodLabel}.
+            {lang === "gu" ? `${periodDisplay} માટે કોઈ રેકોર્ડ મળ્યા નથી.` : `No records for ${report.periodLabel}.`}
           </div>
         )}
 
@@ -844,10 +955,10 @@ export default async function ReportsPage({
               <div className="space-y-0.5">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
                   <CalendarOff className="size-4 text-amber-500" />
-                  Holidays not worked ({report.unworkedHolidays.length})
+                  {t.reports.unworkedHolidaysTitle} ({isGu ? toGujaratiNumerals(report.unworkedHolidays.length) : report.unworkedHolidays.length})
                 </h3>
                 <p className="text-[11px] text-muted-foreground">
-                  Taken as time off, so they earn no extra pay and are excluded from the totals above.
+                  {t.reports.unworkedHolidaysDesc}
                 </p>
               </div>
               <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 group-open:rotate-180 transition-transform duration-200 ml-2">
@@ -864,11 +975,11 @@ export default async function ReportsPage({
                     <div className="min-w-0">
                       <p className="truncate text-xs font-semibold text-foreground">{h.name}</p>
                       <p className="text-[11px] text-muted-foreground">
-                        {h.date} · {h.kind}
+                        {isGu ? toGujaratiNumerals(h.date) : h.date} · {translateDayType(h.kind, t, isGu)}
                       </p>
                     </div>
                     <span className="shrink-0 text-[11px] font-semibold text-muted-foreground">
-                      {formatCurrency(0)}
+                      {isGu ? toGujaratiNumerals(formatCurrency(0)) : formatCurrency(0)}
                     </span>
                   </li>
                 ))}

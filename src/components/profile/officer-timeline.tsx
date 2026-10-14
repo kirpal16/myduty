@@ -34,6 +34,8 @@ import {
 import { AwardModal } from "./award-modal";
 import { ConfirmDeleteModal } from "@/components/ui/confirm-delete-modal";
 import { deleteTimelineEventAction } from "@/actions/profile";
+import { useLanguage } from "@/lib/i18n/language-context";
+import { toGujaratiNumerals } from "@/lib/reports/gujaratiReportUtils";
 
 export interface OfficerTimelineProps {
   events: TimelineEventItem[];
@@ -55,6 +57,17 @@ const ICON_MAP = {
   Bookmark,
 };
 
+const EVENT_TYPE_GUJARATI_LABELS: Record<string, string> = {
+  JOINING: "સેવા પ્રવેશ",
+  TRAINING: "તાલીમ અને એકેડેમી",
+  POSTING: "સ્ટેશન પોસ્ટિંગ",
+  TRANSFER: "બદલી હુકમ",
+  PROMOTION: "બઢતી",
+  SPECIAL_DUTY: "વિશેષ ફરજ",
+  ACHIEVEMENT: "પ્રશંસા અને એવોર્ડ",
+  OTHER: "માઇલસ્ટોન",
+};
+
 type FilterCategory = "ALL" | "POSTINGS" | "TRANSFERS" | "TRAININGS" | "ACHIEVEMENTS";
 
 export function OfficerTimeline({
@@ -65,6 +78,7 @@ export function OfficerTimeline({
   showHeader = true,
   className = "",
 }: OfficerTimelineProps) {
+  const { isGujarati, t } = useLanguage();
   const [filter, setFilter] = useState<FilterCategory>("ALL");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [eventToEdit, setEventToEdit] = useState<TimelineEventItem | null>(null);
@@ -138,7 +152,7 @@ export function OfficerTimeline({
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
-                  Current Posting
+                  {t.profile.currentPosting}
                 </span>
                 {currentEvent.designation && (
                   <span className="text-[11px] font-semibold text-foreground/80">
@@ -159,7 +173,7 @@ export function OfficerTimeline({
           </div>
           {currentEvent.start_date && (
             <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 shrink-0 bg-emerald-500/20 px-2 py-0.5 rounded-md">
-              Active
+              {t.profile.currentlyActive}
             </span>
           )}
         </div>
@@ -170,32 +184,46 @@ export function OfficerTimeline({
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
           <Filter className="size-3 text-muted-foreground shrink-0 mr-1" />
           {[
-            { id: "ALL", label: `All (${sortedEvents.length})` },
+            {
+              id: "ALL",
+              label: `${t.profile.allFilter} (${isGujarati ? toGujaratiNumerals(sortedEvents.length) : sortedEvents.length})`,
+            },
             {
               id: "POSTINGS",
-              label: `Postings (${
-                sortedEvents.filter((e) => e.event_type === "POSTING").length
+              label: `${t.profile.postingsFilter} (${
+                isGujarati
+                  ? toGujaratiNumerals(sortedEvents.filter((e) => e.event_type === "POSTING").length)
+                  : sortedEvents.filter((e) => e.event_type === "POSTING").length
               })`,
             },
             {
               id: "TRANSFERS",
-              label: `Transfers (${
-                sortedEvents.filter((e) => e.event_type === "TRANSFER").length
+              label: `${t.profile.transfersFilter} (${
+                isGujarati
+                  ? toGujaratiNumerals(sortedEvents.filter((e) => e.event_type === "TRANSFER").length)
+                  : sortedEvents.filter((e) => e.event_type === "TRANSFER").length
               })`,
             },
             {
               id: "TRAININGS",
-              label: `Trainings (${
-                sortedEvents.filter((e) => e.event_type === "TRAINING").length
+              label: `${t.profile.trainingsFilter} (${
+                isGujarati
+                  ? toGujaratiNumerals(sortedEvents.filter((e) => e.event_type === "TRAINING").length)
+                  : sortedEvents.filter((e) => e.event_type === "TRAINING").length
               })`,
             },
             {
               id: "ACHIEVEMENTS",
-              label: `Honours (${
-                sortedEvents.filter(
-                  (e) =>
-                    e.event_type === "ACHIEVEMENT" || e.event_type === "PROMOTION"
-                ).length
+              label: `${t.profile.honoursFilter} (${
+                isGujarati
+                  ? toGujaratiNumerals(
+                      sortedEvents.filter(
+                        (e) => e.event_type === "ACHIEVEMENT" || e.event_type === "PROMOTION"
+                      ).length
+                    )
+                  : sortedEvents.filter(
+                      (e) => e.event_type === "ACHIEVEMENT" || e.event_type === "PROMOTION"
+                    ).length
               })`,
             },
           ].map((tab) => {
@@ -225,10 +253,10 @@ export function OfficerTimeline({
             <Calendar className="size-5" />
           </div>
           <p className="text-xs sm:text-sm font-semibold text-foreground">
-            No milestones recorded yet
+            {t.profile.noMilestonesRecorded}
           </p>
           <p className="text-[11px] text-muted-foreground max-w-xs">
-            Record your station postings, transfers, and honours to build your career history.
+            {t.profile.noMilestonesRecordedDesc}
           </p>
           {canEdit && (
             <button
@@ -240,7 +268,7 @@ export function OfficerTimeline({
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs transition-all active:scale-[0.98] cursor-pointer mt-1"
             >
               <Plus className="size-3.5" />
-              <span>Record First Milestone</span>
+              <span>{t.profile.recordFirstMilestone}</span>
             </button>
           )}
         </div>
@@ -253,7 +281,8 @@ export function OfficerTimeline({
             const { dateRange, duration } = formatTimelineSpan(
               event.start_date,
               event.end_date,
-              event.is_current
+              event.is_current,
+              isGujarati
             );
             const isGst =
               event.title.toLowerCase().includes("gst") ||
@@ -293,13 +322,17 @@ export function OfficerTimeline({
                         className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${meta.badgeBg} ${meta.badgeText} ${meta.badgeBorder}`}
                       >
                         <IconComponent className="size-3" />
-                        <span>{meta.label}</span>
+                        <span>
+                          {isGujarati
+                            ? EVENT_TYPE_GUJARATI_LABELS[event.event_type] ?? meta.label
+                            : meta.label}
+                        </span>
                       </span>
 
                       {event.is_current && (
                         <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[9px] font-bold uppercase tracking-wider">
                           <span className="size-1 rounded-full bg-emerald-500 animate-pulse" />
-                          Current
+                          {t.profile.current}
                         </span>
                       )}
 
@@ -320,7 +353,7 @@ export function OfficerTimeline({
                         <div className="flex items-center gap-0.5 opacity-70 group-hover:opacity-100 transition-opacity ml-1">
                           <button
                             type="button"
-                            title="Edit Milestone"
+                            title={t.profile.editMilestone}
                             onClick={() => handleEdit(event)}
                             className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
                           >
@@ -328,7 +361,7 @@ export function OfficerTimeline({
                           </button>
                           <button
                             type="button"
-                            title="Delete Milestone"
+                            title={t.profile.deleteMilestone}
                             onClick={() => setEventToDelete(event)}
                             className="p-1 rounded-md text-muted-foreground hover:text-rose-600 hover:bg-rose-500/10 transition-colors cursor-pointer"
                           >
@@ -356,11 +389,11 @@ export function OfficerTimeline({
                     (event.from_location || event.to_location) && (
                       <div className="mt-1.5 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-500/10 border border-cyan-500/25 text-xs text-cyan-800 dark:text-cyan-200">
                         <span className="font-semibold truncate max-w-[120px] sm:max-w-[160px]">
-                          {event.from_location || "Previous Unit"}
+                          {event.from_location || t.profile.previousUnit}
                         </span>
                         <ArrowRight className="size-3 text-cyan-600 dark:text-cyan-400 shrink-0" />
                         <span className="font-bold text-foreground truncate max-w-[120px] sm:max-w-[160px]">
-                          {event.to_location || "New Unit"}
+                          {event.to_location || t.profile.newUnit}
                         </span>
                       </div>
                     )}
@@ -404,13 +437,15 @@ export function OfficerTimeline({
       {variant === "dashboard" && sortedEvents.length > maxEvents && (
         <div className="pt-2 border-t border-border/60 flex items-center justify-between text-xs text-muted-foreground">
           <span>
-            Showing {displayEvents.length} of {sortedEvents.length} milestones
+            {t.profile.showingMilestonesCount
+              .replace("{shown}", isGujarati ? toGujaratiNumerals(displayEvents.length) : String(displayEvents.length))
+              .replace("{total}", isGujarati ? toGujaratiNumerals(sortedEvents.length) : String(sortedEvents.length))}
           </span>
           <Link
             href="/profile"
             className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
           >
-            <span>View Full Timeline</span>
+            <span>{t.profile.viewFullTimeline}</span>
             <ArrowRight className="size-3" />
           </Link>
         </div>
@@ -431,13 +466,13 @@ export function OfficerTimeline({
               </div>
               <div className="flex items-center gap-2 min-w-0">
                 <h3 className="text-xs sm:text-sm font-bold text-foreground truncate tracking-tight">
-                  Career Timeline
+                  {t.profile.careerTimelineSection}
                 </h3>
                 <span className="px-1.5 py-0.2 rounded-full text-[9px] font-extrabold bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 shrink-0">
-                  {sortedEvents.length}
+                  {isGujarati ? toGujaratiNumerals(sortedEvents.length) : sortedEvents.length}
                 </span>
                 <span className="text-[11px] text-muted-foreground hidden md:inline truncate">
-                  Service milestones &amp; postings
+                  {t.profile.serviceMilestonesPostings}
                 </span>
               </div>
             </div>
@@ -471,7 +506,7 @@ export function OfficerTimeline({
                       <span className="relative inline-flex rounded-full size-2 bg-emerald-500" />
                     </span>
                     <span className="text-[9px] font-extrabold uppercase tracking-widest text-emerald-700 dark:text-emerald-400 shrink-0">
-                      Active
+                      {t.profile.currentlyActive}
                     </span>
                     <span className="text-[11px] font-bold text-foreground truncate">
                       {currentEvent.title}
@@ -484,7 +519,9 @@ export function OfficerTimeline({
                   </div>
                   {currentEvent.start_date && (
                     <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 shrink-0 whitespace-nowrap bg-emerald-500/15 px-1.5 py-0.5 rounded-md">
-                      Since {formatTimelineDate(currentEvent.start_date, true)}
+                      {isGujarati
+                        ? `${formatTimelineDate(currentEvent.start_date, true, true)} થી`
+                        : `Since ${formatTimelineDate(currentEvent.start_date, true)}`}
                     </span>
                   )}
                 </div>
@@ -493,7 +530,7 @@ export function OfficerTimeline({
               {/* Milestone Rows - Ultra-Compact List */}
               {displayEvents.length === 0 ? (
                 <div className="px-4 py-4 text-center text-xs text-muted-foreground">
-                  No career milestones recorded yet.
+                  {t.profile.noMilestonesRecorded}
                 </div>
               ) : (
                 <div className="divide-y divide-border/40">
@@ -504,7 +541,8 @@ export function OfficerTimeline({
                     const { dateRange, duration } = formatTimelineSpan(
                       event.start_date,
                       event.end_date,
-                      event.is_current
+                      event.is_current,
+                      isGujarati
                     );
                     const isGst =
                       event.title.toLowerCase().includes("gst") ||
@@ -698,10 +736,10 @@ export function OfficerTimeline({
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border/80">
               <div>
                 <h3 className="text-base sm:text-lg font-bold text-foreground">
-                  Job &amp; Service Career Timeline
+                  {t.profile.careerTimelineTitle}
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  Chronological record of induction, academy training, station postings, and transfers.
+                  {t.profile.careerTimelineSubtitle}
                 </p>
               </div>
 
@@ -721,7 +759,9 @@ export function OfficerTimeline({
                 >
                   <Plus className="size-4" />
                   <span>
-                    {filter === "ACHIEVEMENTS" ? "Add Honour / Award" : "Add Milestone"}
+                    {filter === "ACHIEVEMENTS"
+                      ? t.profile.addHonour
+                      : t.profile.addMilestone}
                   </span>
                 </button>
               )}
@@ -758,9 +798,9 @@ export function OfficerTimeline({
         onClose={() => setEventToDelete(null)}
         onConfirm={handleDeleteConfirm}
         isPending={isDeleting}
-        title="Delete Career Milestone?"
-        description={`Are you sure you want to delete "${eventToDelete?.title}" from your timeline? This action cannot be undone.`}
-        confirmLabel="Delete Milestone"
+        title={t.profile.deleteMilestoneConfirmTitle}
+        description={t.profile.deleteMilestoneConfirmDesc.replace("{title}", eventToDelete?.title ?? "")}
+        confirmLabel={t.profile.deleteMilestone}
       />
     </div>
   );

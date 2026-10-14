@@ -11,6 +11,8 @@ import { PwaInstallButton } from "@/components/pwa/install-button";
 import { FieldError } from "@/components/ui/field-error";
 import { AutoDismissBanner } from "@/components/ui/auto-dismiss-banner";
 import { useFormFeedback } from "@/lib/hooks/useFormFeedback";
+import { LanguageToggle } from "@/components/layout/language-toggle";
+import { useLanguage } from "@/lib/i18n/language-context";
 
 function ResetSuccessNotice() {
   const searchParams = useSearchParams();
@@ -28,6 +30,7 @@ function ResetSuccessNotice() {
 }
 
 export default function LoginPage() {
+  const { dictionary } = useLanguage();
   const [state, action, pending] = useActionState<AuthFormState, FormData>(
     login,
     undefined
@@ -44,6 +47,11 @@ export default function LoginPage() {
       </div>
 
       <div className="relative w-full max-w-md">
+        {/* Floating Top Language Switcher */}
+        <div className="flex justify-end mb-3">
+          <LanguageToggle variant="auth" />
+        </div>
+
         <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-8 sm:p-10 shadow-2xl backdrop-blur-xl">
           {/* Brand header */}
           <div className="flex flex-col items-center text-center mb-8">
@@ -61,10 +69,10 @@ export default function LoginPage() {
               />
             </Link>
             <h1 className="text-2xl font-bold tracking-tight text-white">
-              My Duty Portal
+              {dictionary.common.appName}
             </h1>
             <p className="text-xs sm:text-sm text-slate-400 mt-1">
-              Sign in to your Gujarat Police officer account
+              {dictionary.auth.signInSubtitle}
             </p>
           </div>
 
@@ -90,7 +98,7 @@ export default function LoginPage() {
                 htmlFor="email"
                 className="text-xs font-semibold text-slate-300 uppercase tracking-wider"
               >
-                Email address
+                {dictionary.auth.email}
               </label>
               <div className="relative flex items-center">
                 <Mail className="absolute left-3.5 size-4.5 text-slate-500 pointer-events-none" />
@@ -101,9 +109,6 @@ export default function LoginPage() {
                   autoComplete="email"
                   placeholder="officer@agency.gov"
                   required
-                  // React resets uncontrolled fields once a Server Action
-                  // returns, so a rejected sign-in wiped the address too.
-                  // Keyed on the attempt so a fresh failure re-seeds it.
                   key={state?.email ?? ""}
                   defaultValue={state?.email ?? ""}
                   className={`w-full rounded-xl border bg-slate-950/60 pl-10.5 pr-4 py-2.5 text-sm text-white placeholder:text-slate-500 shadow-xs transition-colors focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 ${
@@ -123,13 +128,13 @@ export default function LoginPage() {
                   htmlFor="password"
                   className="text-xs font-semibold text-slate-300 uppercase tracking-wider"
                 >
-                  Password
+                  {dictionary.auth.password}
                 </label>
                 <Link
                   href="/forgot-password"
                   className="inline-flex items-center gap-1.5 whitespace-nowrap text-xs font-medium text-indigo-400 hover:text-indigo-300 transition-colors"
                 >
-                  Forgot password?
+                  {dictionary.auth.forgotPassword}
                 </Link>
               </div>
               <div className="relative">
@@ -155,20 +160,18 @@ export default function LoginPage() {
               {pending ? (
                 <>
                   <Loader2 className="size-4.5 animate-spin" />
-                  <span>Signing in…</span>
+                  <span>{dictionary.auth.loggingIn}</span>
                 </>
               ) : (
                 <>
-                  <span>Sign in</span>
+                  <span>{dictionary.auth.signIn}</span>
                   <ArrowRight className="size-4" />
                 </>
               )}
             </button>
           </form>
 
-          {/* Install lives with the sign-in action rather than only on the
-              landing page: this is the screen an officer reaches from a
-              bookmark or a shared link. */}
+          {/* Install lives with the sign-in action */}
           <div className="mt-4">
             <PwaInstallButton variant="plain" />
           </div>
@@ -176,26 +179,23 @@ export default function LoginPage() {
           {/* Footer link */}
           <div className="mt-8 pt-6 border-t border-slate-800 text-center">
             <p className="text-xs text-slate-400">
-              Don&apos;t have an officer account yet?{" "}
+              {dictionary.auth.dontHaveAccount}{" "}
               <Link
                 href="/signup"
                 className="font-semibold text-indigo-400 hover:text-indigo-300 underline underline-offset-4"
               >
-                Sign up
+                {dictionary.auth.signUp}
               </Link>
             </p>
-          {/* An explicit way back. The logo above already linked home, but a
-              logo is not an obvious affordance for "leave this page" — several
-              people will never discover it. */}
-          <div className="mt-6 text-center">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 transition-colors hover:text-slate-200"
-            >
-              <ArrowLeft className="size-3.5" />
-              <span>Back to home</span>
-            </Link>
-          </div>
+            <div className="mt-6 text-center">
+              <Link
+                href="/"
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 transition-colors hover:text-slate-200"
+              >
+                <ArrowLeft className="size-3.5" />
+                <span>{dictionary.common.back}</span>
+              </Link>
+            </div>
           </div>
         </div>
       </div>

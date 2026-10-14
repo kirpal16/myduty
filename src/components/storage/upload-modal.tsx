@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { HardDrive, Plus, X } from "lucide-react";
 import { ModalPortal, MODAL_Z } from "@/components/ui/modal-portal";
 import { useBodyScrollLock } from "@/lib/hooks/useBodyScrollLock";
+import { useLanguage } from "@/lib/i18n/language-context";
 import { FileUploader } from "./file-uploader";
 
 /**
@@ -21,6 +22,7 @@ import { FileUploader } from "./file-uploader";
  * above this one.
  */
 export function UploadModal() {
+  const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
 
   useBodyScrollLock(isOpen);
@@ -41,7 +43,7 @@ export function UploadModal() {
         className="flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-xl bg-indigo-600 px-2.5 py-2 text-xs font-semibold text-white shadow-md shadow-indigo-600/30 transition-colors hover:bg-indigo-500 sm:gap-2 sm:px-4 sm:py-2.5 sm:text-sm"
       >
         <Plus className="size-4 shrink-0" />
-        <span>Upload</span>
+        <span>{t.common.upload}</span>
       </button>
 
       {isOpen && (
@@ -53,7 +55,7 @@ export function UploadModal() {
             <div
               role="dialog"
               aria-modal="true"
-              aria-label="Upload document"
+              aria-label={t.storage.uploadModalTitle}
               className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-2xl animate-in zoom-in-95 duration-150"
               // The backdrop closes on click; a click inside must not bubble
               // up to it, or picking a file would dismiss the dialog.
@@ -63,16 +65,16 @@ export function UploadModal() {
                 <div>
                   <h3 className="flex items-center gap-2 text-sm font-bold text-foreground">
                     <HardDrive className="size-4 text-sky-500" />
-                    <span>Upload Document</span>
+                    <span>{t.storage.uploadModalTitle}</span>
                   </h3>
                   <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    Receipts, orders, or signed shift logs.
+                    {t.storage.uploadModalSubtitle}
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setIsOpen(false)}
-                  aria-label="Close"
+                  aria-label={t.common.close}
                   className="cursor-pointer rounded-lg p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 >
                   <X className="size-4" />

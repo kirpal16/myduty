@@ -16,6 +16,8 @@ import { SubmitButton } from "@/components/ui/submit-button";
 import { ConfirmDeleteModal } from "@/components/ui/confirm-delete-modal";
 import { AutoDismissBanner } from "@/components/ui/auto-dismiss-banner";
 import { formatSafeDateFull } from "@/lib/format/safeDate";
+import { useLanguage } from "@/lib/i18n/language-context";
+import { toGujaratiNumerals } from "@/lib/reports/gujaratiReportUtils";
 import { FieldError } from "@/components/ui/field-error";
 import { useToast } from "@/components/ui/toast";
 import { useFormFeedback } from "@/lib/hooks/useFormFeedback";
@@ -62,6 +64,7 @@ export function MyHolidaysPanel({
   holidayCount: number;
   year: number;
 }) {
+  const { isGujarati, t } = useLanguage();
   // Accordions are closed by default across the panel
   const [openSection, setOpenSection] = useState<"official" | "optional" | "personal" | null>(
     null,
@@ -154,20 +157,20 @@ export function MyHolidaysPanel({
           </p>
           {h.is_optional ? (
             <span className="inline-flex items-center rounded-md border border-purple-500/30 bg-purple-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-purple-700 dark:text-purple-300">
-              Optional (મરજિયાત · max 2/yr)
+              {t.settings.badgeOptionalMax2}
             </span>
           ) : h.is_government ? (
             <span className="inline-flex items-center rounded-md border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-300">
-              Gazetted / Public
+              {t.settings.badgeGazettedPublic}
             </span>
           ) : (
             <span className="inline-flex items-center rounded-md border border-indigo-500/30 bg-indigo-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700 dark:text-indigo-300">
-              Personal Date
+              {t.settings.badgePersonalDate}
             </span>
           )}
         </div>
         <p className="mt-0.5 text-[11px] text-muted-foreground">
-          {formatSafeDateFull(new Date(`${h.holiday_date}T12:00:00`))}
+          {formatSafeDateFull(new Date(`${h.holiday_date}T12:00:00`), isGujarati)}
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-1">
@@ -206,10 +209,12 @@ export function MyHolidaysPanel({
           <Sparkles className="mt-0.5 size-4 shrink-0 text-amber-500" />
           <div className="text-[11px] text-muted-foreground">
             <p className="text-xs font-bold text-foreground">
-              {holidayCount} Public Holidays in {year}
+              {isGujarati
+                ? `${toGujaratiNumerals(holidayCount)} ${t.settings.statPublicHolidaysTitle} (${toGujaratiNumerals(year)})`
+                : `${holidayCount} ${t.settings.statPublicHolidaysTitle} in ${year}`}
             </p>
             <p className="mt-0.5">
-              Sundays, 2nd/4th Saturdays, and gazetted days. Sets your statutory Holiday Leave (HL) allocation.
+              {t.settings.statPublicHolidaysDesc}
             </p>
           </div>
         </div>
@@ -218,10 +223,10 @@ export function MyHolidaysPanel({
           <Palmtree className="mt-0.5 size-4 shrink-0 text-purple-500" />
           <div className="text-[11px] text-muted-foreground">
             <p className="text-xs font-bold text-foreground">
-              {optional.length} Declared Optional Holidays (મરજિયાત)
+              {`${isGujarati ? toGujaratiNumerals(optional.length) : optional.length} ${t.settings.statOptionalHolidaysTitle}`}
             </p>
             <p className="mt-0.5">
-              Choice of <strong>any 2 days</strong> per calendar year. Kept separate from public Holiday Leave.
+              {t.settings.statOptionalHolidaysDesc}
             </p>
           </div>
         </div>
@@ -230,8 +235,8 @@ export function MyHolidaysPanel({
       <div className="divide-y divide-border overflow-hidden rounded-2xl border border-border">
         <Section
           id="official"
-          title="Government &amp; official"
-          hint="Gazetted festivals and department-wide public days"
+          title={t.settings.sectionGovtOfficial}
+          hint={t.settings.sectionGovtOfficialHint}
           count={official.length}
           icon={Landmark}
           accent="text-amber-500"
@@ -247,8 +252,8 @@ export function MyHolidaysPanel({
 
         <Section
           id="optional"
-          title="Optional holidays (મરજિયાત)"
-          hint="Declared optional holidays (choice of max 2/yr from this list)"
+          title={t.settings.sectionOptionalHolidays}
+          hint={t.settings.sectionOptionalHolidaysHint}
           count={optional.length}
           icon={Palmtree}
           accent="text-purple-500"
@@ -259,7 +264,10 @@ export function MyHolidaysPanel({
         >
           {optional.length === 0 ? (
             <p className="px-4 py-6 text-center text-xs text-muted-foreground">
-              No optional holidays declared for {year}.
+              {t.settings.noOptionalHolidaysForYear.replace(
+                "{year}",
+                isGujarati ? toGujaratiNumerals(year) : String(year),
+              )}
             </p>
           ) : (
             <ul className="max-h-80 divide-y divide-border/60 overflow-y-auto">
@@ -270,8 +278,8 @@ export function MyHolidaysPanel({
 
         <Section
           id="personal"
-          title="My own dates"
-          hint="Days you added yourself"
+          title={t.settings.sectionMyOwnDates}
+          hint={t.settings.sectionMyOwnDatesHint}
           count={personal.length}
           icon={CalendarDays}
           accent="text-indigo-500"
@@ -282,8 +290,7 @@ export function MyHolidaysPanel({
         >
           {personal.length === 0 ? (
             <p className="px-4 py-6 text-center text-xs text-muted-foreground">
-              Nothing added yet. Use the form below for a day off that is not on
-              the official list.
+              {t.settings.noPersonalDatesAdded}
             </p>
           ) : (
             <ul className="max-h-80 divide-y divide-border/60 overflow-y-auto">
@@ -308,7 +315,11 @@ export function MyHolidaysPanel({
             <div className="flex size-7 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
               <CalendarDays className="size-4 shrink-0" />
             </div>
-            <span>{editing ? `Edit “${editing.name}”` : "Add a holiday"}</span>
+            <span>
+              {editing
+                ? t.settings.editHolidayWithTitle.replace("{name}", editing.name)
+                : t.settings.addHoliday}
+            </span>
           </div>
 
           <div className="flex items-center gap-2">
@@ -321,7 +332,7 @@ export function MyHolidaysPanel({
                 className="inline-flex cursor-pointer items-center gap-1 text-[11px] font-semibold text-rose-500 hover:text-rose-600 bg-rose-500/10 px-2 py-0.5 rounded-md"
               >
                 <X className="size-3" />
-                Cancel edit
+                {t.settings.cancelEdit}
               </span>
             )}
             <div
@@ -352,17 +363,21 @@ export function MyHolidaysPanel({
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="flex flex-col gap-1.5">
-                <span className="text-[11px] font-semibold text-foreground">Name</span>
+                <span className="text-[11px] font-semibold text-foreground">
+                  {t.settings.holidayNameLabel}
+                </span>
                 <input
                   {...fieldProps("name")}
                   defaultValue={editing?.name ?? ""}
-                  placeholder="e.g. Founders Day"
+                  placeholder={t.settings.holidayNamePlaceholder}
                   className="w-full rounded-xl border border-border bg-card px-3 py-2 text-xs shadow-xs focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 aria-[invalid]:border-rose-500 aria-[invalid]:ring-1 aria-[invalid]:ring-rose-500/30"
                 />
                 <FieldError {...errorProps("name")} />
               </label>
               <label className="flex flex-col gap-1.5">
-                <span className="text-[11px] font-semibold text-foreground">Date</span>
+                <span className="text-[11px] font-semibold text-foreground">
+                  {t.settings.holidayDateLabel}
+                </span>
                 <input
                   type="date"
                   {...fieldProps("holidayDate")}
@@ -384,10 +399,10 @@ export function MyHolidaysPanel({
               <div className="min-w-0">
                 <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                   <Palmtree className="size-3.5 text-purple-500" />
-                  Optional Holiday (મરજિયાત રજા)
+                  {t.settings.optionalHolidayCheckboxLabel}
                 </p>
                 <p className="text-[11px] text-muted-foreground">
-                  Mark as optional holiday. Employees can take any 2 per year; does not inflate general Holiday Leave entitlement.
+                  {t.settings.optionalHolidayCheckboxDesc}
                 </p>
               </div>
             </label>
@@ -395,10 +410,10 @@ export function MyHolidaysPanel({
             <div className="flex justify-end">
               <SubmitButton
                 icon={editing ? Pencil : Plus}
-                loadingText={editing ? "Saving…" : "Adding…"}
+                loadingText={editing ? t.settings.savingHoliday : t.settings.addingHoliday}
                 disabled={isPending}
               >
-                {editing ? "Save changes" : "Add holiday"}
+                {editing ? t.settings.saveHolidayChanges : t.settings.addHolidaySubmit}
               </SubmitButton>
             </div>
           </form>
@@ -409,13 +424,13 @@ export function MyHolidaysPanel({
         isOpen={Boolean(deleting)}
         onClose={() => setDeleting(null)}
         onConfirm={handleDelete}
-        title="Remove holiday"
+        title={t.settings.removeHolidayTitle}
         description={
           deleting?.is_optional
-            ? `Remove “${deleting?.name ?? ""}”? This removes it from the declared optional holidays list.`
-            : `Remove “${deleting?.name ?? ""}”? This also removes a day from your Holiday Leave entitlement.`
+            ? t.settings.removeOptionalDesc.replace("{name}", deleting?.name ?? "")
+            : t.settings.removePublicDesc.replace("{name}", deleting?.name ?? "")
         }
-        confirmLabel="Remove"
+        confirmLabel={t.settings.removeHolidayConfirm}
         isPending={isPending}
       />
     </div>
@@ -446,6 +461,7 @@ function Section({
   onToggle: () => void;
   children: React.ReactNode;
 }) {
+  const { isGujarati } = useLanguage();
   return (
     <div className="bg-card">
       <button
@@ -460,7 +476,7 @@ function Section({
             <p className="text-xs font-bold text-foreground">
               {title}
               <span className="ml-1.5 font-semibold text-muted-foreground">
-                ({count})
+                ({isGujarati ? toGujaratiNumerals(count) : count})
               </span>
             </p>
             <p className="truncate text-[11px] text-muted-foreground">{hint}</p>

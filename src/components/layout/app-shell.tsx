@@ -6,7 +6,6 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useBodyScrollLock } from "@/lib/hooks/useBodyScrollLock";
 import { useModalBackClose } from "@/lib/hooks/useModalBackClose";
 import { useEffect, useRef, useState } from "react";
-import { logout } from "@/actions/auth";
 import { QueryScrollPreserver } from "@/components/ui/query-scroll-preserver";
 import {
   LayoutDashboard,
@@ -30,7 +29,10 @@ import {
   X,
   User as UserIcon,
 } from "lucide-react";
-import { PendingButton } from "@/components/ui/pending-button";
+import { LanguageToggle } from "./language-toggle";
+import { LogoutModal } from "./logout-modal";
+import { RouteLanguageSkeleton } from "./route-language-skeleton";
+import { useLanguage } from "@/lib/i18n/language-context";
 
 export type NavItem = { href: string; label: string; icon?: string };
 export type NavSection = { title?: string; items: NavItem[] };
@@ -68,11 +70,62 @@ export function AppShell({
   userAvatar?: string | null;
   children: React.ReactNode;
 }) {
+  const { dictionary, isChangingLanguage } = useLanguage();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [open, setOpen] = useState(false);
+  const [isLogoutOpen, setIsLogoutOpen] = useState(false);
   const drawerRef = useRef<HTMLDivElement | null>(null);
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  const getTranslatedLabel = (href: string, fallback: string) => {
+    switch (href) {
+      case "/dashboard":
+        return dictionary.nav.dashboard;
+      case "/duty":
+        return userRole === "SUPER_ADMIN" ? dictionary.nav.dutyRoster : dictionary.nav.dutyLog;
+      case "/leave":
+        return userRole === "SUPER_ADMIN" ? dictionary.nav.leaveRecords : dictionary.nav.leaveLog;
+      case "/leave/balance":
+        return dictionary.nav.leaveBalance;
+      case "/calendar":
+        return dictionary.nav.calendar;
+      case "/holidays":
+        return userRole === "SUPER_ADMIN" ? dictionary.nav.officialHolidays : dictionary.nav.holidays;
+      case "/storage":
+        return userRole === "SUPER_ADMIN" ? dictionary.nav.documentVault : dictionary.nav.files;
+      case "/reports":
+        return userRole === "SUPER_ADMIN" ? dictionary.nav.reportsAnalytics : dictionary.nav.reports;
+      case "/profile":
+        return dictionary.nav.profile;
+      case "/settings":
+        return userRole === "SUPER_ADMIN" ? dictionary.nav.systemSettings : dictionary.nav.settings;
+      case "/admin/dashboard":
+        return dictionary.nav.adminOverview;
+      case "/admin/users":
+        return dictionary.nav.officerDirectory;
+      case "/admin/permissions":
+        return dictionary.nav.storagePermissions;
+      case "/admin/profiles":
+        return dictionary.nav.officerProfile;
+      case "/admin/departments":
+        return dictionary.nav.departments;
+      case "/admin/duty-types":
+        return dictionary.nav.dutyTypes;
+      case "/admin/leave-types":
+        return dictionary.nav.leaveTypes;
+      default:
+        return fallback;
+    }
+  };
+
+  const getTranslatedSectionTitle = (title?: string) => {
+    if (!title) return undefined;
+    if (title === "Main Menu") return dictionary.nav.mainMenu;
+    if (title === "Operations & Oversight") return dictionary.nav.operationsOversight;
+    if (title === "System Administration") return dictionary.nav.systemAdmin;
+    return title;
+  };
 
   // The drawer is a modal surface, so the page behind it must not scroll.
   // Without this a drag anywhere over the drawer or its backdrop scrolled the
@@ -173,10 +226,10 @@ export function AppShell({
             </div>
             <div className="flex flex-col">
               <span className="text-sm font-bold tracking-tight text-white group-hover:text-amber-300 transition-colors">
-                My Duty
+                {dictionary.common.appName}
               </span>
               <span className="text-[10px] font-semibold text-amber-400/85 tracking-wide">
-                Gujarat Police
+                {dictionary.common.subTitle}
               </span>
             </div>
           </Link>
@@ -197,7 +250,7 @@ export function AppShell({
             <div key={section.title ?? i} className="flex flex-col gap-1.5">
               {section.title && (
                 <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                  {section.title}
+                  {getTranslatedSectionTitle(section.title)}
                 </p>
               )}
               {section.items.map((item) => {
@@ -219,7 +272,7 @@ export function AppShell({
                       className={`size-4.5 shrink-0 ${active ? "text-white" : "text-slate-400"
                         }`}
                     />
-                    <span className="truncate">{item.label}</span>
+                    <span className="truncate">{getTranslatedLabel(item.href, item.label)}</span>
                   </Link>
                 );
               })}
@@ -228,49 +281,52 @@ export function AppShell({
         </nav>
       </div>
 
-      {/* User Footer Profile, PWA Install & Logout */}
+      {/* User Footer Profile & Language Toggle */}
       <div className="shrink-0 pt-3 mt-3 border-t border-slate-800 flex flex-col gap-2.5">
-        {/* <PwaInstallButton variant="sidebar" /> */}
-        <Link
-          href="/profile"
-          onClick={() => setOpen(false)}
-          className="group flex items-center gap-3 px-2.5 py-2 rounded-xl bg-slate-800/50 hover:bg-slate-800 transition-all border border-transparent hover:border-slate-700/60"
-        >
-          {userAvatar ? (
-            <div className="relative size-8 shrink-0 rounded-lg overflow-hidden border border-indigo-500/40 bg-slate-900 group-hover:scale-105 transition-transform">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={userAvatar}
-                alt={userName}
-                className="size-full object-cover"
-              />
-            </div>
-          ) : (
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-indigo-500/20 text-indigo-300 font-bold text-xs border border-indigo-500/30 group-hover:scale-105 transition-transform">
-              {getInitials(userName)}
-            </div>
-          )}
-          <div className="flex flex-col min-w-0 flex-1">
-            <span className="truncate text-xs font-semibold text-slate-200 group-hover:text-white transition-colors">
-              {userName}
-            </span>
-            {userRole && (
-              <span className="text-[10px] uppercase font-semibold tracking-wider text-indigo-400 truncate">
-                {userRole.replace("_", " ")}
-              </span>
-            )}
-          </div>
-        </Link>
+        <LanguageToggle variant="sidebar" />
 
-        <form action={logout}>
-          <PendingButton
-            pendingLabel="Logging out…"
-            className="w-full flex items-center justify-center gap-2 rounded-xl border border-slate-800 px-3 py-2 text-xs font-medium text-slate-400 hover:bg-rose-500/10 hover:text-rose-400 hover:border-rose-500/20 transition-all duration-200 cursor-pointer whitespace-nowrap flex-nowrap"
+        <div className="flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl bg-slate-800/50 hover:bg-slate-800/70 transition-all border border-slate-700/40">
+          <Link
+            href="/profile"
+            onClick={() => setOpen(false)}
+            className="group flex items-center gap-2.5 min-w-0 flex-1"
           >
-            <LogOut className="size-4 shrink-0" />
-            <span>Log out</span>
-          </PendingButton>
-        </form>
+            {userAvatar ? (
+              <div className="relative size-8 shrink-0 rounded-lg overflow-hidden border border-indigo-500/40 bg-slate-900 group-hover:scale-105 transition-transform">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={userAvatar}
+                  alt={userName}
+                  className="size-full object-cover"
+                />
+              </div>
+            ) : (
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-indigo-500/20 text-indigo-300 font-bold text-xs border border-indigo-500/30 group-hover:scale-105 transition-transform">
+                {getInitials(userName)}
+              </div>
+            )}
+            <div className="flex flex-col min-w-0 flex-1">
+              <span className="truncate text-xs font-semibold text-slate-200 group-hover:text-white transition-colors">
+                {userName}
+              </span>
+              {userRole && (
+                <span className="text-[10px] uppercase font-semibold tracking-wider text-indigo-400 truncate">
+                  {userRole.replace("_", " ")}
+                </span>
+              )}
+            </div>
+          </Link>
+
+          <button
+            type="button"
+            onClick={() => setIsLogoutOpen(true)}
+            title={dictionary.nav.logout}
+            aria-label={dictionary.nav.logout}
+            className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-slate-700/60 bg-slate-900/60 text-slate-400 hover:border-rose-500/40 hover:bg-rose-500/15 hover:text-rose-400 transition-colors shadow-2xs cursor-pointer"
+          >
+            <LogOut className="size-3.5" />
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -278,20 +334,30 @@ export function AppShell({
   return (
     <div className="flex min-h-screen bg-background">
       <QueryScrollPreserver />
+
+      {/* Visual top indicator for instant language revalidation feedback */}
+      {isChangingLanguage && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed top-0 left-0 right-0 z-60 h-1 bg-gradient-to-r from-amber-500 via-indigo-500 to-amber-400 animate-pulse shadow-sm shadow-indigo-500/50"
+        />
+      )}
+
       {/* Mobile top bar — safe-area padding accounts for notch / status bar */}
-      <header className="mobile-header-safe fixed top-0 inset-x-0 z-40 flex items-center justify-between border-b border-border/80 bg-card/90 backdrop-blur-md px-4 md:hidden print:hidden">
-        <div className="flex items-center gap-3">
+      <header className="mobile-header-safe fixed top-0 inset-x-0 z-40 flex items-center justify-between border-b border-border/80 bg-card/90 backdrop-blur-md px-3 sm:px-4 md:hidden print:hidden gap-2">
+        <div className="flex items-center gap-2.5 min-w-0">
           <button
             ref={menuButtonRef}
             type="button"
             onClick={() => setOpen(true)}
             aria-label="Open menu"
             aria-expanded={open}
-            className="flex size-9 items-center justify-center rounded-xl border border-border bg-card text-foreground hover:bg-muted shadow-xs transition-colors"
+            className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-border bg-card text-foreground hover:bg-muted shadow-xs transition-colors"
           >
             <Menu className="size-5" />
           </button>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 truncate">
             <div className="relative flex size-7 shrink-0 items-center justify-center rounded-lg border border-amber-400/40 bg-slate-950 p-0.5 shadow-xs">
               <Image
                 src="/Gujarat-police.png"
@@ -301,31 +367,34 @@ export function AppShell({
                 className="size-full object-contain"
               />
             </div>
-            <span className="text-sm font-bold text-foreground">
-              My Duty
+            <span className="text-sm font-bold text-foreground truncate">
+              {dictionary.common.appName}
             </span>
           </div>
         </div>
-        <Link
-          href="/profile"
-          className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
-        >
-          {userAvatar ? (
-            <div className="relative size-7 shrink-0 rounded-full overflow-hidden border border-indigo-500/40 bg-slate-900">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={userAvatar}
-                alt={userName}
-                className="size-full object-cover"
-              />
-            </div>
-          ) : (
-            <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-indigo-500/20 text-indigo-400 font-bold text-[10px] border border-indigo-500/30">
-              {getInitials(userName)}
-            </div>
-          )}
-          <span className="truncate max-w-[100px] font-medium text-foreground">{userName}</span>
-        </Link>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <LanguageToggle variant="header" />
+          <Link
+            href="/profile"
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {userAvatar ? (
+              <div className="relative size-7 shrink-0 rounded-full overflow-hidden border border-indigo-500/40 bg-slate-900">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={userAvatar}
+                  alt={userName}
+                  className="size-full object-cover"
+                />
+              </div>
+            ) : (
+              <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-indigo-500/20 text-indigo-400 font-bold text-[10px] border border-indigo-500/30">
+                {getInitials(userName)}
+              </div>
+            )}
+          </Link>
+        </div>
       </header>
 
       {/* Desktop sidebar */}
@@ -362,8 +431,19 @@ export function AppShell({
 
       {/* Main content body with responsive padding and mobile safe-area */}
       <div className="mobile-main-safe flex-1 min-w-0 flex flex-col pt-16 md:pt-0 overflow-x-hidden print:pt-0 print:overflow-visible">
-        {children}
+        {isChangingLanguage ? (
+          <div className="animate-in fade-in-50 duration-150">
+            <RouteLanguageSkeleton pathname={pathname} />
+          </div>
+        ) : (
+          children
+        )}
       </div>
+
+      <LogoutModal
+        isOpen={isLogoutOpen}
+        onClose={() => setIsLogoutOpen(false)}
+      />
     </div>
   );
 }

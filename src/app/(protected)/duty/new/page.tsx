@@ -11,6 +11,7 @@ import { ArrowLeft, Briefcase, Compass, Shield } from "lucide-react";
 import { getUserSettings } from "@/lib/settings/getUserSettings";
 import { isoToLocalInput, toDateKey } from "@/lib/format/datetime";
 import type { HolidayRecord } from "@/lib/holidays/resolveHoliday";
+import { getServerTranslations } from "@/lib/i18n/server";
 
 /**
  * The officer's usual shift, so logging a duty is normally just picking the
@@ -59,7 +60,7 @@ export default async function NewDutyPage({
   const from = new Date(windowStart.getFullYear(), windowStart.getMonth() - 2, 1);
   const to = new Date(windowStart.getFullYear(), windowStart.getMonth() + 4, 0);
 
-  const [{ data: dutyTypes }, canAccessStorage, { data: holidays }] = await Promise.all([
+  const [{ data: dutyTypes }, canAccessStorage, { data: holidays }, translations] = await Promise.all([
     supabase
       .from("duty_types")
       .select("id, name")
@@ -71,7 +72,10 @@ export default async function NewDutyPage({
       .select("name, holiday_date, scope, is_government, is_optional")
       .gte("holiday_date", toDateKey(from))
       .lte("holiday_date", toDateKey(to)),
+    getServerTranslations(),
   ]);
+
+  const isGu = translations.lang === "gu";
 
   return (
     <main className="w-full px-4 sm:px-6 lg:px-8 py-6 max-w-7xl 2xl:max-w-full mx-auto space-y-6">
@@ -81,16 +85,20 @@ export default async function NewDutyPage({
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="size-3.5" />
-          <span>Back to Duty Log</span>
+          <span>{isGu ? "ડ્યુટી યાદી પર પાછા" : "Back to Duty Log"}</span>
         </Link>
       </div>
 
       <PageHeader
-        title="Log Duty Shift"
-        subtitle="Record your operational shift timings, station assignments, and travel allowance claims."
+        title={isGu ? "ડ્યુટી શિફ્ટ નોંધણી" : "Log Duty Shift"}
+        subtitle={
+          isGu
+            ? "તમારી ઓપરેશનલ શિફ્ટ સમય, સ્ટેશન સોંપણીઓ અને મુસાફરી ભથ્થાના દાવા નોંધો."
+            : "Record your operational shift timings, station assignments, and travel allowance claims."
+        }
         badge={
           <Badge variant="purple" dot>
-            New Shift
+            {isGu ? "નવી શિફ્ટ" : "New Shift"}
           </Badge>
         }
       />
@@ -114,24 +122,40 @@ export default async function NewDutyPage({
         <div className="space-y-6">
           <Card className="p-5 space-y-4">
             <CardHeader
-              title="Shift & Roster Guidance"
-              description="Best practices for shift handover and logs"
+              title={isGu ? "શિફ્ટ અને રોસ્ટર માર્ગદર્શન" : "Shift & Roster Guidance"}
+              description={
+                isGu
+                  ? "શિફ્ટ હેન્ડઓવર અને નોંધણી માટે શ્રેષ્ઠ પદ્ધતિઓ"
+                  : "Best practices for shift handover and logs"
+              }
             />
 
             <div className="space-y-3 text-xs text-muted-foreground">
               <div className="flex items-start gap-2.5 p-3 rounded-xl bg-muted/40 border border-border/60">
                 <Briefcase className="size-4 text-indigo-500 shrink-0 mt-0.5" />
                 <div>
-                  <span className="font-semibold text-foreground block">Exact Shift Timings</span>
-                  <span>Ensure your shift start and end times reflect physical muster or patrol periods.</span>
+                  <span className="font-semibold text-foreground block">
+                    {isGu ? "ચોક્કસ શિફ્ટ સમય" : "Exact Shift Timings"}
+                  </span>
+                  <span>
+                    {isGu
+                      ? "ખાતરી કરો કે તમારી શિફ્ટ શરૂઆત અને અંતનો સમય વાસ્તવિક હાજરી અથવા પેટ્રોલિંગ અવધિ દર્શાવે છે."
+                      : "Ensure your shift start and end times reflect physical muster or patrol periods."}
+                  </span>
                 </div>
               </div>
 
               <div className="flex items-start gap-2.5 p-3 rounded-xl bg-muted/40 border border-border/60">
                 <Compass className="size-4 text-sky-500 shrink-0 mt-0.5" />
                 <div>
-                  <span className="font-semibold text-foreground block">Travelling Allowance (TA)</span>
-                  <span>If travel was required outside base station, enter accurate kilometer distance and reimbursement claims.</span>
+                  <span className="font-semibold text-foreground block">
+                    {isGu ? "મુસાફરી ભથ્થું (TA)" : "Travelling Allowance (TA)"}
+                  </span>
+                  <span>
+                    {isGu
+                      ? "જો મૂળ સ્ટેશન બહાર મુસાફરી જરૂરી હતી, તો ચોક્કસ કિલોમીટર અંતર અને વળતર દાવા દાખલ કરો."
+                      : "If travel was required outside base station, enter accurate kilometer distance and reimbursement claims."}
+                  </span>
                 </div>
               </div>
             </div>
@@ -140,10 +164,12 @@ export default async function NewDutyPage({
           <Card className="p-5 bg-gradient-to-br from-indigo-900/10 via-slate-900/5 to-slate-900/10 border-indigo-500/20 space-y-3">
             <div className="flex items-center gap-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
               <Shield className="size-4" />
-              <span>Official Record</span>
+              <span>{isGu ? "સત્તાવાર રેકોર્ડ" : "Official Record"}</span>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Logged duty records are verified by department supervisors and permanently archived in system logs.
+              {isGu
+                ? "નોંધાયેલા ડ્યુટી રેકોર્ડ્સ વિભાગીય સુપરવાઇઝર દ્વારા ચકાસવામાં આવે છે અને સિસ્ટમમાં કાયમી સંગ્રહિત થાય છે."
+                : "Logged duty records are verified by department supervisors and permanently archived in system logs."}
             </p>
           </Card>
         </div>

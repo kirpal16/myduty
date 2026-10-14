@@ -3,25 +3,12 @@
 import { useEffect, useState } from "react";
 import { Loader2, Printer } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
+import { useLanguage } from "@/lib/i18n/language-context";
 import {
   printFileName,
   type PrintOfficer,
   type PrintReport,
 } from "@/lib/reports/printReport";
-
-/**
- * Print the current TA / Holiday Worked report.
- *
- * Everywhere that can, this is `window.print()` on THIS page — the print
- * view is already in the page (hidden on screen), so nothing navigates, no
- * new tab or window opens, and an installed app never hands off to an
- * external browser.
- *
- * An app added to an iPhone home screen cannot open the print dialog at all,
- * so there the same report is built as a PDF and given to the iOS Share
- * sheet, where "Print" and "Save to Files" live. Every failure becomes a
- * toast; nothing here can take the app down.
- */
 import { ReportEditModal } from "./report-edit-modal";
 
 export function PrintReportButton({
@@ -33,6 +20,7 @@ export function PrintReportButton({
   officer: PrintOfficer | null;
   className?: string;
 }) {
+  const { t } = useLanguage();
   const { toast } = useToast();
   const [busy, setBusy] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -75,15 +63,14 @@ export function PrintReportButton({
         onClick={handleOpenEditModal}
         disabled={busy}
         className={`flex items-center gap-2 whitespace-nowrap rounded-xl border border-border bg-card px-3.5 py-2.5 text-xs sm:text-sm font-semibold text-foreground shadow-2xs transition-all hover:bg-muted active:scale-[0.98] disabled:opacity-60 cursor-pointer ${className}`}
-        title="પ્રિન્ટ અને એડિટ કરો (Review & Print official letterhead)"
+        title={t.reports.printReportTooltip}
       >
         {busy ? (
           <Loader2 className="size-4 shrink-0 animate-spin" />
         ) : (
           <Printer className="size-4 shrink-0 text-indigo-500" />
         )}
-        <span className="sm:hidden">પ્રિન્ટ / એડિટ</span>
-        <span className="hidden sm:inline">પ્રિન્ટ / એડિટ (Print)</span>
+        <span>{t.reports.printEdit}</span>
       </button>
 
       <ReportEditModal

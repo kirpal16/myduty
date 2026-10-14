@@ -4,6 +4,8 @@ import "./globals.css";
 import { PwaRegister } from "@/components/pwa/pwa-register";
 import { OfflineScreen } from "@/components/ui/offline-screen";
 import { ToastProvider } from "@/components/ui/toast";
+import { LanguageProvider } from "@/lib/i18n/language-context";
+import { getServerLanguage } from "@/lib/i18n/server";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -65,10 +67,12 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const initialLanguage = await getServerLanguage();
+
   return (
     <html
-      lang="en"
+      lang={initialLanguage}
       suppressHydrationWarning
       /* globals.css applies `scroll-smooth` to <html>. Next 16 warns unless it
          is told the smoothness is deliberate, so it knows to suppress it during
@@ -97,11 +101,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         />
       </head>
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
-        <PwaRegister />
-        <OfflineScreen />
-        {/* Wraps everything so any client component can call useToast(). The
-            toasts themselves render through a portal, so this adds no layout. */}
-        <ToastProvider>{children}</ToastProvider>
+        <LanguageProvider initialLanguage={initialLanguage}>
+          <PwaRegister />
+          <OfflineScreen />
+          {/* Wraps everything so any client component can call useToast(). The
+              toasts themselves render through a portal, so this adds no layout. */}
+          <ToastProvider>{children}</ToastProvider>
+        </LanguageProvider>
       </body>
     </html>
   );

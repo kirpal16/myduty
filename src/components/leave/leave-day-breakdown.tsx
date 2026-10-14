@@ -6,6 +6,9 @@ import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import { ColorDot } from "@/components/ui/color-dot";
 import { formatSafeDateShort } from "@/lib/format/safeDate";
 import { formatDays } from "@/lib/leave/leaveDays";
+import { useLanguage } from "@/lib/i18n/language-context";
+import { toGujaratiNumerals } from "@/lib/reports/gujaratiReportUtils";
+import { getPureGujaratiLeaveTypeName } from "@/lib/leave/leaveTranslation";
 import type { AllocationPreview } from "@/actions/leave";
 
 type LeaveTypeOption = {
@@ -14,6 +17,22 @@ type LeaveTypeOption = {
   code?: string | null;
   color?: string | null;
 };
+
+function formatDayLabel(label: string, isGujarati: boolean, workingDayText: string): string {
+  if (!label) return "";
+  if (!isGujarati) return label;
+  const trimmed = label.trim();
+  if (trimmed.toLowerCase() === "working day") return workingDayText;
+  if (trimmed.toLowerCase() === "sunday") return "રવિવાર";
+  if (trimmed.toLowerCase() === "saturday") return "શનિવાર";
+  if (trimmed.toLowerCase().startsWith("optional holiday:")) {
+    return trimmed.replace(/^optional holiday:\s*/i, "મરજિયાત રજા: ");
+  }
+  if (trimmed.toLowerCase() === "optional holiday") {
+    return "મરજિયાત રજા";
+  }
+  return trimmed;
+}
 
 /**
  * The day-by-day split of one leave, as cards the officer can change.
@@ -50,6 +69,25 @@ export function LeaveDayBreakdown({
   loading?: boolean;
 }) {
   const [editingDate, setEditingDate] = useState<string | null>(null);
+  const { dictionary, isGujarati } = useLanguage();
+  const t = dictionary?.leave;
+
+  const dayByDaySplit = t?.dayByDaySplit || (isGujarati ? "દિવસ મુજબ વિભાજન" : "Day-by-day split");
+  const yourChoice = t?.yourChoice || (isGujarati ? "તમારી પસંદગી" : "Your choice");
+  const suggested = t?.suggested || (isGujarati ? "સૂચવેલ" : "Suggested");
+  const workingDay = t?.workingDay || (isGujarati ? "કામકાજનો દિવસ" : "Working day");
+  const resetSuggestion = t?.resetSuggestion || (isGujarati ? "રીસેટ" : "Reset");
+  const backToSuggestion = t?.backToSuggestion || (isGujarati ? "મૂળ સૂચન પર પાછા જાઓ" : "Back to the suggestion");
+  const changeText = t?.change || (isGujarati ? "બદલો" : "Change");
+  const doneText = t?.done || (isGujarati ? "પૂર્ણ" : "Done");
+  const toFix = t?.toFix || (isGujarati ? "સુધારવા જરૂરી" : "to fix");
+  const dayChangedByYou = t?.dayChangedByYou || (isGujarati ? "દિવસ તમે બદલેલ છે." : "day changed by you.");
+  const daysChangedByYou = t?.daysChangedByYou || (isGujarati ? "દિવસો તમે બદલેલ છે." : "days changed by you.");
+  const dayBreakdownHelp =
+    t?.dayBreakdownHelp ||
+    (isGujarati
+      ? "રજા કેલેન્ડરમાંથી સૂચવેલ — જાહેર રજાઓ 'લાભ રજા (HL)' તરીકે, ૨-દિવસના ક્વોટા સુધી જાહેર કરેલ મરજિયાત રજાઓ 'OH' તરીકે, અને બાકીના દિવસો તમે પસંદ કરેલ રજા મુજબ. કોઈપણ દિવસ પર બદલો ટેપ કરો; તમારી પસંદગી આખરી રહેશે."
+      : "Suggested from the holiday calendar — holidays as Holiday Leave (HL), declared optional holidays as OH while your 2-day quota lasts, the rest as the leave you picked. Tap Change on any day; your choice is final.");
 
   const typeById = new Map(leaveTypes.map((t) => [t.id, t]));
   const typeFor = (id: string, fallbackCode: string): LeaveTypeOption =>
@@ -77,7 +115,9 @@ export function LeaveDayBreakdown({
 
   const summary =
     preview.issues.length > 0 ? (
-      <span className="text-rose-600 dark:text-rose-400">{preview.issues.length} to fix</span>
+      <span className="text-rose-600 dark:text-rose-400">
+        {isGujarati ? toGujaratiNumerals(preview.issues.length) : preview.issues.length} {toFix}
+      </span>
     ) : (
       <span className="flex flex-wrap items-center gap-1">
         {loading && <Loader2 className="size-3 animate-spin text-emerald-600" />}
@@ -87,7 +127,12 @@ export function LeaveDayBreakdown({
             className="inline-flex items-center gap-1 rounded-md border border-border/70 bg-card px-1.5 py-0.5 normal-case text-foreground"
           >
             <ColorDot color={colorByCode.get(b.code)} label={b.code} />
-            {Number.isInteger(b.days) ? b.days : b.days.toFixed(1)} {b.code}
+            {isGujarati
+              ? toGujaratiNumerals(Number.isInteger(b.days) ? b.days : b.days.toFixed(1))
+              : Number.isInteger(b.days)
+                ? b.days
+                : b.days.toFixed(1)}{" "}
+            {b.code}
           </span>
         ))}
       </span>
@@ -101,7 +146,7 @@ export function LeaveDayBreakdown({
       aria-busy={loading}
     >
       <CollapsibleSection
-        title={`Day-by-day split · ${formatDays(preview.totalDays)}`}
+        title={`${dayByDaySplit} · ${formatDays(preview.totalDays, isGujarati)}`}
         icon={CalendarDays}
         summary={summary}
         open={open}
@@ -111,13 +156,12 @@ export function LeaveDayBreakdown({
           <p className="flex items-start gap-1.5 text-[11px] leading-relaxed text-muted-foreground">
             <Sparkles className="mt-0.5 size-3.5 shrink-0 text-emerald-500" />
             <span>
-              Suggested from the holiday calendar — holidays as Holiday Leave (HL),
-              declared optional holidays as OH while your 2-day quota lasts, the rest as
-              the leave you picked. Tap <strong>Change</strong> on any day; your choice is final.
+              {dayBreakdownHelp}
               {changedCount > 0 && (
                 <strong className="text-foreground">
                   {" "}
-                  {changedCount} {changedCount === 1 ? "day" : "days"} changed by you.
+                  {isGujarati ? toGujaratiNumerals(changedCount) : changedCount}{" "}
+                  {changedCount === 1 ? dayChangedByYou : daysChangedByYou}
                 </strong>
               )}
             </span>
@@ -154,19 +198,19 @@ export function LeaveDayBreakdown({
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <span className="block text-xs font-bold text-foreground">
-                        {formatSafeDateShort(new Date(`${d.date}T12:00:00`))}
+                        {formatSafeDateShort(new Date(`${d.date}T12:00:00`), isGujarati)}
                       </span>
                       <span className="block truncate text-[11px] text-muted-foreground">
-                        {d.dayLabel}
+                        {formatDayLabel(d.dayLabel, isGujarati, workingDay)}
                       </span>
                     </div>
                     {changed ? (
                       <span className="shrink-0 rounded-md bg-indigo-500/15 px-1.5 py-0.5 text-[10px] font-bold text-indigo-700 dark:text-indigo-300">
-                        Your choice
+                        {yourChoice}
                       </span>
                     ) : (
                       <span className="shrink-0 rounded-md bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
-                        Suggested
+                        {suggested}
                       </span>
                     )}
                   </div>
@@ -182,7 +226,9 @@ export function LeaveDayBreakdown({
                       }
                     >
                       <ColorDot color={chosen.color} label={chosen.name} />
-                      <span className="truncate">{chosen.name}</span>
+                      <span className="truncate">
+                        {isGujarati ? getPureGujaratiLeaveTypeName(chosen.name) : chosen.name}
+                      </span>
                       {chosen.code && chosen.code !== chosen.name && (
                         <span className="text-[10px] font-medium text-muted-foreground">({chosen.code})</span>
                       )}
@@ -193,10 +239,10 @@ export function LeaveDayBreakdown({
                           type="button"
                           onClick={() => onChange(d.date, null)}
                           className="inline-flex cursor-pointer items-center gap-1 rounded-lg px-1.5 py-1 text-[11px] font-semibold text-muted-foreground hover:bg-muted hover:text-foreground"
-                          title="Back to the suggestion"
+                          title={backToSuggestion}
                         >
                           <RotateCcw className="size-3" />
-                          Reset
+                          {resetSuggestion}
                         </button>
                       )}
                       <button
@@ -206,24 +252,28 @@ export function LeaveDayBreakdown({
                         className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-border bg-card px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-muted"
                       >
                         <Pencil className="size-3" />
-                        {isEditing ? "Done" : "Change"}
+                        {isEditing ? doneText : changeText}
                       </button>
                     </div>
                   </div>
 
                   {/* Every leave type, as coloured chips */}
                   {isEditing && (
-                    <div className="flex flex-wrap gap-1.5 border-t border-border/60 pt-2" role="radiogroup" aria-label={`Leave type for ${d.date}`}>
-                      {options.map((t) => {
-                        const selected = t.id === chosenId;
+                    <div
+                      className="flex flex-wrap gap-1.5 border-t border-border/60 pt-2"
+                      role="radiogroup"
+                      aria-label={`${isGujarati ? "રજાનો પ્રકાર" : "Leave type for"} ${d.date}`}
+                    >
+                      {options.map((tOpt) => {
+                        const selected = tOpt.id === chosenId;
                         return (
                           <button
-                            key={t.id}
+                            key={tOpt.id}
                             type="button"
                             role="radio"
                             aria-checked={selected}
                             onClick={() => {
-                              onChange(d.date, t.id === d.engineTypeId ? null : t.id);
+                              onChange(d.date, tOpt.id === d.engineTypeId ? null : tOpt.id);
                               setEditingDate(null);
                             }}
                             className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg border px-2 py-1 text-[11px] font-semibold transition-colors ${
@@ -232,11 +282,13 @@ export function LeaveDayBreakdown({
                                 : "border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground"
                             }`}
                           >
-                            <ColorDot color={t.color} label={t.name} />
-                            {t.code || t.name}
-                            {t.id === d.engineTypeId && (
+                            <ColorDot color={tOpt.color} label={tOpt.name} />
+                            {isGujarati
+                              ? getPureGujaratiLeaveTypeName(tOpt.name || tOpt.code || "")
+                              : tOpt.code || tOpt.name}
+                            {tOpt.id === d.engineTypeId && (
                               <span className="text-[9px] font-bold uppercase text-emerald-600 dark:text-emerald-400">
-                                suggested
+                                {suggested}
                               </span>
                             )}
                             {selected && <Check className="size-3 text-indigo-600" />}

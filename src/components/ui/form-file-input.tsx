@@ -17,6 +17,7 @@ import {
 import { FilePreviewModal } from "./file-preview-modal";
 import { ConfirmDeleteModal } from "./confirm-delete-modal";
 import { CameraCaptureModal } from "./camera-capture-modal";
+import { useLanguage } from "@/lib/i18n/language-context";
 
 export interface FormFileInputProps {
   name?: string;
@@ -50,11 +51,14 @@ function stripExtension(filename: string): string {
 
 export function FormFileInput({
   name = "file",
-  label = "Attach Document / Proof Image",
+  label,
   optional = true,
-  helperText = "Take a photo or upload travel receipts, shift notes, or medical slips (JPG, PNG, PDF, max 10MB)",
+  helperText,
   initialFile = null,
 }: FormFileInputProps) {
+  const { isGujarati, t } = useLanguage();
+  const displayLabel = label ?? t.common.attachDocumentProof;
+  const displayHelperText = helperText ?? t.common.attachDocumentHint;
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [existingFile, setExistingFile] = useState(initialFile);
@@ -338,15 +342,17 @@ export function FormFileInput({
                 className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1"
               >
                 <FileText className="size-3 text-emerald-500" />
-                <span>Description / Remarks</span>
-                <span className="text-[10px] font-normal text-muted-foreground/80">(Optional)</span>
+                <span>{t.common.descRemarks}</span>
+                <span className="text-[10px] font-normal text-muted-foreground/80">
+                  ({t.common.optional})
+                </span>
               </label>
               <textarea
                 id="doc-description-input"
                 rows={2}
                 value={documentDescription}
                 onChange={(e) => setDocumentDescription(e.target.value)}
-                placeholder="Add brief description, remarks, or reference details..."
+                placeholder={t.common.descRemarksPlaceholder}
                 className="w-full rounded-xl border border-border bg-card px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/60 shadow-2xs hover:border-emerald-500/40 focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 transition-all resize-none"
               />
             </div>
@@ -361,10 +367,10 @@ export function FormFileInput({
           </div>
 
           <h4 className="text-xs sm:text-sm font-bold text-foreground mb-1">
-            Choose how to attach proof or document
+            {t.common.chooseAttachProof}
           </h4>
           <p className="text-[11px] text-muted-foreground max-w-sm mb-3">
-            {helperText}
+            {displayHelperText}
           </p>
 
           {/* Supported Format Badges */}
@@ -379,7 +385,7 @@ export function FormFileInput({
               PDF
             </span>
             <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
-              Max 10MB
+              {t.common.max10MB}
             </span>
           </div>
 
@@ -392,7 +398,7 @@ export function FormFileInput({
               className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-600 active:scale-[0.98] text-white text-xs font-bold shadow-md shadow-indigo-600/25 transition-all cursor-pointer w-full"
             >
               <Camera className="size-4 shrink-0" />
-              <span>Take Photo (Camera)</span>
+              <span>{t.common.takePhotoCamera}</span>
             </button>
 
             {/* 2. Browse Files Button */}
@@ -402,7 +408,7 @@ export function FormFileInput({
               className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-indigo-200/90 dark:border-indigo-800 bg-card hover:bg-indigo-50/60 dark:hover:bg-indigo-950/30 hover:border-indigo-400 active:scale-[0.98] text-foreground text-xs font-semibold shadow-2xs transition-all cursor-pointer w-full"
             >
               <FolderOpen className="size-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
-              <span>Browse Files</span>
+              <span>{t.common.browseFiles}</span>
             </button>
           </div>
         </div>

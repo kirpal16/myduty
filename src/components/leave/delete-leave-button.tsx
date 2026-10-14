@@ -7,9 +7,11 @@ import { deleteLeaveLog } from "@/actions/leave";
 import { ConfirmDeleteModal } from "@/components/ui/confirm-delete-modal";
 import { useToast } from "@/components/ui/toast";
 
+import { useLanguage } from "@/lib/i18n/language-context";
+
 export function DeleteLeaveButton({
   id,
-  label = "Delete",
+  label,
   iconOnly = false,
   size = "sm",
   className = "",
@@ -21,11 +23,14 @@ export function DeleteLeaveButton({
   className?: string;
 }) {
   const router = useRouter();
+  const { dictionary } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
   // Guards a double-click on confirm; see DeleteDutyButton.
   const inFlight = useRef(false);
+
+  const displayLabel = label ?? dictionary.common.delete;
 
   const handleConfirm = () => {
     if (inFlight.current) return;
@@ -38,9 +43,6 @@ export function DeleteLeaveButton({
         router.refresh();
         toast("Leave entry deleted.");
       } catch (error) {
-        // Without this a failed delete threw straight through to the error
-        // boundary, replacing the page the officer was working on. The dialog
-        // stays open so they can retry or cancel.
         toast(
           error instanceof Error && error.message
             ? error.message
@@ -66,19 +68,19 @@ export function DeleteLeaveButton({
             ? "px-2.5 py-1 text-xs font-semibold"
             : "px-3.5 py-2 text-xs sm:text-sm font-semibold"
         } ${className}`}
-        title="Delete Leave Record"
+        title={dictionary.leave.deleteLeave}
       >
         <Trash2 className="size-3.5" />
-        {!iconOnly && <span>{label}</span>}
+        {!iconOnly && <span>{displayLabel}</span>}
       </button>
 
       <ConfirmDeleteModal
         isOpen={isOpen}
         onClose={() => setIsOpen(false)}
         onConfirm={handleConfirm}
-        title="Delete Leave Record"
-        description="Are you sure you want to delete this leave application? The allocated quota will be restored automatically."
-        confirmLabel="Delete Leave"
+        title={dictionary.leave.deleteLeave}
+        description={dictionary.leave.deleteLeaveConfirm}
+        confirmLabel={dictionary.common.delete}
         isPending={isPending}
       />
     </>

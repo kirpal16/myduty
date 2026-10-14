@@ -19,6 +19,8 @@ import {
 } from "@/components/charts/lazy-charts";
 import { getCurrentUser } from "@/lib/auth/getCurrentUser";
 import { formatDateTime, formatDateRange } from "@/lib/format/datetime";
+import { getServerLanguage, getServerTranslations } from "@/lib/i18n/server";
+import type { Language, Translations } from "@/lib/i18n/types";
 import { Card, CardHeader, StatCard } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ColorDot } from "@/components/ui/color-dot";
@@ -41,11 +43,12 @@ import {
 
 import { redirect } from "next/navigation";
 import { getYearOptions, clampYear } from "@/lib/format/year";
+import { translateDutyTypeToGujarati, toGujaratiNumerals } from "@/lib/reports/gujaratiReportUtils";
+import { getPureGujaratiLeaveTypeName } from "@/lib/leave/leaveTranslation";
 import {
   CompactCareerTimeline,
   type TimelineEventItem,
 } from "@/components/profile/compact-career-timeline";
-
 
 /**
  * How many recent records each card loads, and how many are visible before it
@@ -72,6 +75,11 @@ const MONTH_NAMES = [
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
 
+const GUJARATI_MONTH_NAMES = [
+  "જાન્યુઆરી", "ફેબ્રુઆરી", "માર્ચ", "એપ્રિલ", "મે", "જૂન",
+  "જુલાઈ", "ઓગસ્ટ", "સપ્ટેમ્બર", "ઓક્ટોબર", "નવેમ્બર", "ડિસેમ્બર",
+];
+
 /**
  * The data-dependent half of the dashboard, split out so it can stream.
  *
@@ -90,6 +98,8 @@ async function DashboardBody({
   now,
   timeFormat,
   dutyLinkParams,
+  lang,
+  t,
 }: {
   userId: string;
   periodStart: Date;
@@ -100,6 +110,8 @@ async function DashboardBody({
   now: Date;
   timeFormat: TimeFormat;
   dutyLinkParams: string;
+  lang: Language;
+  t: Translations;
 }) {
   const supabase = await createClient();
   const startOfYear = new Date(year, 0, 1);
@@ -277,14 +289,21 @@ async function DashboardBody({
 
   // ---- chart data -------------------------------------------------------
 
+  const isGu = lang === "gu";
   const dutyTypeCounts = new Map<string, number>();
   for (const d of duties) {
-    const name =
+    const rawName =
       (d.duty_types as unknown as { name: string } | null)?.name ?? "Other";
+    const name = isGu ? (rawName !== "Other" ? translateDutyTypeToGujarati(rawName) : "અન્ય ફરજ") : rawName;
     dutyTypeCounts.set(name, (dutyTypeCounts.get(name) ?? 0) + 1);
   }
   const dutyTypeData = [...dutyTypeCounts.entries()]
-    .map(([name, value]) => ({ name, value }))
+    .map(([name, value]) => ({
+      name: isGu
+        ? (name !== "Standard Duty" ? translateDutyTypeToGujarati(name) : "સામાન્ય ફરજ")
+        : name,
+      value,
+    }))
     .sort((a, b) => b.value - a.value);
 
   const leaveUsage = new Map<string, { value: number; color: string | null }>();
@@ -315,10 +334,15 @@ async function DashboardBody({
     }
   }
   const leaveUsageData = [...leaveUsage.entries()]
-    .map(([name, v]) => ({ name, value: v.value, color: v.color }))
+    .map(([name, v]) => ({
+      name: isGu ? getPureGujaratiLeaveTypeName(name) : name,
+      value: v.value,
+      color: v.color,
+    }))
     .sort((a, b) => b.value - a.value);
 
-  const monthlyTa = MONTH_NAMES.map((name) => ({ name, value: 0 }));
+  const monthNamesList = isGu ? GUJARATI_MONTH_NAMES : MONTH_NAMES;
+  const monthlyTa = monthNamesList.map((name) => ({ name, value: 0 }));
   for (const d of yearDuties ?? []) {
     const m = /^(\d{4})-(\d{2})/.exec(d.starts_at);
     const monthIdx = m ? Number(m[2]) - 1 : new Date(d.starts_at).getUTCMonth();
@@ -386,43 +410,49 @@ async function DashboardBody({
           }`}
       >
         <StatCard
-          title="Duty Logs"
-          value={dutyCount}
+          title={t.dashboard.dutyLogs}
+          value={isGu ? toGujaratiNumerals(dutyCount) : dutyCount}
           icon={Briefcase}
           color="indigo"
           trend={periodLabel}
           href={`/duty?${dutyLinkParams}`}
         />
-        {/* Holidays that OCCURRED vs holidays WORKED are different numbers,
-            and only the worked ones earn pay — so the tile leads with the
-            worked count and shows the total behind it. */}
+        {/* Holidays that OCCURRED vs holidays WORKED are different numbers */}
         <StatCard
-          title="Holidays Worked"
-          value={`${holidayDutyCount} of ${holidaysInPeriod}`}
+          title={t.dashboard.holidaysWorked}
+          value={
+            isGu
+              ? `${toGujaratiNumerals(holidayDutyCount)} / ${toGujaratiNumerals(holidaysInPeriod)}`
+              : `${holidayDutyCount} / ${holidaysInPeriod}`
+          }
           icon={Calendar}
           color="amber"
-          trend={`${formatCurrency(holidayExtraPay)} extra pay`}
+          trend={`${isGu ? toGujaratiNumerals(formatCurrency(holidayExtraPay)) : formatCurrency(holidayExtraPay)} ${t.dashboard.extraPay}`}
           href={`/duty?dayType=holiday&${dutyLinkParams}`}
         />
         <StatCard
-          title="Total Leaves"
-          value={formatDays(leaveDaysTotal)}
+          title={t.dashboard.totalLeaves}
+          value={formatDays(leaveDaysTotal, isGu)}
           icon={CalendarOff}
           color="rose"
           trend={periodLabel}
           href="/leave"
         />
         <StatCard
-          title="Travel Distance"
-          value={`${totalDistance.toLocaleString()} km`}
+          title={t.dashboard.travelDistance}
+          value={
+            isGu
+              ? `${toGujaratiNumerals(totalDistance.toLocaleString())} કિ.મી.`
+              : `${totalDistance.toLocaleString()} km`
+          }
           icon={Compass}
           color="sky"
           trend={periodLabel}
           href={`/duty?${dutyLinkParams}`}
         />
         <StatCard
-          title="TA Allowance"
-          value={formatCurrency(totalTaAmount)}
+          title={t.dashboard.taAllowance}
+          value={isGu ? toGujaratiNumerals(formatCurrency(totalTaAmount)) : formatCurrency(totalTaAmount)}
           icon={IndianRupee}
           color="emerald"
           trend={periodLabel}
@@ -431,14 +461,14 @@ async function DashboardBody({
         />
         {binpagariDays > 0 && (
           <StatCard
-            title="Binpagari (LWP)"
-            value={formatDays(binpagariDays)}
+            title={t.dashboard.binpagari}
+            value={formatDays(binpagariDays, isGu)}
             icon={IndianRupee}
             color="rose"
             trend={
               dailySalaryRate > 0
-                ? `-${formatCurrency(binpagariDeduction)} salary`
-                : "Set daily rate in Settings"
+                ? `-${isGu ? toGujaratiNumerals(formatCurrency(binpagariDeduction)) : formatCurrency(binpagariDeduction)}`
+                : (isGu ? "સેટિંગ્સ" : "Settings")
             }
             href="/leave"
           />
@@ -458,60 +488,67 @@ async function DashboardBody({
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 className="text-sm font-bold text-foreground">
-              Leave Position for {year}
+              {t.leave.leaveBalanceTitle} ({isGu ? toGujaratiNumerals(year) : year})
             </h2>
             <p className="text-[11px] text-muted-foreground">
-              Entitlement against days taken, across every leave type.
+              {t.leave.leaveBalanceSubtitle}
             </p>
           </div>
           <Link
             href="/leave/balance"
             className="text-[11px] font-semibold text-indigo-600 hover:underline dark:text-indigo-400"
           >
-            Full breakdown
+            {t.common.details}
           </Link>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="rounded-2xl border border-border/70 bg-muted/30 p-3.5">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Allocated
+              {t.leave.allocated}
             </p>
-            <p className="text-xl font-bold text-foreground">{totalAllocated}</p>
+            <p className="text-xl font-bold text-foreground">
+              {isGu ? toGujaratiNumerals(totalAllocated) : totalAllocated}
+            </p>
             <span className="mt-0.5 block text-[10px] font-medium text-muted-foreground">
-              total quota
+              {t.common.total}
             </span>
           </div>
           <div className="rounded-2xl border border-border/70 bg-muted/30 p-3.5">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Taken
+              {t.leave.used}
             </p>
-            <p className="text-xl font-bold text-foreground">{totalUsed}</p>
+            <p className="text-xl font-bold text-foreground">
+              {isGu ? toGujaratiNumerals(totalUsed) : totalUsed}
+            </p>
             <span className="mt-0.5 block text-[10px] font-medium text-rose-600 dark:text-rose-400">
-              leaves taken
+              {t.dashboard.leavesTaken}
             </span>
           </div>
           <div className="rounded-2xl border border-border/70 bg-muted/30 p-3.5">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Worked
+              {t.dashboard.holidaysWorked}
             </p>
-            <p className="text-xl font-bold text-foreground">{yearHolidayDutyCount}</p>
+            <p className="text-xl font-bold text-foreground">
+              {isGu ? toGujaratiNumerals(yearHolidayDutyCount) : yearHolidayDutyCount}
+            </p>
             <span className="mt-0.5 block text-[10px] font-medium text-amber-600 dark:text-amber-400">
-              holiday {yearHolidayDutyCount === 1 ? "duty" : "duties"}
+              {t.duty.holidayDuty}
             </span>
           </div>
           <div className="rounded-2xl border border-border/70 bg-muted/30 p-3.5">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Remaining
+              {t.leave.remaining}
             </p>
             <p
-              className={`text-xl font-bold ${totalRemaining < 0 ? "text-rose-600 dark:text-rose-400" : "text-foreground"
-                }`}
+              className={`text-xl font-bold ${
+                totalRemaining < 0 ? "text-rose-600 dark:text-rose-400" : "text-foreground"
+              }`}
             >
-              {totalRemaining}
+              {isGu ? toGujaratiNumerals(totalRemaining) : totalRemaining}
             </p>
             <span className="mt-0.5 block text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
-              available quota
+              {t.leave.totalAvailable}
             </span>
           </div>
         </div>
@@ -522,7 +559,7 @@ async function DashboardBody({
         <div className="space-y-1">
           <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5">
             <IndianRupee className="size-3.5" />
-            <span>Duty & Allowance Breakdown (ભથ્થાં અને રજાના દિવસની ગણતરી)</span>
+            <span>{t.dashboard.dutyAllowanceBreakdown}</span>
           </span>
           <p className="text-xs sm:text-sm font-semibold text-foreground">
             {/* Reads the selected period rather than hardcoding "Year-to-date".
@@ -530,34 +567,38 @@ async function DashboardBody({
                 not, so a month's numbers were presented as a year's. */}
             <span className="text-foreground">{periodLabel}</span>:{" "}
             <span className="font-bold text-emerald-600 dark:text-emerald-400">
-              {formatCurrency(totalTaAmount)}
+              {isGu ? toGujaratiNumerals(formatCurrency(totalTaAmount)) : formatCurrency(totalTaAmount)}
             </span>{" "}
-            claimed in Travelling Allowance across {totalDistance.toLocaleString()} km,
-            with{" "}
+            {t.dashboard.claimedInTaAcrossKm}{" "}
+            {isGu
+              ? `${toGujaratiNumerals(totalDistance.toLocaleString())} કિ.મી.`
+              : `${totalDistance.toLocaleString()} km`},{" "}
             <span className="font-bold text-amber-600 dark:text-amber-400">
-              {holidayDutyCount} holiday{holidayDutyCount === 1 ? "" : "s"} worked
+              {isGu ? toGujaratiNumerals(holidayDutyCount) : holidayDutyCount}{" "}
+              {holidayDutyCount === 1
+                ? t.dashboard.withHolidayWorkedFor
+                : t.dashboard.withHolidaysWorkedFor}
             </span>{" "}
-            for{" "}
             <span className="font-bold text-amber-600 dark:text-amber-400">
-              {formatCurrency(holidayExtraPay)}
+              {isGu ? toGujaratiNumerals(formatCurrency(holidayExtraPay)) : formatCurrency(holidayExtraPay)}
             </span>{" "}
-            extra pay
+            {t.dashboard.extraPay}
             {binpagariDays > 0 && (
               <>
-                , and{" "}
+                {t.dashboard.andBinpagari}{" "}
                 <span className="font-bold text-rose-600 dark:text-rose-400">
-                  {formatDays(binpagariDays)} Binpagari
+                  {formatDays(binpagariDays, isGu)} {t.dashboard.binpagari}
                 </span>{" "}
                 {dailySalaryRate > 0 ? (
                   <>
-                    cutting{" "}
+                    {t.dashboard.cuttingFromSalaryAt}{" "}
                     <span className="font-bold text-rose-600 dark:text-rose-400">
-                      {formatCurrency(binpagariDeduction)}
+                      {isGu ? toGujaratiNumerals(formatCurrency(binpagariDeduction)) : formatCurrency(binpagariDeduction)}
                     </span>{" "}
-                    from salary at {formatCurrency(dailySalaryRate)}/day
+                    ({isGu ? `${toGujaratiNumerals(formatCurrency(dailySalaryRate))}/દિવસ` : `${formatCurrency(dailySalaryRate)}/day`})
                   </>
                 ) : (
-                  <>unpaid (set a daily salary rate in Settings to price it)</>
+                  <>{t.dashboard.unpaidSetSalaryRate}</>
                 )}
               </>
             )}
@@ -570,46 +611,46 @@ async function DashboardBody({
             href="/calendar"
             className="px-3.5 py-2 rounded-xl bg-card border border-border text-xs font-bold text-foreground hover:bg-muted shadow-2xs transition-colors"
           >
-            View Calendar
+            {t.dashboard.viewCalendar}
           </Link>
           <Link
             href="/duty"
             className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white shadow-xs transition-colors"
           >
-            Duty Register
+            {t.dashboard.dutyRegister}
           </Link>
         </div>
       </div>
 
       {/* Main Grid: Recent Duties & Recent Leaves */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         {/* Recent Duties (2 columns wide on desktop) */}
         <div className="lg:col-span-2">
-          <Card className="h-full flex flex-col justify-between">
+          <Card className="flex flex-col">
             <div>
               <CardHeader
-                title="My Recent Duty Logs"
-                description="Latest shift assignments and travel records"
+                title={t.dashboard.recentDutyLogs}
+                description={t.duty.pageSubtitle}
                 action={
                   <Link
                     href="/duty"
                     className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
                   >
-                    <span>View all</span>
+                    <span>{t.dashboard.viewAll}</span>
                     <ArrowRight className="size-3.5" />
                   </Link>
                 }
               />
 
-              {/* Mobile gets stacked cards; the five-column table only appears
-                  where there is room for it. It used to be the table at every
-                  width with overflow-x-auto, which on a phone squeezed every
-                  column to a few characters and hid the rest sideways. */}
+              {/* Mobile gets stacked cards */}
               <div className={`flex flex-col gap-2 md:hidden ${RECENT_SCROLL_CARDS}`}>
                 {(recentDuties ?? []).map((d) => {
-                  const typeName =
+                  const rawTypeName =
                     (d.duty_types as unknown as { name: string } | null)?.name ??
                     "Standard Duty";
+                  const typeName = isGu
+                    ? (rawTypeName !== "Standard Duty" ? translateDutyTypeToGujarati(rawTypeName) : "સામાન્ય ફરજ")
+                    : rawTypeName;
                   return (
                     <Link
                       key={d.id}
@@ -621,12 +662,14 @@ async function DashboardBody({
                           {typeName}
                         </span>
                         {d.ta_amount ? (
-                          <Badge variant="success">{formatCurrency(d.ta_amount)}</Badge>
+                          <Badge variant="success">
+                            {isGu ? toGujaratiNumerals(formatCurrency(d.ta_amount)) : formatCurrency(d.ta_amount)}
+                          </Badge>
                         ) : null}
                       </div>
                       <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
                         <Clock className="size-3 shrink-0 text-slate-400" />
-                        <span>{formatDateTime(d.starts_at, timeFormat)}</span>
+                        <span>{formatDateTime(d.starts_at, timeFormat, isGu ? "gu" : "en-US")}</span>
                       </div>
                       {d.location && (
                         <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
@@ -639,34 +682,38 @@ async function DashboardBody({
                 })}
                 {(recentDuties ?? []).length === 0 && (
                   <p className="py-8 text-center text-xs text-muted-foreground">
-                    No duties logged yet this year.
+                    {t.dashboard.noRecentDuties}
                   </p>
                 )}
               </div>
 
-              <div className={`hidden md:block ${RECENT_SCROLL_TABLE}`}>
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left text-xs sm:text-sm">
-                  {/* sticky, so the columns stay labelled once the list
-                      scrolls past the first few rows */}
                   <thead className="sticky top-0 z-10 bg-card">
                     <tr className="border-b border-border/60 text-muted-foreground font-medium">
-                      <th className="pb-3 font-medium">Duty Type</th>
-                      <th className="pb-3 font-medium">Timing</th>
-                      <th className="pb-3 font-medium">Location</th>
+                      <th className="pb-3 font-medium">{t.duty.dutyType}</th>
+                      <th className="pb-3 font-medium">{t.common.time}</th>
+                      <th className="pb-3 font-medium">{t.duty.location}</th>
                       <th className="pb-3 font-medium">TA</th>
-                      <th className="pb-3 font-medium text-right">Details</th>
+                      <th className="pb-3 pr-4 font-medium text-right">{t.common.details}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/40">
-                    {(recentDuties ?? []).map((d) => (
-                      <tr key={d.id} className="hover:bg-muted/40 transition-colors">
-                        <td className="py-3.5 font-medium text-foreground">
-                          {(d.duty_types as unknown as { name: string } | null)?.name ?? "Standard Duty"}
-                        </td>
+                    {(recentDuties ?? []).map((d) => {
+                      const rawTypeName =
+                        (d.duty_types as unknown as { name: string } | null)?.name ?? "Standard Duty";
+                      const typeName = isGu
+                        ? (rawTypeName !== "Standard Duty" ? translateDutyTypeToGujarati(rawTypeName) : "સામાન્ય ફરજ")
+                        : rawTypeName;
+                      return (
+                        <tr key={d.id} className="hover:bg-muted/40 transition-colors">
+                          <td className="py-3.5 font-medium text-foreground">
+                            {typeName}
+                          </td>
                         <td className="py-3.5 text-muted-foreground whitespace-nowrap">
                           <div className="flex items-center gap-1.5">
                             <Clock className="size-3.5 text-slate-400" />
-                            <span>{formatDateTime(d.starts_at, timeFormat)}</span>
+                            <span>{formatDateTime(d.starts_at, timeFormat, isGu ? "gu" : "en-US")}</span>
                           </div>
                         </td>
                         <td className="py-3.5 text-muted-foreground">
@@ -682,26 +729,27 @@ async function DashboardBody({
                         <td className="py-3.5">
                           {d.ta_amount ? (
                             <Badge variant="success">
-                              {formatCurrency(d.ta_amount)}
+                              {isGu ? toGujaratiNumerals(formatCurrency(d.ta_amount)) : formatCurrency(d.ta_amount)}
                             </Badge>
                           ) : (
                             <span className="text-muted-foreground text-xs">—</span>
                           )}
                         </td>
-                        <td className="py-3.5 text-right">
+                        <td className="py-3.5 pr-4 text-right">
                           <Link
                             href={`/duty/${d.id}`}
                             className="inline-flex items-center justify-center rounded-lg border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted transition-colors shadow-2xs"
                           >
-                            View
+                            {t.common.view}
                           </Link>
                         </td>
                       </tr>
-                    ))}
+                    );
+                  })}
                     {(recentDuties ?? []).length === 0 && (
                       <tr>
                         <td colSpan={5} className="py-8 text-center text-muted-foreground">
-                          No duties logged yet this year.
+                          {t.dashboard.noRecentDuties}
                         </td>
                       </tr>
                     )}
@@ -710,17 +758,16 @@ async function DashboardBody({
               </div>
             </div>
 
-            <div className="pt-4 mt-auto border-t border-border/60 flex justify-between items-center">
+            <div className="pt-4 mt-3 border-t border-border/60 flex justify-between items-center">
               <span className="text-xs text-muted-foreground">
-                Showing most recent {(recentDuties ?? []).length} record
-                {(recentDuties ?? []).length === 1 ? "" : "s"}
+                {t.common.showing} {isGu ? toGujaratiNumerals((recentDuties ?? []).length) : (recentDuties ?? []).length} {t.common.records}
               </span>
               <Link
                 href="/duty/new"
                 className="text-xs font-semibold text-indigo-600 hover:text-indigo-500 flex items-center gap-1"
               >
                 <Plus className="size-3.5" />
-                <span>Log shift</span>
+                <span>{t.duty.addDuty}</span>
               </Link>
             </div>
           </Card>
@@ -730,14 +777,14 @@ async function DashboardBody({
         <div className="space-y-6">
           <Card>
             <CardHeader
-              title="Recent Leave Logs"
-              description="Your absence records"
+              title={t.dashboard.recentLeaveLogs}
+              description={t.leave.pageSubtitle}
               action={
                 <Link
                   href="/leave"
                   className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
                 >
-                  <span>Balance</span>
+                  <span>{t.nav.leaveBalance}</span>
                   <ArrowRight className="size-3.5" />
                 </Link>
               }
@@ -759,27 +806,33 @@ async function DashboardBody({
                       {breakdown ? (
                         <span className="flex min-w-0 items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400">
                           <Sparkles className="size-3 text-indigo-500 shrink-0" />
-                          <span className="truncate">Multi-Type ({breakdown.map((b) => `${b.days} ${b.code}`).join(", ")})</span>
+                          <span className="truncate">
+                            {t.dashboard.multiType} (
+                            {breakdown
+                              .map((b) => `${isGu ? toGujaratiNumerals(b.days) : b.days} ${b.code}`)
+                              .join(", ")}
+                            )
+                          </span>
                         </span>
                       ) : (
                         <span className="flex min-w-0 items-center gap-1.5 text-xs font-semibold text-foreground">
                           <ColorDot color={leaveType?.color} label={leaveType?.name ?? "Leave"} />
-                          <span className="truncate">{leaveType?.name ?? "Leave"}</span>
+                          <span className="truncate">{isGu ? getPureGujaratiLeaveTypeName(leaveType?.name ?? "Leave") : (leaveType?.name ?? "Leave")}</span>
                         </span>
                       )}
                       <span className="text-xs text-muted-foreground">
-                        {formatDateRange(l.start_date, l.end_date)}
-                        {l.is_half_day ? ` (${l.half_day_session} half-day)` : ""}
+                        {formatDateRange(l.start_date, l.end_date, isGu ? "gu" : "en-US")}
+                        {l.is_half_day ? ` (${l.half_day_session} ${t.dashboard.halfDaySession})` : ""}
                       </span>
                     </div>
-                    <Badge variant="purple">Logged</Badge>
+                    <Badge variant="purple">{t.dashboard.statusLogged}</Badge>
                   </div>
                 );
               })}
 
               {(recentLeaves ?? []).length === 0 && (
                 <div className="py-6 text-center text-xs text-muted-foreground">
-                  No leave requests recorded recently.
+                  {t.dashboard.noRecentLeaves}
                 </div>
               )}
             </div>
@@ -787,16 +840,16 @@ async function DashboardBody({
 
           {/* Quick Hub Card */}
           <Card className="bg-gradient-to-br from-indigo-900 to-slate-900 text-white border-indigo-800/60 p-5">
-            <h4 className="text-sm font-bold text-white mb-1">Roster & Calendar</h4>
+            <h4 className="text-sm font-bold text-white mb-1">{t.nav.calendar}</h4>
             <p className="text-xs text-slate-300 mb-4">
-              Check upcoming departmental duty schedules and government holidays.
+              {t.calendar.pageSubtitle}
             </p>
             <Link
               href="/calendar"
               className="w-full flex items-center justify-center gap-2 rounded-xl bg-white text-indigo-900 py-2.5 px-4 text-xs font-semibold hover:bg-indigo-50 transition-colors shadow-sm"
             >
               <Calendar className="size-4 text-indigo-600" />
-              <span>Open Calendar View</span>
+              <span>{t.nav.calendar}</span>
             </Link>
           </Card>
         </div>
@@ -824,6 +877,8 @@ export default async function DashboardPage({
     redirect("/admin/dashboard");
   }
 
+  const { lang, t } = await getServerTranslations();
+
   // Nothing here touches the database: the shell and the filter must paint
   // before any query runs, which is the whole point of the split below.
   const params = await searchParams;
@@ -831,9 +886,9 @@ export default async function DashboardPage({
   const now = new Date();
   const userId = user?.id ?? "";
 
+  const monthNames = lang === "gu" ? GUJARATI_MONTH_NAMES : MONTH_NAMES;
+
   // The overview defaults to the current month; "all" widens it to the year.
-  // Clamped, not trusted: a hand-typed ?year=1900 must not reach the queries,
-  // and must not ask leave_balance_view for a year it does not materialise.
   const year = clampYear(params.year);
   const monthParam = params.month ?? String(now.getMonth() + 1);
   const isWholeYear = monthParam === "all";
@@ -849,14 +904,14 @@ export default async function DashboardPage({
     : new Date(year, month as number, 0, 23, 59, 59, 999);
 
   const periodLabel = isWholeYear
-    ? String(year)
-    : `${MONTH_NAMES[(month as number) - 1]} ${year}`;
+    ? (lang === "gu" ? toGujaratiNumerals(year) : String(year))
+    : `${monthNames[(month as number) - 1]} ${lang === "gu" ? toGujaratiNumerals(year) : year}`;
 
   const thisMonth = now.getMonth() + 1;
   const thisYear = now.getFullYear();
   const PERIOD_PRESETS = [
     {
-      label: "This month",
+      label: t.dashboard.thisMonth,
       query: new URLSearchParams({
         month: String(thisMonth),
         year: String(thisYear),
@@ -864,14 +919,13 @@ export default async function DashboardPage({
       active: !isWholeYear && month === thisMonth && year === thisYear,
     },
     {
-      label: "This year",
+      label: t.dashboard.thisYear,
       query: new URLSearchParams({ month: "all", year: String(thisYear) }).toString(),
       active: isWholeYear && year === thisYear,
     },
   ];
 
-  // Every KPI tile links into the duty log filtered to the same period, so
-  // the number you clicked is the list you land on.
+  // Every KPI tile links into the duty log filtered to the same period
   const dutyLinkParams = new URLSearchParams({
     from: toDateKey(periodStart),
     to: toDateKey(periodEnd),
@@ -879,26 +933,26 @@ export default async function DashboardPage({
 
   return (
     <main className="w-full px-4 sm:px-6 lg:px-8 py-6 max-w-7xl 2xl:max-w-full mx-auto space-y-8">
-      {/* Top Page Header (Responsive layout: on mobile, user badge & action buttons share one row) */}
+      {/* Top Page Header */}
       <div className="flex flex-col gap-2.5 pb-3 border-b border-border/70 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           {/* Row 1: Welcome title + Desktop Badge */}
           <div className="flex items-center gap-2.5 flex-wrap">
             <h1 className="text-xl font-bold tracking-tight text-balance text-foreground sm:text-2xl xl:text-3xl">
-              Welcome back, {user?.fullName}
+              {t.dashboard.welcomeBack}, {user?.fullName}
             </h1>
             <span className="hidden sm:inline-flex shrink-0">
               <Badge variant="purple" dot>
-                {user?.role?.replace("_", " ") ?? "Officer"}
+                {t.admin.roleOfficer}
               </Badge>
             </span>
           </div>
 
-          {/* Row 2 on Mobile: Badge on Left, Action buttons on Right in one row */}
+          {/* Row 2 on Mobile */}
           <div className="flex items-center justify-between gap-2 sm:hidden pt-0.5">
             <span className="shrink-0">
               <Badge variant="purple" dot>
-                {user?.role?.replace("_", " ") ?? "Officer"}
+                {t.admin.roleOfficer}
               </Badge>
             </span>
             <div className="flex items-center gap-2 shrink-0">
@@ -907,52 +961,49 @@ export default async function DashboardPage({
                 className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-muted shadow-xs transition-colors"
               >
                 <CalendarOff className="size-3.5 text-purple-500" />
-                <span>Log Leave</span>
+                <span>{t.dashboard.applyLeaveNow}</span>
               </Link>
               <Link
                 href="/duty/new"
                 className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-2.5 py-1.5 text-xs font-semibold text-white shadow-sm shadow-indigo-600/25 hover:bg-indigo-500 transition-colors"
               >
                 <Plus className="size-3.5" />
-                <span>Log New Duty</span>
+                <span>{t.duty.addDuty}</span>
               </Link>
             </div>
           </div>
 
           {/* Subtitle */}
           <p className="text-xs sm:text-sm text-muted-foreground">
-            Manage and monitor your duty shifts, travel claims, and leave schedule.
+            {t.dashboard.pageSubtitle}
           </p>
         </div>
 
-        {/* Desktop Actions (Hidden on mobile since rendered in row 2 above) */}
+        {/* Desktop Actions */}
         <div className="hidden sm:flex items-center gap-2.5 shrink-0">
           <Link
             href="/leave/new"
             className="flex items-center gap-2 rounded-xl border border-border bg-card px-3.5 py-2 text-xs sm:text-sm font-medium text-foreground hover:bg-muted hover:text-foreground shadow-xs transition-colors"
           >
             <CalendarOff className="size-4 text-purple-500" />
-            <span>Log Leave</span>
+            <span>{t.dashboard.applyLeaveNow}</span>
           </Link>
           <Link
             href="/duty/new"
             className="flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-xs sm:text-sm font-semibold text-white shadow-md shadow-indigo-600/25 hover:bg-indigo-500 transition-colors"
           >
             <Plus className="size-4" />
-            <span>Log New Duty</span>
+            <span>{t.duty.addDuty}</span>
           </Link>
         </div>
       </div>
 
-      {/* Period filter. The whole overview below reflects it, and every tile
-          links into the duty log filtered to the same window. */}
+      {/* Period filter */}
       <div className="flex flex-wrap items-center gap-2.5 rounded-2xl border border-border bg-card p-3 shadow-xs">
         <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-          Overview period
+          {t.dashboard.overviewPeriod}
         </span>
 
-        {/* The dropdowns can already express these, but the two periods people
-            actually want should not need two selections to reach. */}
         <div className="flex items-center gap-1.5">
           {PERIOD_PRESETS.map((preset) => (
             <Link
@@ -972,12 +1023,12 @@ export default async function DashboardPage({
         <div className="w-36">
           <FilterSelect
             paramName="month"
-            placeholder="Whole year"
+            placeholder={t.dashboard.wholeYear}
             value={monthParam}
             icon="calendar"
             options={[
-              { value: "all", label: "Whole year" },
-              ...MONTH_NAMES.map((m, i) => ({
+              { value: "all", label: t.dashboard.wholeYear },
+              ...monthNames.map((m, i) => ({
                 value: String(i + 1),
                 label: m,
               })),
@@ -987,20 +1038,21 @@ export default async function DashboardPage({
         <div className="w-28">
           <FilterSelect
             paramName="year"
-            placeholder={String(year)}
+            placeholder={lang === "gu" ? toGujaratiNumerals(year) : String(year)}
             value={String(year)}
             clearable={false}
             icon="calendar"
-            options={getYearOptions(3, 1)}
+            options={getYearOptions(3, 1).map((opt) => ({
+              value: opt.value,
+              label: lang === "gu" ? toGujaratiNumerals(opt.value) : opt.label,
+            }))}
           />
         </div>
         <span className="ml-auto text-[11px] text-muted-foreground">
-          Showing <span className="font-bold text-foreground">{periodLabel}</span>
+          {t.common.showing} <span className="font-bold text-foreground">{periodLabel}</span>
         </span>
       </div>
 
-      {/* The skeleton here is the same one the route-level loading.tsx uses,
-          so the transition from one to the other is invisible. */}
       <Suspense
         key={`${year}-${monthParam}`}
         fallback={<DashboardBodySkeleton />}
@@ -1015,6 +1067,8 @@ export default async function DashboardPage({
           now={now}
           timeFormat={timeFormat}
           dutyLinkParams={dutyLinkParams}
+          lang={lang}
+          t={t}
         />
       </Suspense>
     </main>

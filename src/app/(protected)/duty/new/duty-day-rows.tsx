@@ -21,6 +21,8 @@ import {
 } from "@/lib/holidays/resolveHoliday";
 import { formatSafeDateFull } from "@/lib/format/safeDate";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
+import { useLanguage } from "@/lib/i18n/language-context";
+import { toGujaratiNumerals } from "@/lib/reports/gujaratiReportUtils";
 
 export type DayDefaults = {
   taFromPlace?: string;
@@ -57,6 +59,7 @@ export function DutyDayRows({
   holidayDayRate: number;
   shared: DayDefaults;
 }) {
+  const { isGujarati, t } = useLanguage();
   const [openDay, setOpenDay] = useState<string | null>(slots[0]?.dateKey ?? null);
 
   /**
@@ -90,11 +93,13 @@ export function DutyDayRows({
         <CalendarDays className="size-4.5 shrink-0 text-indigo-500 mt-0.5" />
         <div className="text-[11px] text-muted-foreground">
           <p className="font-bold text-foreground text-xs">
-            This will create {slots.length} separate duty logs — one per day.
+            {t.duty.multiDayNotice.replace(
+              "{count}",
+              isGujarati ? toGujaratiNumerals(slots.length) : String(slots.length),
+            )}
           </p>
           <p className="mt-0.5">
-            Each day keeps the same shift window and can carry its own travel
-            route and amount. Edit or delete any day on its own afterwards.
+            {t.duty.multiDayNoticeSub}
           </p>
         </div>
       </div>
@@ -107,7 +112,7 @@ export function DutyDayRows({
             className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-1.5 text-[11px] font-semibold text-foreground transition-colors hover:bg-muted"
           >
             <Copy className="size-3" />
-            Copy first day&apos;s travel to all days
+            {t.duty.copyFirstDayTravel}
           </button>
         </div>
       )}
@@ -131,7 +136,7 @@ export function DutyDayRows({
               >
                 <div className="flex min-w-0 flex-wrap items-center gap-2">
                   <span className="text-xs font-bold text-foreground">
-                    {formatSafeDateFull(slot.startsAt)}
+                    {formatSafeDateFull(slot.startsAt, isGujarati)}
                   </span>
                   <span className="text-[11px] text-muted-foreground">
                     {hhmm(slot.startsAt)} – {hhmm(slot.endsAt)}
@@ -140,19 +145,18 @@ export function DutyDayRows({
                     (resolution.kind === "optional_holiday" ? (
                       // Purple, not amber: an optional holiday earns nothing.
                       <span className="inline-flex items-center gap-1 rounded-lg border border-purple-500/30 bg-purple-500/10 px-2 py-0.5 text-[10px] font-bold text-purple-700 dark:text-purple-300">
-                        {holidayKindLabel(resolution.kind)} · no extra pay
+                        {holidayKindLabel(resolution.kind, isGujarati)} · {t.common.noExtraPay}
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 rounded-lg border border-amber-500/30 bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-300">
                         <Sparkles className="size-3" />
-                        {holidayKindLabel(resolution.kind)}
+                        {holidayKindLabel(resolution.kind, isGujarati)}
                       </span>
                     ))}
                 </div>
                 <ChevronDown
-                  className={`size-4 shrink-0 text-muted-foreground transition-transform ${
-                    isOpen ? "rotate-180" : ""
-                  }`}
+                  className={`size-4 shrink-0 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""
+                    }`}
                 />
               </button>
 
@@ -164,16 +168,17 @@ export function DutyDayRows({
 
                   {resolution.kind === "optional_holiday" ? (
                     <p className="rounded-xl border border-purple-500/30 bg-purple-500/10 p-3 text-[11px] font-medium text-purple-900 dark:text-purple-200">
-                      {resolution.name ?? "Optional Holiday"} is an Optional Holiday
-                      (મરજિયાત રજા) — a regular working day, so working it earns no
-                      holiday extra pay.
+                      {t.duty.optionalHolidayRegularWorkingNotice.replace(
+                        "{name}",
+                        resolution.name ?? holidayKindLabel(resolution.kind, isGujarati),
+                      )}
                     </p>
                   ) : resolution.qualifiesForHolidayAllowance ? (
                     <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
                       <Field
                         name={`${p}.holidayAllowance`}
-                        label={`Holiday Extra Pay (₹) — ${
-                          resolution.name ?? holidayKindLabel(resolution.kind)
+                        label={`${t.duty.holidayExtraPayFieldLabel} — ${
+                          resolution.name ?? holidayKindLabel(resolution.kind, isGujarati)
                         }`}
                         icon={Sparkles}
                         type="number"
@@ -183,9 +188,8 @@ export function DutyDayRows({
                         placeholder={holidayDayRate > 0 ? String(holidayDayRate) : "0.00"}
                       />
                       <p className="mt-1.5 text-[11px] text-muted-foreground">
-                        Applied automatically because you worked this holiday.
-                        {holidayDayRate === 0 &&
-                          " Set a default rate in Settings to pre-fill this."}
+                        {t.duty.appliedAutoHolidayWorked}
+                        {holidayDayRate === 0 && ` ${t.duty.setSettingsDefaultRate}`}
                       </p>
                     </div>
                   ) : (
@@ -207,6 +211,7 @@ export function DutyDayRows({
  * while closed, so "copy first day to all" and the form post still see them.
  */
 function DayTravel({ prefix, shared }: { prefix: string; shared: DayDefaults }) {
+  const { isGujarati, t } = useLanguage();
   const hasShared = Boolean(
     shared.taFromPlace || shared.taToPlace || shared.taDistanceKm || shared.taAmount,
   );
@@ -215,9 +220,9 @@ function DayTravel({ prefix, shared }: { prefix: string; shared: DayDefaults }) 
 
   return (
     <CollapsibleSection
-      title="Travelling Allowance (TA)"
+      title={t.duty.taClaimTitle}
       icon={Compass}
-      summary={open ? undefined : "Tap to add"}
+      summary={open ? undefined : t.common.tapToAdd}
       open={open}
       onToggle={() => setOpen((o) => !o)}
       className="rounded-xl border border-sky-500/20 bg-sky-500/5 px-3"
@@ -226,17 +231,17 @@ function DayTravel({ prefix, shared }: { prefix: string; shared: DayDefaults }) 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field
             name={`${prefix}.taFromPlace`}
-            label="Departure Place"
+            label={t.duty.departurePlaceLabel}
             icon={Navigation}
             defaultValue={shared.taFromPlace}
-            placeholder="Origin base station"
+            placeholder={t.duty.departurePlaceholder}
           />
           <Field
             name={`${prefix}.taToPlace`}
-            label="Arrival Destination"
+            label={t.duty.arrivalPlaceLabel}
             icon={MapPin}
             defaultValue={shared.taToPlace}
-            placeholder="Field deployment site"
+            placeholder={t.duty.arrivalPlaceholder}
           />
         </div>
 
@@ -245,10 +250,10 @@ function DayTravel({ prefix, shared }: { prefix: string; shared: DayDefaults }) 
           <label className="text-xs font-semibold text-foreground flex items-center justify-between">
             <span className="flex items-center gap-1">
               <Car className="size-3 text-sky-500" />
-              <span>વાહનનો પ્રકાર (Vehicle Type)</span>
+              <span>{t.duty.vehicleTypeLabel}</span>
             </span>
             <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-sky-500/10 text-sky-700 dark:text-sky-300 border border-sky-500/20 font-mono">
-              {vehicleType === "govt" ? "સ.વા." : "ખ.વા."}
+              {vehicleType === "govt" ? t.duty.govtVehicleShort : t.duty.pvtVehicleShort}
             </span>
           </label>
           <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-muted/60 border border-border">
@@ -262,7 +267,7 @@ function DayTravel({ prefix, shared }: { prefix: string; shared: DayDefaults }) 
               }`}
             >
               <Car className="size-3 text-sky-500" />
-              <span>ખાનગી વાહન (ખ.વા.)</span>
+              <span>{t.duty.privateVehicle}</span>
             </button>
             <button
               type="button"
@@ -274,7 +279,7 @@ function DayTravel({ prefix, shared }: { prefix: string; shared: DayDefaults }) 
               }`}
             >
               <ShieldCheck className="size-3 text-emerald-500" />
-              <span>સરકારી વાહન (સ.વા.)</span>
+              <span>{t.duty.govtVehicle}</span>
             </button>
           </div>
           <input type="hidden" name={`${prefix}.taVehicleType`} value={vehicleType} />
@@ -283,7 +288,7 @@ function DayTravel({ prefix, shared }: { prefix: string; shared: DayDefaults }) 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field
             name={`${prefix}.taDistanceKm`}
-            label="Distance (km)"
+            label={t.duty.totalDistanceKm}
             icon={Compass}
             type="number"
             step="0.1"
@@ -293,7 +298,7 @@ function DayTravel({ prefix, shared }: { prefix: string; shared: DayDefaults }) 
           />
           <Field
             name={`${prefix}.taAmount`}
-            label="TA Claim Amount (₹)"
+            label={t.duty.claimAmount}
             icon={IndianRupee}
             type="number"
             step="0.01"
@@ -321,6 +326,7 @@ function ManualClaim({
   holidayDayRate: number;
 }) {
   const [claiming, setClaiming] = useState(false);
+  const { t } = useLanguage();
 
   return (
     <div className="rounded-xl border border-border bg-card p-3">
@@ -333,14 +339,14 @@ function ManualClaim({
           className="size-4 rounded border-amber-500/40 text-amber-600 focus:ring-amber-500/30"
         />
         <span className="text-xs font-semibold text-foreground">
-          Claim holiday pay for this working day
+          {t.duty.claimHolidayPayLabel}
         </span>
       </label>
       {claiming && (
         <div className="mt-3">
           <Field
             name={`${name}.holidayAllowance`}
-            label="Holiday Extra Pay (₹)"
+            label={t.duty.holidayExtraPayFieldLabel}
             icon={Sparkles}
             type="number"
             step="0.01"

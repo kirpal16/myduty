@@ -4,6 +4,9 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 
+import { useLanguage } from "@/lib/i18n/language-context";
+import { toGujaratiNumerals } from "@/lib/reports/gujaratiReportUtils";
+
 /**
  * Which year the holiday calendar is showing.
  *
@@ -20,6 +23,7 @@ export function HolidayYearPicker({
   min: number;
   max: number;
 }) {
+  const { isGujarati } = useLanguage();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -46,7 +50,7 @@ export function HolidayYearPicker({
 
       <span className="flex min-w-14 items-center justify-center gap-1.5 text-sm font-bold text-foreground">
         {isPending && <Loader2 className="size-3.5 animate-spin text-indigo-500" />}
-        {year}
+        {isGujarati ? toGujaratiNumerals(year) : year}
       </span>
 
       <button

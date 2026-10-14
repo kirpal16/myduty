@@ -45,6 +45,9 @@ import {
   getAdjacentDates,
 } from "@/lib/leave/optionalHolidayRules";
 import { applyLeaveSchema, leaveValuesFromForm } from "@/lib/validations/leave";
+import { useLanguage } from "@/lib/i18n/language-context";
+import { toGujaratiNumerals } from "@/lib/reports/gujaratiReportUtils";
+import { getTranslatedLeaveTypeName } from "@/lib/leave/leaveTranslation";
 
 type LeaveType = {
   id: string;
@@ -146,6 +149,7 @@ export function LeaveForm({
   dailySalaryRate?: number;
 }) {
   const action = logId ? updateLeaveLog.bind(null, logId) : logLeave;
+  const { isGujarati, t } = useLanguage();
   const [state, formAction, pending] = useActionState<LeaveFormState, FormData>(
     action,
     undefined
@@ -566,7 +570,11 @@ export function LeaveForm({
               className="text-xs font-semibold text-foreground flex items-center gap-1"
             >
               <Calendar className="size-3 text-slate-400" />
-              <span>{isHalfDay ? "Date" : "Start Date"}</span>
+              <span>
+                {isHalfDay
+                  ? t.common.date
+                  : t.leave.startDate}
+              </span>
               <span className="text-rose-500">*</span>
             </label>
             {isHolidayLeave ? (
@@ -574,7 +582,7 @@ export function LeaveForm({
                 id="startDate"
                 {...fieldProps("startDate")}
                 required
-                placeholder="Choose a holiday…"
+                placeholder={t.leave.chooseHolidayPlaceholder}
                 value={startDateVal}
                 onChange={(val) => {
                   setStartDateVal(val);
@@ -614,7 +622,7 @@ export function LeaveForm({
                 className="text-xs font-semibold text-foreground flex items-center gap-1"
               >
                 <Calendar className="size-3 text-slate-400" />
-                <span>End Date</span>
+                <span>{t.leave.endDateLabel}</span>
                 <span className="text-rose-500">*</span>
               </label>
               {isHolidayLeave ? (
@@ -622,7 +630,9 @@ export function LeaveForm({
                   id="endDate"
                   {...fieldProps("endDate")}
                   placeholder={
-                    startDateVal ? "Choose an end date…" : "Pick a start date first"
+                    startDateVal
+                      ? t.leave.chooseEndDatePlaceholder
+                      : t.leave.pickStartDateFirst
                   }
                   disabled={endChoices.length === 0}
                   value={effectiveEnd}
@@ -654,7 +664,7 @@ export function LeaveForm({
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-semibold text-foreground flex items-center gap-1">
                 <Sun className="size-3 text-amber-500" />
-                <span>Session Period</span>
+                <span>{t.leave.sessionPeriodLabel}</span>
               </label>
               <input type="hidden" name="halfDaySession" value={halfDaySession} />
 
@@ -669,7 +679,7 @@ export function LeaveForm({
                   }`}
                 >
                   <Sun className="size-3.5" />
-                  <span>Morning (AM)</span>
+                  <span>{t.leave.sessionMorning}</span>
                 </button>
                 <button
                   type="button"
@@ -681,7 +691,7 @@ export function LeaveForm({
                   }`}
                 >
                   <Moon className="size-3.5" />
-                  <span>Afternoon (PM)</span>
+                  <span>{t.leave.sessionAfternoon}</span>
                 </button>
               </div>
               <FieldError {...errorProps("halfDaySession")} />
@@ -698,17 +708,24 @@ export function LeaveForm({
         >
           <span className="flex items-center gap-1.5">
             <CalendarOff className="size-3.5 text-indigo-500" />
-            <span>Leave Classification</span>
+            <span>{t.leave.leaveClassificationLabel}</span>
             <span className="text-rose-500">*</span>
           </span>
           {sanctionOnlyBalance ? (
             <span className="text-[11px] font-normal text-muted-foreground">
-              Sanctioned left:{" "}
-              <strong className="text-foreground">{sanctionSummary?.left ?? 0}</strong> days
+              {t.leave.sanctionedLeft}
+              <strong className="text-foreground">
+                {isGujarati ? toGujaratiNumerals(sanctionSummary?.left ?? 0) : (sanctionSummary?.left ?? 0)}
+              </strong>{" "}
+              {t.common.day}
             </span>
           ) : balance ? (
             <span className="text-[11px] font-normal text-muted-foreground">
-              Remaining: <strong className="text-foreground">{balance.remaining}</strong> days
+              {t.leave.remainingLabel}
+              <strong className="text-foreground">
+                {isGujarati ? toGujaratiNumerals(balance.remaining) : balance.remaining}
+              </strong>{" "}
+              {t.common.day}
             </span>
           ) : null}
         </label>
@@ -717,14 +734,14 @@ export function LeaveForm({
           id="leaveTypeId"
           {...fieldProps("leaveTypeId")}
           required
-          placeholder="Select leave classification"
+          placeholder={t.leave.selectClassificationPlaceholder}
           value={leaveTypeId}
           onChange={(val) => {
             setLeaveTypeId(val);
             // A new leave type means a new proposal; old per-day choices no
             // longer describe it.
             setDayOverrides({});
-            const newType = leaveTypes.find((t) => t.id === val);
+            const newType = leaveTypes.find((lt) => lt.id === val);
             if (!isHalfDayAllowed(newType)) setIsHalfDay(false);
 
             // The dates are the officer's. They are only cleared when the new
@@ -744,10 +761,10 @@ export function LeaveForm({
           }}
           icon={CalendarOff}
           error={!!errorProps("leaveTypeId").message}
-          options={leaveTypes.map((t) => ({
-            value: t.id,
-            label: t.name,
-            color: t.color,
+          options={leaveTypes.map((lt) => ({
+            value: lt.id,
+            label: getTranslatedLeaveTypeName(lt.name, isGujarati),
+            color: lt.color,
           }))}
         />
 
@@ -887,7 +904,7 @@ export function LeaveForm({
                   <span className="text-[11px] font-bold text-foreground truncate">
                     {isBinpagariLeave
                       ? "Binpagari Leave (બિનપગારી રજા) — sanction details"
-                      : "Special Leave (વિશેષ રજા) — sanction details"}
+                      : "Special Leave (ખાસ રજા) — sanction details"}
                   </span>
                   {isBinpagariLeave && (
                     <Badge variant="danger">Unpaid</Badge>
@@ -1017,8 +1034,10 @@ export function LeaveForm({
         <div className="flex flex-col gap-2">
           <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
             <Clock className="size-3.5 text-indigo-500" />
-            <span>Leave Duration Format</span>
-            <span className="text-[10px] font-normal text-muted-foreground">(half-day is CL only)</span>
+            <span>{t.leave.leaveDurationFormat}</span>
+            <span className="text-[10px] font-normal text-muted-foreground">
+              {t.leave.clOnlyNotice}
+            </span>
           </label>
 
           {/* Hidden input for form submission */}
@@ -1035,7 +1054,7 @@ export function LeaveForm({
               }`}
             >
               <Calendar className="size-4" />
-              <span>Full Day(s)</span>
+              <span>{t.leave.fullDayOption}</span>
             </button>
 
             <button
@@ -1048,7 +1067,7 @@ export function LeaveForm({
               }`}
             >
               <Clock className="size-4" />
-              <span>Half-Day Session</span>
+              <span>{t.leave.halfDayOption}</span>
             </button>
           </div>
           <FieldError {...errorProps("isHalfDay")} />
@@ -1341,14 +1360,16 @@ export function LeaveForm({
           className="text-xs font-semibold text-foreground flex items-center gap-1"
         >
           <FileText className="size-3 text-slate-400" />
-          <span>Reason / Justification</span>
-          <span className="text-muted-foreground text-[10px]">(Optional)</span>
+          <span>{t.leave.reasonJustificationLabel}</span>
+          <span className="text-muted-foreground text-[10px]">
+            {t.common.optional}
+          </span>
         </label>
         <textarea
           id="reason"
           name="reason"
           rows={3}
-          placeholder="Enter reason or handover details..."
+          placeholder={t.leave.reasonPlaceholder}
           defaultValue={defaults?.reason ?? ""}
           className="w-full min-h-[76px] rounded-xl border border-border bg-card px-3.5 py-2.5 text-xs sm:text-sm shadow-xs hover:border-slate-400 dark:hover:border-slate-600 transition-colors focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 resize-none leading-relaxed"
         />
@@ -1358,8 +1379,8 @@ export function LeaveForm({
       {canUploadFiles && (
         <FormFileInput
           name="file"
-          label="Attach Document or Proof Image"
-          helperText="Upload doctor slip, application letter, or supporting photo (JPG, PNG, PDF, max 10MB)"
+          label={t.leave.attachDocumentProofLabel}
+          helperText={t.common.attachDocumentHint}
           initialFile={initialFile}
         />
       )}
@@ -1370,7 +1391,7 @@ export function LeaveForm({
           href="/leave"
           className="rounded-xl border border-border bg-card px-4 py-2.5 text-xs sm:text-sm font-medium text-foreground hover:bg-muted transition-colors"
         >
-          Cancel
+          {t.common.cancel}
         </Link>
         <button
           type="submit"
@@ -1384,13 +1405,16 @@ export function LeaveForm({
           }
           title={
             breakdownIssues > 0
-              ? "Fix the day-by-day breakdown first"
+              ? t.leave.fixDayBreakdownFirst
               : requiresSanction && (!matchingSanctions.length || !selectedSanction)
-                ? `An approved ${isBinpagariLeave ? "Binpagari" : "Special"} Leave sanction is required`
+                ? t.leave.approvedSanctionRequired.replace(
+                    "{type}",
+                    isBinpagariLeave ? t.leave.binpagari : t.leave.special
+                  )
                 : requiresSanction && specialLeaveIssue
                   ? specialLeaveIssue
                   : previewing
-                    ? "Working out your leave split…"
+                    ? t.leave.workingOutLeaveSplit
                     : undefined
           }
           className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-md shadow-emerald-600/30 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 transition-all cursor-pointer"
@@ -1398,10 +1422,14 @@ export function LeaveForm({
           {pending ? (
             <>
               <Loader2 className="size-4 animate-spin" />
-              <span>Saving...</span>
+              <span>{t.leave.savingStatus}</span>
             </>
           ) : (
-            <span>{logId ? "Save Changes" : "Submit Leave Request"}</span>
+            <span>
+              {logId
+                ? t.common.save
+                : t.leave.applyLeave}
+            </span>
           )}
         </button>
       </div>

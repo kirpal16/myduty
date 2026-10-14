@@ -21,6 +21,8 @@ import { FieldError } from "@/components/ui/field-error";
 import { useToast } from "@/components/ui/toast";
 import { useFormFeedback } from "@/lib/hooks/useFormFeedback";
 import type { FormState } from "@/lib/forms/formState";
+import { useLanguage } from "@/lib/i18n/language-context";
+import { toGujaratiNumerals } from "@/lib/reports/gujaratiReportUtils";
 
 export type ManagedLeaveType = {
   id: string;
@@ -66,6 +68,7 @@ export function LeaveTypeManager({
   title: string;
   emptyHint: string;
 }) {
+  const { isGujarati, t } = useLanguage();
   const [editing, setEditing] = useState<ManagedLeaveType | null>(null);
   const [deleting, setDeleting] = useState<ManagedLeaveType | null>(null);
   const [pendingToggleId, setPendingToggleId] = useState<string | null>(null);
@@ -157,7 +160,9 @@ export function LeaveTypeManager({
         <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
           {title}
         </h3>
-        <span className="text-[11px] text-muted-foreground">{types.length}</span>
+        <span className="text-[11px] text-muted-foreground">
+          {isGujarati ? toGujaratiNumerals(types.length) : types.length}
+        </span>
       </div>
 
       {types.length === 0 ? (
@@ -166,12 +171,12 @@ export function LeaveTypeManager({
         </p>
       ) : (
         <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
-          {types.map((t) => {
-            const isDisabled = Boolean(t.is_disabled_for_user || !t.is_active);
+          {types.map((lt) => {
+            const isDisabled = Boolean(lt.is_disabled_for_user || !lt.is_active);
             return (
-              <li key={t.id} className="flex items-center gap-2.5 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 hover:bg-muted/20 transition-colors">
+              <li key={lt.id} className="flex items-center gap-2.5 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 hover:bg-muted/20 transition-colors">
                 <div className="shrink-0 flex items-center justify-center">
-                  <ColorDot color={t.color} label={t.name} size="md" />
+                  <ColorDot color={lt.color} label={lt.name} size="md" />
                 </div>
                 
                 <div className="min-w-0 flex-1">
@@ -182,32 +187,32 @@ export function LeaveTypeManager({
                         : "text-foreground"
                     }`}
                   >
-                    {t.name}
+                    {lt.name}
                   </p>
 
                   <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
                     <span className="font-mono text-[11px] font-semibold text-muted-foreground uppercase">
-                      {t.code}
+                      {lt.code}
                     </span>
 
                     <span className="text-[10px] text-muted-foreground/40">•</span>
 
                     {isDisabled ? (
                       <span className="inline-flex items-center rounded-md border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.2 text-[9.5px] font-bold text-amber-600 dark:text-amber-400">
-                        Disabled
+                        {t.settings.badgeDisabled}
                       </span>
                     ) : (
                       <span className="inline-flex items-center rounded-md border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.2 text-[9.5px] font-bold text-emerald-600 dark:text-emerald-400">
-                        Active
+                        {t.settings.badgeActive}
                       </span>
                     )}
 
-                    {t.is_system && (
+                    {lt.is_system && (
                       <span
                         className="inline-flex items-center rounded-md border border-indigo-500/30 bg-indigo-500/10 px-1.5 py-0.2 text-[9.5px] font-bold text-indigo-600 dark:text-indigo-400"
                         title="Built-in type used by the leave rules. Its code is fixed; name and colour can be changed."
                       >
-                        System
+                        {t.settings.badgeSystem}
                       </span>
                     )}
                   </div>
@@ -217,26 +222,26 @@ export function LeaveTypeManager({
                   {onToggleDisabled && (
                     <button
                       type="button"
-                      disabled={pendingToggleId === t.id}
-                      onClick={() => handleToggleDisabled(t.id, isDisabled)}
-                      aria-label={isDisabled ? `Enable ${t.name}` : `Disable ${t.name}`}
+                      disabled={pendingToggleId === lt.id}
+                      onClick={() => handleToggleDisabled(lt.id, isDisabled)}
+                      aria-label={isDisabled ? `Enable ${lt.name}` : `Disable ${lt.name}`}
                       className={`inline-flex items-center gap-1 rounded-xl border px-2 sm:px-2.5 py-1 text-[11px] font-semibold transition-colors cursor-pointer disabled:opacity-50 ${
                         isDisabled
                           ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 dark:text-emerald-400"
                           : "border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground"
                       }`}
                     >
-                      {pendingToggleId === t.id ? (
+                      {pendingToggleId === lt.id ? (
                         <Loader2 className="size-3 animate-spin" />
                       ) : isDisabled ? (
                         <>
                           <CheckCircle2 className="size-3" />
-                          <span>Enable</span>
+                          <span>{t.settings.btnEnable}</span>
                         </>
                       ) : (
                         <>
                           <EyeOff className="size-3" />
-                          <span>Disable</span>
+                          <span>{t.settings.btnDisable}</span>
                         </>
                       )}
                     </button>
@@ -246,19 +251,19 @@ export function LeaveTypeManager({
                     <>
                       <button
                         type="button"
-                        onClick={() => setEditing(t)}
-                        aria-label={`Edit ${t.name}`}
+                        onClick={() => setEditing(lt)}
+                        aria-label={`Edit ${lt.name}`}
                         className="cursor-pointer rounded-xl border border-border bg-card p-1.5 sm:p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-indigo-600 dark:hover:text-indigo-400 shadow-2xs"
-                        title="Edit leave type"
+                        title={t.settings.editLeaveTypeTitle}
                       >
                         <Pencil className="size-3.5" />
                       </button>
                       <button
                         type="button"
-                        onClick={() => setDeleting(t)}
-                        aria-label={`Delete ${t.name}`}
+                        onClick={() => setDeleting(lt)}
+                        aria-label={`Delete ${lt.name}`}
                         className="cursor-pointer rounded-xl border border-rose-500/20 bg-rose-500/10 p-1.5 sm:p-2 text-rose-600 transition-colors hover:bg-rose-500/20 dark:text-rose-400 shadow-2xs"
-                        title="Delete leave type"
+                        title={t.settings.deleteLeaveTypeTitle}
                       >
                         <Trash2 className="size-3.5" />
                       </button>
@@ -286,7 +291,11 @@ export function LeaveTypeManager({
               <div className="flex size-7 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
                 <Tag className="size-4 shrink-0" />
               </div>
-              <span>{editing ? `Edit “${editing.name}”` : "Add a leave type"}</span>
+              <span>
+                {editing
+                  ? t.settings.editHolidayWithTitle.replace("{name}", editing.name)
+                  : t.settings.addLeaveTypeAccordion}
+              </span>
             </div>
 
             <div className="flex items-center gap-2">
@@ -299,7 +308,7 @@ export function LeaveTypeManager({
                   className="inline-flex cursor-pointer items-center gap-1 text-[11px] font-semibold text-rose-500 hover:text-rose-600 bg-rose-500/10 px-2 py-0.5 rounded-md"
                 >
                   <X className="size-3" />
-                  Cancel edit
+                  {t.settings.cancelEditLeaveType}
                 </span>
               )}
               <div
@@ -325,19 +334,21 @@ export function LeaveTypeManager({
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <label className="flex flex-col gap-1.5">
-                  <span className="text-[11px] font-semibold text-foreground">Name</span>
+                  <span className="text-[11px] font-semibold text-foreground">
+                    {t.settings.leaveTypeNameLabel}
+                  </span>
                   <input
                     required
                     {...fieldProps("name")}
                     defaultValue={editing?.name ?? ""}
-                    placeholder="e.g. Study Leave"
+                    placeholder={t.settings.leaveTypeNamePlaceholder}
                     className="w-full rounded-xl border border-border bg-card px-3 py-2 text-xs shadow-xs focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 aria-[invalid]:border-rose-500"
                   />
                   <FieldError {...errorProps("name")} />
                 </label>
                 <label className="flex flex-col gap-1.5">
                   <span className="text-[11px] font-semibold text-foreground">
-                    Code <span className="font-normal text-muted-foreground">(optional)</span>
+                    {t.settings.leaveTypeCodeLabel} <span className="font-normal text-muted-foreground">({t.settings.optionalLabel})</span>
                   </span>
                   <input
                     name="code"
@@ -345,7 +356,7 @@ export function LeaveTypeManager({
                     // The leave rules find HL / OH / SPL by code, so it is fixed.
                     readOnly={Boolean(editing?.is_system)}
                     title={editing?.is_system ? "System type: the code is fixed" : undefined}
-                    placeholder="Derived from the name if left blank"
+                    placeholder={t.settings.leaveTypeCodePlaceholder}
                     className="w-full rounded-xl border border-border bg-card px-3 py-2 text-xs shadow-xs focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 read-only:cursor-not-allowed read-only:bg-muted read-only:text-muted-foreground"
                   />
                 </label>
@@ -356,10 +367,10 @@ export function LeaveTypeManager({
               <div className="flex justify-end">
                 <SubmitButton
                   icon={editing ? Pencil : Plus}
-                  loadingText={editing ? "Saving…" : "Adding…"}
+                  loadingText={editing ? t.settings.savingLeaveType : t.settings.addingLeaveType}
                   disabled={isPending}
                 >
-                  {editing ? "Save changes" : "Add leave type"}
+                  {editing ? t.settings.submitSaveLeaveType : t.settings.submitAddLeaveType}
                 </SubmitButton>
               </div>
             </form>
@@ -371,13 +382,15 @@ export function LeaveTypeManager({
         isOpen={Boolean(deleting)}
         onClose={() => setDeleting(null)}
         onConfirm={handleDelete}
-        title="Delete leave type"
+        title={t.settings.deleteLeaveTypeModalTitle}
         description={
           deleting?.is_system
-            ? `“${deleting.name}” is a SYSTEM leave type. Deleting it switches off the leave rules built on it (${deleting.code}) until it is recreated. If any leave uses it you will be asked to deactivate it instead.`
-            : `Delete “${deleting?.name ?? ""}”? If any leave has been logged against it you will be asked to deactivate it instead.`
+            ? t.settings.deleteSystemLeaveTypeDesc
+                .replace("{name}", deleting.name)
+                .replace("{code}", deleting.code)
+            : t.settings.deleteCustomLeaveTypeDesc.replace("{name}", deleting?.name ?? "")
         }
-        confirmLabel="Delete"
+        confirmLabel={t.settings.deleteLeaveTypeConfirm}
         isPending={isPending}
       />
     </div>

@@ -4,15 +4,17 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import { ConfirmDeleteModal } from "@/components/ui/confirm-delete-modal";
+import { useLanguage } from "@/lib/i18n/language-context";
 
 export function DeleteFileButton({
   id,
-  label = "Delete",
+  label,
 }: {
   id: string;
   label?: string;
 }) {
   const router = useRouter();
+  const { dictionary } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -57,22 +59,21 @@ export function DeleteFileButton({
         onClick={() => setIsOpen(true)}
         disabled={isPending || isDeleting}
         className="inline-flex items-center gap-1 rounded-xl border border-rose-500/20 bg-rose-500/10 px-2.5 py-1 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 transition-colors shadow-2xs disabled:opacity-50 cursor-pointer"
-        title="Delete attachment"
+        title={dictionary.storage.deleteFile}
       >
         <Trash2 className="size-3" />
-        <span>{label}</span>
+        <span>{label ?? dictionary.common.delete}</span>
       </button>
 
       <ConfirmDeleteModal
         isOpen={isOpen}
         onClose={handleClose}
         onConfirm={handleDelete}
-        title="Delete File Attachment"
+        title={dictionary.storage.deleteFile}
         description={
-          error ??
-          "Are you sure you want to permanently delete this file attachment from the vault? This cannot be undone."
+          error ?? dictionary.storage.deleteConfirm
         }
-        confirmLabel={error ? "Try again" : "Delete File"}
+        confirmLabel={error ? dictionary.common.reset : dictionary.storage.deleteFile}
         isPending={isPending || isDeleting}
       />
     </>

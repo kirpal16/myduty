@@ -13,6 +13,9 @@ import { Badge } from "@/components/ui/badge";
 import { ColorDot } from "@/components/ui/color-dot";
 import { NavLink as Link } from "@/components/ui/nav-link";
 import { ArrowLeft, Info, CheckCircle2 } from "lucide-react";
+import { getServerTranslations } from "@/lib/i18n/server";
+import { toGujaratiNumerals } from "@/lib/reports/gujaratiReportUtils";
+import { getTranslatedLeaveTypeName } from "@/lib/leave/leaveTranslation";
 
 export default async function EditLeavePage({
   params,
@@ -46,6 +49,7 @@ export default async function EditLeavePage({
     canAccessStorage,
     disabledTypeIds,
     { data: savedDays },
+    translations,
   ] = await Promise.all([
     supabase
       .from("leave_types")
@@ -73,7 +77,11 @@ export default async function EditLeavePage({
       .from("leave_log_days")
       .select("leave_date, leave_type_id")
       .eq("leave_log_id", id),
+    getServerTranslations(),
   ]);
+
+  const isGu = translations.lang === "gu";
+  const { t } = translations;
 
   // Exclude disabled leave types, but preserve the one currently on this log
   const enabledLeaveTypes = (leaveTypes ?? []).filter(
@@ -100,14 +108,18 @@ export default async function EditLeavePage({
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="size-3.5" />
-          <span>Back to Leave Log</span>
+          <span>{t.leave.backToLeaveLog}</span>
         </Link>
       </div>
 
       <PageHeader
-        title="Edit Leave Entry"
-        subtitle="Modify absence dates, session format, or reason."
-        badge={<Badge variant="warning" dot>Edit Mode</Badge>}
+        title={t.leave.editLeave}
+        subtitle={t.leave.editLeaveSubtitle}
+        badge={
+          <Badge variant="warning" dot>
+            {t.duty.editMode}
+          </Badge>
+        }
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -160,8 +172,8 @@ export default async function EditLeavePage({
         <div className="space-y-6">
           <Card className="p-5 space-y-4">
             <CardHeader
-              title={`Leave Allowances (${leaveYear})`}
-              description="Your remaining quota for active categories"
+              title={`${t.leave.leaveBalanceTitle} (${isGu ? toGujaratiNumerals(leaveYear) : leaveYear})`}
+              description={t.leave.leaveBalanceSubtitle}
             />
 
             <div className="space-y-2.5">
@@ -174,24 +186,26 @@ export default async function EditLeavePage({
                 const quota = totalAvailable > 0 ? totalAvailable : allocated;
                 const used = Number(bal?.used ?? 0);
                 const percent = quota > 0 ? Math.max(0, Math.min(100, Math.round((used / quota) * 100))) : 0;
+                const translatedName = getTranslatedLeaveTypeName(lt.name, isGu);
 
                 return (
-                  <div
+                   <div
                     key={lt.id}
                     className="p-3 rounded-xl bg-muted/40 border border-border/60 space-y-1.5"
                   >
                     <div className="flex items-center justify-between text-xs">
                       <span className="flex min-w-0 items-center gap-1.5 font-semibold text-foreground">
-                        <ColorDot color={lt.color} label={lt.name} />
-                        <span className="truncate">{lt.name}</span>
+                        <ColorDot color={lt.color} label={translatedName} />
+                        <span className="truncate">{translatedName}</span>
                       </span>
                       <div className="text-right shrink-0">
                         <span className="font-medium text-muted-foreground">
-                          <strong className="text-foreground">{remaining}</strong> / {quota} days left
+                          <strong className="text-foreground">{isGu ? toGujaratiNumerals(remaining) : remaining}</strong> / {isGu ? toGujaratiNumerals(quota) : quota}{" "}
+                          {t.leave.daysLeft}
                         </span>
                         {carriedIn > 0 && (
                           <span className="block text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold leading-none mt-0.5">
-                            {quota} days (incl. {carriedIn} carried)
+                            {isGu ? toGujaratiNumerals(quota) : quota} {t.leave.daysInclCarried.replace("{carried}", isGu ? toGujaratiNumerals(carriedIn) : String(carriedIn))}
                           </span>
                         )}
                       </div>

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { WifiOff, RefreshCw, Loader2 } from "lucide-react";
 import { useBodyScrollLock } from "@/lib/hooks/useBodyScrollLock";
+import { useLanguage } from "@/lib/i18n/language-context";
 
 /**
  * Tells the officer, on any screen, that the connection has gone.
@@ -151,24 +152,27 @@ export function OfflineScreen() {
     };
   }, [offline]);
 
+  const { dictionary } = useLanguage();
+
   if (!offline) return null;
 
   return (
     <div
       role="alertdialog"
       aria-modal="true"
-      aria-label="No internet connection"
+      aria-label={dictionary.pwa.offlineTitle}
       className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 px-6 text-center text-slate-100"
     >
       <div className="flex size-16 items-center justify-center rounded-2xl border border-slate-700 bg-slate-900/80">
         <WifiOff className="size-8 text-amber-400" />
       </div>
 
-      <h1 className="mt-6 text-xl font-bold text-white">No internet connection</h1>
+      <h1 className="mt-6 text-xl font-bold text-white">
+        {dictionary.pwa.offlineTitle}
+      </h1>
 
       <p className="mt-2 max-w-sm text-sm leading-relaxed text-slate-400">
-        My Duty needs a connection to show your duty log, leave and holiday
-        calendar. This will clear by itself the moment you reconnect.
+        {dictionary.pwa.offlineMessage}
       </p>
 
       <button
@@ -180,12 +184,12 @@ export function OfflineScreen() {
         {checking ? (
           <>
             <Loader2 className="size-4 animate-spin" />
-            <span>Checking…</span>
+            <span>{dictionary.pwa.checking}</span>
           </>
         ) : (
           <>
             <RefreshCw className="size-4" />
-            <span>Try again</span>
+            <span>{dictionary.pwa.tryAgain}</span>
           </>
         )}
       </button>

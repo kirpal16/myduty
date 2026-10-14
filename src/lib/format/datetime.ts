@@ -1,5 +1,6 @@
 import type { TimeFormat } from "@/types/database";
 import { formatSafeTime } from "./safeDate";
+import { toGujaratiNumerals } from "@/lib/reports/gujaratiReportUtils";
 
 /**
  * Single place the per-user 12h/24h preference is applied. Every screen
@@ -20,45 +21,56 @@ function timeOptions(timeFormat: TimeFormat): Intl.DateTimeFormatOptions {
 export function formatDateTime(
   value: string | Date,
   timeFormat: TimeFormat,
+  locale = "en-US",
 ): string {
   const d = typeof value === "string" ? new Date(value) : value;
   if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleString("en-US", {
+  const resolvedLocale = locale === "gu" ? "gu-IN" : locale;
+  const formatted = d.toLocaleString(resolvedLocale, {
     timeZone: "UTC",
     year: "numeric",
     month: "short",
     day: "numeric",
     ...timeOptions(timeFormat),
   });
+  return locale === "gu" ? toGujaratiNumerals(formatted) : formatted;
 }
 
 export function formatTime(
   value: string | Date,
   timeFormat: TimeFormat,
+  locale = "en-US",
 ): string {
   // Deterministic, not toLocaleTimeString(undefined): this renders inside
   // client components on both the server and the browser, and locales
   // disagree ("04:30 PM" vs "4:30 pm"), which breaks hydration.
-  return formatSafeTime(value, timeFormat === "12h");
+  const formatted = formatSafeTime(value, timeFormat === "12h");
+  return locale === "gu" ? toGujaratiNumerals(formatted) : formatted;
 }
 
 /** Dates carry no time, so the preference doesn't apply here. */
-export function formatDate(value: string | Date): string {
+export function formatDate(value: string | Date, locale = "en-US"): string {
   const d = typeof value === "string" ? new Date(value) : value;
   if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleDateString("en-US", {
+  const resolvedLocale = locale === "gu" ? "gu-IN" : locale;
+  const formatted = d.toLocaleDateString(resolvedLocale, {
     timeZone: "UTC",
     year: "numeric",
     month: "short",
     day: "numeric",
   });
+  return locale === "gu" ? toGujaratiNumerals(formatted) : formatted;
 }
 
 /** A leave log's date span, collapsing a single-date entry to one date. */
-export function formatDateRange(startDate: string, endDate: string): string {
+export function formatDateRange(
+  startDate: string,
+  endDate: string,
+  locale = "en-US",
+): string {
   return startDate === endDate
-    ? formatDate(startDate)
-    : `${formatDate(startDate)} – ${formatDate(endDate)}`;
+    ? formatDate(startDate, locale)
+    : `${formatDate(startDate, locale)} – ${formatDate(endDate, locale)}`;
 }
 
 /**

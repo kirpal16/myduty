@@ -1,6 +1,10 @@
+"use client";
+
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/format/currency";
 import { Sparkles, Route } from "lucide-react";
+import { useLanguage } from "@/lib/i18n/language-context";
+import { toGujaratiNumerals } from "@/lib/reports/gujaratiReportUtils";
 
 /**
  * The badges a duty row shows, in one place so the desktop table and the
@@ -15,11 +19,25 @@ export type DutyBadgeRow = {
   ta_amount?: number | null;
 };
 
-export function DutyStatusBadge({ status }: { status?: string | null }) {
+export function DutyStatusBadge({
+  status,
+  isGujarati: propIsGujarati,
+}: {
+  status?: string | null;
+  isGujarati?: boolean;
+}) {
+  const { isGujarati: contextIsGu, t } = useLanguage();
+  const isGu = propIsGujarati ?? contextIsGu;
   const value = status ?? "SCHEDULED";
   const variant =
     value === "CANCELLED" ? "danger" : value === "COMPLETED" ? "success" : "secondary";
-  return <Badge variant={variant}>{value}</Badge>;
+
+  let label: string = value;
+  if (value === "COMPLETED") label = t.duty.completed;
+  else if (value === "CANCELLED") label = t.duty.cancelled;
+  else if (value === "SCHEDULED") label = t.duty.scheduled;
+
+  return <Badge variant={variant}>{label}</Badge>;
 }
 
 /**
@@ -30,6 +48,7 @@ export function DutyStatusBadge({ status }: { status?: string | null }) {
 export function DutyHolidayBadge({
   duty,
   iconOnly = false,
+  isGujarati: propIsGujarati,
 }: {
   duty: DutyBadgeRow;
   /**
@@ -40,22 +59,28 @@ export function DutyHolidayBadge({
    * unexplained to anyone hovering it.
    */
   iconOnly?: boolean;
+  isGujarati?: boolean;
 }) {
+  const { isGujarati: contextIsGu, t } = useLanguage();
+  const isGu = propIsGujarati ?? contextIsGu;
+
   if (duty.is_holiday_duty) {
+    const label = t.duty.badgeWorkedHoliday;
     return (
-      <Badge variant="warning" aria-label="Holiday" title="Holiday">
+      <Badge variant="warning" aria-label={label} title={label}>
         <Sparkles className="size-3" />
-        {!iconOnly && "Holiday"}
+        {!iconOnly && label}
       </Badge>
     );
   }
   if (duty.manual_holiday_claim) {
+    const label = t.duty.badgeHolidayClaim;
     return iconOnly ? (
-      <Badge variant="secondary" aria-label="Holiday claim" title="Holiday claim">
+      <Badge variant="secondary" aria-label={label} title={label}>
         <Sparkles className="size-3" />
       </Badge>
     ) : (
-      <Badge variant="secondary">Holiday claim</Badge>
+      <Badge variant="secondary">{label}</Badge>
     );
   }
   return null;
@@ -71,19 +96,24 @@ export function DutyHolidayBadge({
 export function DutyTaBadge({
   duty,
   iconOnly = false,
+  isGujarati: propIsGujarati,
 }: {
   duty: DutyBadgeRow;
   /** Icon alone, for the mobile card where the amount has its own row. */
   iconOnly?: boolean;
+  isGujarati?: boolean;
 }) {
+  const { isGujarati: contextIsGu } = useLanguage();
+  const isGu = propIsGujarati ?? contextIsGu;
   const amount = Number(duty.ta_amount ?? 0);
   if (!amount) return null;
 
-  const label = `TA ${formatCurrency(amount)}`;
+  const formattedAmount = isGu ? toGujaratiNumerals(formatCurrency(amount)) : formatCurrency(amount);
+  const label = `TA ${formattedAmount}`;
   return (
     <Badge variant="success" aria-label={label} title={label}>
       <Route className="size-3" />
-      {!iconOnly && formatCurrency(amount)}
+      {!iconOnly && formattedAmount}
     </Badge>
   );
 }

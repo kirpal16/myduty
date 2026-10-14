@@ -3,6 +3,8 @@
 import { useTransition, useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { ShieldCheck, Loader2, Calendar } from "lucide-react";
+import { useLanguage } from "@/lib/i18n/language-context";
+import { toGujaratiNumerals } from "@/lib/reports/gujaratiReportUtils";
 
 export function LeaveNavTabs({
   activeTab,
@@ -18,6 +20,8 @@ export function LeaveNavTabs({
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
   const [pendingTab, setPendingTab] = useState<string | null>(null);
+  const { dictionary, isGujarati } = useLanguage();
+  const t = dictionary;
 
   const handleTabClick = (targetTab: "records" | "special") => {
     if (targetTab === activeTab) return;
@@ -62,8 +66,10 @@ export function LeaveNavTabs({
         ) : (
           <Calendar className="size-3.5 shrink-0 text-current" />
         )}
-        <span className="sm:hidden">Records</span>
-        <span className="hidden sm:inline">Leave Records &amp; Log</span>
+        <span className="sm:hidden">{t.leave.navRecords}</span>
+        <span className="hidden sm:inline">
+          {t.leave.leaveRecordsTab}
+        </span>
       </button>
 
       {/* Tab 2: Special Leave Approvals */}
@@ -90,8 +96,10 @@ export function LeaveNavTabs({
             }`}
           />
         )}
-        <span className="sm:hidden">Approvals</span>
-        <span className="hidden sm:inline">Leave Approvals &amp; Sanctions</span>
+        <span className="sm:hidden">{t.leave.sanctions}</span>
+        <span className="hidden sm:inline">
+          {t.leave.leaveSanctionsTab}
+        </span>
         {pendingSplCount > 0 && (
           <span
             className={`inline-flex items-center justify-center rounded-full text-[10px] font-bold leading-none shrink-0 min-w-4 px-1.5 py-0.5 ${
@@ -101,8 +109,8 @@ export function LeaveNavTabs({
             }`}
             aria-label={`${pendingSplCount} pending`}
           >
-            {pendingSplCount}
-            <span className="hidden sm:inline">&nbsp;pending</span>
+            {isGujarati ? toGujaratiNumerals(pendingSplCount) : pendingSplCount}
+            <span className="hidden sm:inline">&nbsp;{t.leave.pending}</span>
           </span>
         )}
       </button>

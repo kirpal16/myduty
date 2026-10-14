@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { FilePreviewModal } from "@/components/ui/file-preview-modal";
 import { CameraCaptureModal } from "@/components/ui/camera-capture-modal";
+import { useLanguage } from "@/lib/i18n/language-context";
 
 function getLocalDateTimeString(date: Date = new Date()) {
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -48,6 +49,7 @@ export function FileUploader({
   onUploaded?: () => void;
 }) {
   const router = useRouter();
+  const { t } = useLanguage();
   const [error, setError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -104,7 +106,7 @@ export function FileUploader({
     e.preventDefault();
     if (busy) return;
     if (!selectedFile) {
-      setError("Choose a file or take a photo first.");
+      setError(t.storage.chooseFileError);
       return;
     }
 
@@ -129,16 +131,16 @@ export function FileUploader({
 
       if (!res.ok) {
         const body = await res.json().catch(() => null);
-        setError(body?.error ?? `Upload failed (${res.status})`);
+        setError(body?.error ?? `${t.storage.uploadFailed} (${res.status})`);
         return;
       }
 
       handleClear();
-      setNotice(`${name} uploaded successfully.`);
+      setNotice(`${name} ${t.storage.uploadSuccessMessage}`);
       startTransition(() => router.refresh());
       onUploaded?.();
     } catch {
-      setError("Could not reach the server. Check your connection and try again.");
+      setError(t.storage.networkError);
     } finally {
       setIsUploading(false);
     }
@@ -201,7 +203,7 @@ export function FileUploader({
                 {selectedFile.name}
               </span>
               <span className="text-[11px] text-muted-foreground mt-0.5">
-                {(selectedFile.size / 1024).toFixed(1)} KB • Ready to upload
+                {(selectedFile.size / 1024).toFixed(1)} KB • {t.storage.readyToUpload}
               </span>
             </div>
           </div>
@@ -215,14 +217,14 @@ export function FileUploader({
                   className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1"
                 >
                   <Tag className="size-3 text-indigo-500" />
-                  <span>Document / Report Name</span>
+                  <span>{t.storage.docReportName}</span>
                 </label>
                 <input
                   id="upload-doc-title"
                   type="text"
                   value={documentTitle}
                   onChange={(e) => setDocumentTitle(e.target.value)}
-                  placeholder="e.g. Duty Shift Report, Travel Bill"
+                  placeholder={t.storage.docNamePlaceholder}
                   className="w-full rounded-xl border border-border bg-card px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/60 shadow-2xs hover:border-indigo-500/40 focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 transition-all"
                 />
               </div>
@@ -233,7 +235,7 @@ export function FileUploader({
                   className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1"
                 >
                   <Clock className="size-3 text-sky-500" />
-                  <span>Document / Upload Date & Time</span>
+                  <span>{t.storage.docDateTime}</span>
                 </label>
                 <input
                   id="upload-doc-date"
@@ -251,15 +253,15 @@ export function FileUploader({
                 className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1"
               >
                 <FileText className="size-3 text-emerald-500" />
-                <span>Description / Remarks</span>
-                <span className="text-[10px] font-normal text-muted-foreground/80">(Optional)</span>
+                <span>{t.storage.docRemarks}</span>
+                <span className="text-[10px] font-normal text-muted-foreground/80">{t.common.optional}</span>
               </label>
               <textarea
                 id="upload-doc-desc"
                 rows={2}
                 value={documentDescription}
                 onChange={(e) => setDocumentDescription(e.target.value)}
-                placeholder="Add brief description, remarks, or notes..."
+                placeholder={t.storage.docDescPlaceholder}
                 className="w-full rounded-xl border border-border bg-card px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/60 shadow-2xs hover:border-emerald-500/40 focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 transition-all resize-none"
               />
             </div>
@@ -272,38 +274,38 @@ export function FileUploader({
                   type="button"
                   onClick={() => setIsPreviewOpen(true)}
                   className="flex items-center gap-1 p-2 sm:px-2.5 sm:py-1.5 rounded-xl border border-border bg-card text-xs font-semibold text-foreground hover:bg-muted transition-colors shadow-2xs cursor-pointer"
-                  title="Preview File"
+                  title={t.storage.previewFile}
                 >
                   <Eye className="size-3.5 text-sky-500" />
-                  <span className="hidden sm:inline">Preview</span>
+                  <span className="hidden sm:inline">{t.common.preview}</span>
                 </button>
               )}
               <button
                 type="button"
                 onClick={() => setIsCameraModalOpen(true)}
                 className="flex items-center gap-1 p-2 sm:px-2.5 sm:py-1.5 rounded-xl border border-border bg-card text-xs font-semibold text-foreground hover:bg-muted transition-colors shadow-2xs cursor-pointer"
-                title="Retake with Camera"
+                title={t.storage.retakeCamera}
               >
                 <Camera className="size-3.5 text-indigo-500" />
-                <span className="hidden sm:inline">Camera</span>
+                <span className="hidden sm:inline">{t.common.camera}</span>
               </button>
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 className="flex items-center gap-1 p-2 sm:px-2.5 sm:py-1.5 rounded-xl border border-border bg-card text-xs font-semibold text-foreground hover:bg-muted transition-colors shadow-2xs cursor-pointer"
-                title="Change File"
+                title={t.storage.changeFile}
               >
                 <Pencil className="size-3.5 text-slate-500" />
-                <span className="hidden sm:inline">Change</span>
+                <span className="hidden sm:inline">{t.common.change}</span>
               </button>
               <button
                 type="button"
                 onClick={handleClear}
                 className="flex items-center gap-1 p-2 sm:px-2.5 sm:py-1.5 rounded-xl border border-rose-500/20 bg-rose-500/10 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 transition-colors shadow-2xs cursor-pointer"
-                title="Remove File"
+                title={t.storage.removeFile}
               >
                 <Trash2 className="size-3.5" />
-                <span className="hidden sm:inline">Remove</span>
+                <span className="hidden sm:inline">{t.common.remove}</span>
               </button>
             </div>
 
@@ -315,12 +317,12 @@ export function FileUploader({
               {busy ? (
                 <>
                   <Loader2 className="size-3.5 animate-spin" />
-                  <span>Uploading...</span>
+                  <span>{t.common.uploading}</span>
                 </>
               ) : (
                 <>
                   <UploadCloud className="size-3.5" />
-                  <span>Upload Now</span>
+                  <span>{t.storage.uploadNow}</span>
                 </>
               )}
             </button>
@@ -329,10 +331,10 @@ export function FileUploader({
       ) : (
         <div className="flex flex-col items-center justify-center p-5 sm:p-6 border-2 border-dashed border-border hover:border-indigo-500/60 rounded-2xl bg-muted/20 hover:bg-muted/30 transition-all text-center">
           <p className="text-xs sm:text-sm font-semibold text-foreground mb-1">
-            Attach document or proof
+            {t.storage.attachProof}
           </p>
           <p className="text-[11px] text-muted-foreground mb-4">
-            Take a photo with your camera or browse files (PDF, JPG, PNG, DOCX, max 20MB)
+            {t.storage.attachProofDesc}
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-3">
@@ -342,7 +344,7 @@ export function FileUploader({
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-98 text-white text-xs font-bold shadow-md shadow-indigo-600/25 transition-all cursor-pointer"
             >
               <Camera className="size-4" />
-              <span>Take Photo (Camera)</span>
+              <span>{t.storage.takePhotoCamera}</span>
             </button>
 
             <button
@@ -351,7 +353,7 @@ export function FileUploader({
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-card hover:bg-muted hover:border-indigo-500/50 active:scale-98 text-foreground text-xs font-semibold shadow-2xs transition-all cursor-pointer"
             >
               <FolderOpen className="size-4 text-indigo-500" />
-              <span>Browse Files</span>
+              <span>{t.storage.browseFiles}</span>
             </button>
           </div>
         </div>

@@ -10,6 +10,8 @@ import { useToast } from "@/components/ui/toast";
 import { useFormDirty } from "@/lib/hooks/useFormDirty";
 import { useFormFeedback } from "@/lib/hooks/useFormFeedback";
 import type { FormState } from "@/lib/forms/formState";
+import { useLanguage } from "@/lib/i18n/language-context";
+import { toGujaratiNumerals } from "@/lib/reports/gujaratiReportUtils";
 
 /**
  * One leave type's allowance, as a card.
@@ -52,6 +54,7 @@ export function LeaveAllowanceRow({
   action: (state: FormState, formData: FormData) => Promise<FormState>;
   saveLabel?: string;
 }) {
+  const { isGujarati, t } = useLanguage();
   const [carry, setCarry] = useState(balance?.carry_forward ?? false);
   const [state, formAction] = useActionState<FormState, FormData>(action, undefined);
 
@@ -91,14 +94,26 @@ export function LeaveAllowanceRow({
         </span>
         <div className="flex shrink-0 items-center gap-1.5">
           <span className="text-[10px] font-medium text-muted-foreground">
-            Used: <strong className="text-foreground">{used}d</strong>
+            {t.settings.allowanceUsedLabel}{" "}
+            <strong className="text-foreground">
+              {isGujarati ? toGujaratiNumerals(used) : used}
+              {" "}{t.settings.daysUnit}
+            </strong>
           </span>
           {balance ? (
             <Badge
               variant={isOver ? "danger" : "success"}
               className="px-1.5 py-0 text-[10px] font-bold"
             >
-              {isOver ? `-${Math.abs(remaining)}d` : `${remaining}d left`}
+              {isOver
+                ? t.settings.allowanceDaysOver.replace(
+                    "{days}",
+                    isGujarati ? toGujaratiNumerals(Math.abs(remaining)) : String(Math.abs(remaining)),
+                  )
+                : t.settings.allowanceDaysLeft.replace(
+                    "{days}",
+                    isGujarati ? toGujaratiNumerals(remaining) : String(remaining),
+                  )}
             </Badge>
           ) : null}
         </div>
@@ -107,7 +122,9 @@ export function LeaveAllowanceRow({
       {type.isSystem ? (
         <p className="mt-2 flex items-start gap-1 rounded-lg bg-muted/40 p-2 text-[10px] text-muted-foreground">
           <Info className="mt-0.5 size-3 shrink-0 text-indigo-500" />
-          <span>Calculated automatically from holiday calendar. No manual quota.</span>
+          <span>
+            {t.settings.allowanceSystemNotice}
+          </span>
         </p>
       ) : (
         <form ref={formRef} action={formAction} className="mt-2.5 space-y-2">
@@ -118,7 +135,7 @@ export function LeaveAllowanceRow({
           {/* Inline Quota & Carry Toggle Row */}
           <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
             <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <span className="font-semibold text-foreground text-xs">Annual:</span>
+              <span className="font-semibold text-foreground text-xs">{t.settings.allowanceAnnualLabel}</span>
               <input
                 type="number"
                 step="0.5"
@@ -128,7 +145,7 @@ export function LeaveAllowanceRow({
                 {...fieldProps("allocated")}
                 className="h-6.5 w-16 rounded-md border border-border bg-muted/30 px-1 text-center text-xs font-bold text-foreground shadow-2xs focus:border-indigo-500 focus:bg-card focus:outline-hidden aria-[invalid]:border-rose-500"
               />
-              <span className="text-[11px]">days</span>
+              <span className="text-[11px]">{t.settings.daysUnit}</span>
               <FieldError {...errorProps("allocated")} />
             </label>
 
@@ -153,7 +170,7 @@ export function LeaveAllowanceRow({
               </span>
               <span className="flex items-center gap-1 text-[11px] font-medium text-foreground">
                 <ArrowRightLeft className="size-2.5 text-indigo-500" />
-                Carry over
+                {t.settings.allowanceCarryOver}
               </span>
             </label>
           </div>
@@ -163,20 +180,20 @@ export function LeaveAllowanceRow({
             <div className="rounded-lg border border-indigo-500/25 bg-indigo-500/5 p-2 space-y-1.5">
               <div className="grid grid-cols-2 gap-2">
                 <label className="flex items-center justify-between gap-1 text-[10px]">
-                  <span className="font-semibold text-muted-foreground">Max limit:</span>
+                  <span className="font-semibold text-muted-foreground">{t.settings.allowanceMaxLimit}</span>
                   <input
                     type="number"
                     step="0.5"
                     min="0"
                     defaultValue={balance?.max_accumulated ?? ""}
                     {...fieldProps("maxAccumulated")}
-                    placeholder="None"
+                    placeholder={t.settings.allowanceNone}
                     className="h-6 w-16 rounded border border-border bg-card px-1.5 text-right text-xs font-medium focus:border-indigo-500 focus:outline-hidden"
                   />
                 </label>
                 <label className="flex items-center justify-between gap-1 text-[10px]">
-                  <span className="font-semibold text-muted-foreground" title="Unused balance from prior years">
-                    Prior balance:
+                  <span className="font-semibold text-muted-foreground" title={t.settings.allowancePriorBalanceTip}>
+                    {t.settings.allowancePriorBalance}
                   </span>
                   <input
                     type="number"
@@ -184,8 +201,8 @@ export function LeaveAllowanceRow({
                     min="0"
                     defaultValue={balance?.carried_override ?? ""}
                     {...fieldProps("carriedOverride")}
-                    placeholder="0"
-                    title="Starting this year? Enter unused days from prior years."
+                    placeholder={isGujarati ? "૦" : "0"}
+                    title={t.settings.allowancePriorBalanceTip}
                     className="h-6 w-16 rounded border border-border bg-card px-1.5 text-right text-xs font-medium focus:border-indigo-500 focus:outline-hidden"
                   />
                 </label>
@@ -196,13 +213,15 @@ export function LeaveAllowanceRow({
                   {carriedIn > 0 ? (
                     <>
                       <strong className="text-indigo-600 dark:text-indigo-400">
-                        {totalAvailable} days
+                        {isGujarati ? `${toGujaratiNumerals(totalAvailable)} ${t.settings.daysUnit}` : `${totalAvailable} ${t.settings.daysUnit}`}
                       </strong>{" "}
-                      (incl. {carriedIn} carried)
-                      {cappedAway > 0 && ` · ${cappedAway}d capped`}
+                      {t.settings.allowanceCarriedNotice
+                        .replace("{total}", isGujarati ? toGujaratiNumerals(totalAvailable) : String(totalAvailable))
+                        .replace("{carried}", isGujarati ? toGujaratiNumerals(carriedIn) : String(carriedIn))}
+                      {cappedAway > 0 && ` · ${isGujarati ? toGujaratiNumerals(cappedAway) : cappedAway} ${t.settings.daysUnit}`}
                     </>
                   ) : (
-                    "Unused days roll into next year."
+                    t.settings.allowanceRollOverNotice
                   )}
                 </span>
               </div>
@@ -222,7 +241,7 @@ export function LeaveAllowanceRow({
               disabled={!dirty}
               className="shrink-0 cursor-pointer rounded-lg bg-indigo-600 px-3 py-1 text-[11px] font-semibold text-white shadow-2xs hover:bg-indigo-500 disabled:opacity-40"
             >
-              {saveLabel}
+              {saveLabel === "Save" ? t.common.save : saveLabel}
             </PendingButton>
           </div>
         </form>

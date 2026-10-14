@@ -39,6 +39,7 @@ import {
 import { splitIntoDailyDuties } from "@/lib/duty/splitDuty";
 import { useLinkedEndDate, deriveDutyEnd } from "@/lib/hooks/useLinkedEndDate";
 import { DutyDayRows } from "./duty-day-rows";
+import { useLanguage } from "@/lib/i18n/language-context";
 
 type DutyType = { id: string; name: string };
 
@@ -93,6 +94,7 @@ export function DutyForm({
   /** "HH:MM" the end date snaps to when the start moves. */
   defaultShiftEnd?: string;
 }) {
+  const { t } = useLanguage();
   const [startsAtVal, setStartsAtVal] = useState(defaults?.startsAt ?? "");
   // The end follows the start onto the same day at the shift end, until the
   // officer edits it themselves — after which it stays where they put it.
@@ -202,7 +204,7 @@ export function DutyForm({
       <div className="space-y-4">
         <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
           <Clock className="size-4 text-indigo-500" />
-          <span>Shift Details & Timing</span>
+          <span>{t.duty.shiftDetailsTitle}</span>
         </h3>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -212,14 +214,14 @@ export function DutyForm({
               className="text-xs font-semibold text-foreground flex items-center gap-1"
             >
               <Briefcase className="size-3 text-slate-400" />
-              <span>Duty Type</span>
+              <span>{t.duty.dutyTypeLabel}</span>
               <span className="text-rose-500">*</span>
             </label>
             <FormSelect
               id="dutyTypeId"
               {...fieldProps("dutyTypeId")}
               required
-              placeholder="Select duty type"
+              placeholder={t.duty.selectDutyTypePlaceholder}
               defaultValue={defaults?.dutyTypeId ?? ""}
               icon={Briefcase}
               error={!!errorProps("dutyTypeId").message}
@@ -237,7 +239,7 @@ export function DutyForm({
               className="text-xs font-semibold text-foreground flex items-center gap-1"
             >
               <Clock className="size-3 text-slate-400" />
-              <span>Starts At</span>
+              <span>{t.duty.startsAtLabel}</span>
               <span className="text-rose-500">*</span>
             </label>
             <input
@@ -265,7 +267,7 @@ export function DutyForm({
               className="text-xs font-semibold text-foreground flex items-center gap-1"
             >
               <Clock className="size-3 text-slate-400" />
-              <span>Ends At</span>
+              <span>{t.duty.endsAtLabel}</span>
               <span className="text-rose-500">*</span>
             </label>
             <input
@@ -305,9 +307,8 @@ export function DutyForm({
           <div className="rounded-xl border border-purple-500/30 bg-purple-500/10 p-3 text-xs font-medium text-purple-900 dark:text-purple-200 flex items-start gap-2">
             <Sparkles className="mt-0.5 size-4 text-purple-500 shrink-0" />
             <span>
-              <strong>Optional Holiday (મરજિયાત રજા)</strong>
-              {holidayInfo.name ? ` — ${holidayInfo.name}` : ""}: regular working day, no holiday
-              extra pay.
+              <strong>{t.settings.optionalHolidaysTitle}</strong>
+              {holidayInfo.name ? ` — ${holidayInfo.name}` : ""}: {t.duty.optionalHolidayNoPayNotice}
             </span>
           </div>
         ) : holidayInfo.qualifiesForHolidayAllowance ? (
@@ -315,14 +316,14 @@ export function DutyForm({
              officer only opens it to change it. */
           <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 px-4">
             <CollapsibleSection
-              title="Holiday Duty Extra Pay"
+              title={t.duty.holidayDutyExtraPayTitle}
               icon={Sparkles}
               iconClassName="text-amber-500"
               open={holidayPayOpen}
               onToggle={() => setHolidayPayOpen((o) => !o)}
               summary={
                 <span className="flex items-center gap-1.5">
-                  {holidayPayVal ? <strong className="text-foreground">₹{holidayPayVal}</strong> : "Not set"}
+                  {holidayPayVal ? <strong className="text-foreground">₹{holidayPayVal}</strong> : t.duty.notClaimed}
                   <span className="hidden sm:inline">· {holidayInfo.name || holidayKindLabel(holidayInfo.kind)}</span>
                 </span>
               }
@@ -333,14 +334,14 @@ export function DutyForm({
                   {holidayKindLabel(holidayInfo.kind)}
                   {holidayInfo.name ? ` — ${holidayInfo.name}` : ""}
                 </span>
-                : working this day earns extra pay (રજાના દિવસનું વધારાનું મહેનતાણું).
+                : {t.duty.holidayDutyExtraPayDesc}
               </p>
               <label
                 htmlFor="holidayAllowance"
                 className="text-xs font-semibold text-foreground flex items-center gap-1"
               >
                 <IndianRupee className="size-3 text-amber-500" />
-                <span>Holiday Duty Extra Pay / Allowance (₹)</span>
+                <span>{t.duty.holidayExtraPayFieldLabel}</span>
               </label>
               <input
                 id="holidayAllowance"
@@ -376,15 +377,15 @@ export function DutyForm({
                 <div className="flex items-center gap-1.5 flex-wrap text-xs">
                   <Sparkles className="size-3.5 text-amber-500" />
                   <span className="font-semibold text-foreground">
-                    Claim holiday pay for this working day
+                    {t.duty.claimHolidayPayLabel}
                   </span>
                   <span className="text-muted-foreground text-[11px]">
-                    (રજાના દિવસનું વધારાનું મહેનતાણું)
+                    {t.duty.holidayExtraPayTag}
                   </span>
                 </div>
               </div>
               <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md hidden sm:inline">
-                ક્લેઇમ કરવો હોય તો ટીક કરો
+                {t.duty.tickToClaim}
               </span>
             </label>
           </div>
@@ -396,11 +397,10 @@ export function DutyForm({
                 <Sparkles className="size-4 text-amber-500" />
                 <div>
                   <h4 className="text-xs font-bold text-foreground">
-                    Holiday Duty Extra Pay (રજાના દિવસનું વધારાનું મહેનતાણું)
+                    {t.duty.holidayDutyExtraPayTitle}
                   </h4>
                   <p className="text-[11px] text-muted-foreground">
-                    Extra pay is earned by <strong>working</strong> a holiday. A
-                    holiday you take off pays nothing extra.
+                    {t.duty.holidayDutyExtraPayDesc}
                   </p>
                 </div>
               </div>
@@ -409,7 +409,7 @@ export function DutyForm({
                 onClick={() => setManualClaim(false)}
                 className="text-xs text-muted-foreground hover:text-foreground underline cursor-pointer shrink-0"
               >
-                બંધ કરો (Cancel)
+                {t.common.cancel}
               </button>
             </div>
 
@@ -423,11 +423,11 @@ export function DutyForm({
                   className="size-4 rounded border-amber-500/40 text-amber-600 focus:ring-amber-500/30 cursor-pointer"
                 />
                 <span className="text-xs font-bold text-foreground">
-                  Claim holiday pay for this working day
+                  {t.duty.claimHolidayPayLabel}
                 </span>
               </label>
               <p className="text-[11px] text-muted-foreground">
-                This date is not a holiday, weekend off or day off. Tick only if you are owed holiday pay for it anyway.
+                {t.duty.claimNotAHolidayHint}
               </p>
 
               <div className="flex flex-col gap-1.5 animate-in fade-in-50 pt-1">
@@ -436,7 +436,9 @@ export function DutyForm({
                   className="text-xs font-semibold text-foreground flex items-center gap-1"
                 >
                   <IndianRupee className="size-3 text-amber-500" />
-                  <span>Holiday Duty Extra Pay / Allowance (₹)</span>
+                  <span>
+                    {t.duty.holidayExtraPayFieldLabel}
+                  </span>
                 </label>
                 <input
                   id="holidayAllowance"
@@ -466,13 +468,15 @@ export function DutyForm({
               className="text-xs font-semibold text-foreground flex items-center gap-1"
             >
               <MapPin className="size-3 text-slate-400" />
-              <span>Station / Location</span>
-              <span className="text-muted-foreground text-[10px]">(Optional)</span>
+              <span>{t.duty.stationLocationLabel}</span>
+              <span className="text-muted-foreground text-[10px]">
+                {t.settings.optionalLabel}
+              </span>
             </label>
             <input
               id="location"
               name="location"
-              placeholder="e.g. Central Command, Sector 4"
+              placeholder={t.duty.stationPlaceholder}
               defaultValue={defaults?.location ?? ""}
               className="w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-xs sm:text-sm shadow-xs hover:border-slate-400 dark:hover:border-slate-600 transition-colors focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20"
             />
@@ -484,13 +488,15 @@ export function DutyForm({
               className="text-xs font-semibold text-foreground flex items-center gap-1"
             >
               <FileText className="size-3 text-slate-400" />
-              <span>Operational Notes</span>
-              <span className="text-muted-foreground text-[10px]">(Optional)</span>
+              <span>{t.duty.operationalNotesLabel}</span>
+              <span className="text-muted-foreground text-[10px]">
+                {t.settings.optionalLabel}
+              </span>
             </label>
             <input
               id="notes"
               name="notes"
-              placeholder="Special handover details, vehicle #, or incidents..."
+              placeholder={t.duty.operationalNotesPlaceholder}
               defaultValue={defaults?.notes ?? ""}
               className="w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-xs sm:text-sm shadow-xs hover:border-slate-400 dark:hover:border-slate-600 transition-colors focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20"
             />
@@ -525,7 +531,7 @@ export function DutyForm({
                 }`}
               />
               <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground group-hover:text-foreground truncate transition-colors">
-                Travelling Allowance (TA) Claim
+                {t.duty.taClaimTitle}
               </span>
             </div>
 
@@ -537,7 +543,7 @@ export function DutyForm({
                 </span>
               ) : (
                 <span className="text-[11px] font-medium text-muted-foreground group-hover:text-foreground transition-colors">
-                  Not claimed
+                  {t.duty.notClaimed}
                 </span>
               )}
               <ChevronDown
@@ -557,12 +563,12 @@ export function DutyForm({
                   className="text-xs font-semibold text-foreground flex items-center gap-1"
                 >
                   <Navigation className="size-3 text-sky-500" />
-                  <span>Departure Place</span>
+                  <span>{t.duty.departurePlaceLabel}</span>
                 </label>
                 <input
                   id="taFromPlace"
                   name="taFromPlace"
-                  placeholder="Origin base station"
+                  placeholder={t.duty.departurePlaceholder}
                   defaultValue={defaults?.taFromPlace ?? ""}
                   className="w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-xs sm:text-sm shadow-xs hover:border-slate-400 dark:hover:border-slate-600 transition-colors focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20"
                 />
@@ -574,12 +580,12 @@ export function DutyForm({
                   className="text-xs font-semibold text-foreground flex items-center gap-1"
                 >
                   <MapPin className="size-3 text-sky-500" />
-                  <span>Arrival Destination</span>
+                  <span>{t.duty.arrivalPlaceLabel}</span>
                 </label>
                 <input
                   id="taToPlace"
                   name="taToPlace"
-                  placeholder="Field deployment site"
+                  placeholder={t.duty.arrivalPlaceholder}
                   defaultValue={defaults?.taToPlace ?? ""}
                   className="w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-xs sm:text-sm shadow-xs hover:border-slate-400 dark:hover:border-slate-600 transition-colors focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20"
                 />
@@ -591,10 +597,10 @@ export function DutyForm({
               <label className="text-xs font-semibold text-foreground flex items-center justify-between">
                 <span className="flex items-center gap-1">
                   <Car className="size-3 text-sky-500" />
-                  <span>વાહનનો પ્રકાર (Vehicle Type)</span>
+                  <span>{t.duty.vehicleTypeLabel}</span>
                 </span>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-sky-500/10 text-sky-700 dark:text-sky-300 border border-sky-500/20">
-                  {vehicleType === "govt" ? "સરકારી વાહન (સ.વા.)" : "ખાનગી વાહન (ખ.વા.)"}
+                  {vehicleType === "govt" ? t.duty.govtVehicle : t.duty.privateVehicle}
                 </span>
               </label>
               <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-muted/60 border border-border">
@@ -608,7 +614,7 @@ export function DutyForm({
                   }`}
                 >
                   <Car className="size-3.5 text-sky-500" />
-                  <span>ખાનગી વાહન (ખ.વા.)</span>
+                  <span>{t.duty.privateVehicle}</span>
                 </button>
                 <button
                   type="button"
@@ -620,7 +626,7 @@ export function DutyForm({
                   }`}
                 >
                   <ShieldCheck className="size-3.5 text-emerald-500" />
-                  <span>સરકારી વાહન (સ.વા.)</span>
+                  <span>{t.duty.govtVehicle}</span>
                 </button>
               </div>
               <input type="hidden" name="taVehicleType" value={vehicleType} />
@@ -633,7 +639,7 @@ export function DutyForm({
                   className="text-xs font-semibold text-foreground flex items-center gap-1"
                 >
                   <Compass className="size-3 text-slate-400" />
-                  <span>Total Distance (km)</span>
+                  <span>{t.duty.totalDistanceKm}</span>
                 </label>
                 <input
                   id="taDistanceKm"
@@ -659,7 +665,7 @@ export function DutyForm({
                   className="text-xs font-semibold text-foreground flex items-center gap-1"
                 >
                   <IndianRupee className="size-3 text-emerald-500" />
-                  <span>Claim Amount (₹)</span>
+                  <span>{t.duty.claimAmount}</span>
                 </label>
                 <input
                   id="taAmount"
@@ -687,8 +693,8 @@ export function DutyForm({
       {canUploadFiles && (
         <FormFileInput
           name="file"
-          label="Attach Shift Document or Travel Receipt"
-          helperText="Upload travel tickets, duty slips, or photo documentation (JPG, PNG, PDF, max 10MB)"
+          label={t.duty.attachShiftDoc}
+          helperText={t.duty.attachShiftDocHelp}
           initialFile={initialFile}
         />
       )}
@@ -699,7 +705,7 @@ export function DutyForm({
           href="/duty"
           className="rounded-xl border border-border bg-card px-4 py-2.5 text-xs sm:text-sm font-medium text-foreground hover:bg-muted transition-colors"
         >
-          Cancel
+          {t.common.cancel}
         </Link>
         <button
           type="submit"
@@ -709,10 +715,12 @@ export function DutyForm({
           {pending ? (
             <>
               <Loader2 className="size-4 animate-spin" />
-              <span>Saving...</span>
+              <span>{t.duty.savingStatus}</span>
             </>
           ) : (
-            <span>{dutyId ? "Update Duty Log" : "Submit Duty Shift"}</span>
+            <span>
+              {dutyId ? t.duty.updateDutyLog : t.duty.submitDutyShift}
+            </span>
           )}
         </button>
       </div>

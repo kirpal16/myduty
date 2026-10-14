@@ -33,6 +33,8 @@ import { ConfirmDeleteModal } from "@/components/ui/confirm-delete-modal";
 import { updateOfficerProfileDetails, deleteTimelineEventAction } from "@/actions/profile";
 import { formatTimelineDate } from "@/lib/profile/timelineUtils";
 import type { FormState } from "@/lib/forms/formState";
+import { useLanguage } from "@/lib/i18n/language-context";
+import { toGujaratiNumerals } from "@/lib/reports/gujaratiReportUtils";
 
 export interface OfficerProfileData {
   id: string;
@@ -71,6 +73,7 @@ export function OfficerProfileContainer({
   timelineEvents,
   canEdit = true,
 }: OfficerProfileContainerProps) {
+  const { isGujarati, t } = useLanguage();
   const [activeTab, setActiveTab] = useState<TabKey>("timeline");
   const { toast } = useToast();
   const [state, formAction, isPending] = useActionState<FormState, FormData>(
@@ -112,9 +115,16 @@ export function OfficerProfileContainer({
     const diffYears = now.getFullYear() - start.getFullYear();
     const diffMonths = now.getMonth() - start.getMonth();
     const totalMonths = diffYears * 12 + diffMonths;
-    if (totalMonths < 12) return `${totalMonths} mos service`;
+    if (totalMonths < 12) {
+      return isGujarati
+        ? `${toGujaratiNumerals(totalMonths)} ${t.profile.months} ${t.profile.service}`
+        : `${totalMonths} mos service`;
+    }
     const yrs = Math.floor(totalMonths / 12);
     const mos = totalMonths % 12;
+    if (isGujarati) {
+      return `${toGujaratiNumerals(yrs)} ${t.profile.years}${mos > 0 ? ` ${toGujaratiNumerals(mos)} ${t.profile.months}` : ""} ${t.profile.service}`;
+    }
     return `${yrs} yr${yrs > 1 ? "s" : ""}${mos > 0 ? ` ${mos} mo${mos > 1 ? "s" : ""}` : ""} service`;
   })();
 
@@ -141,7 +151,15 @@ export function OfficerProfileContainer({
                 </h2>
                 {officer.role && (
                   <span className="px-2 py-0.5 rounded-md bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold uppercase tracking-wider border border-indigo-500/30">
-                    {officer.role.replace("_", " ")}
+                    {officer.role.toUpperCase() === "SUPER_ADMIN"
+                      ? t.profile.roleSuperAdmin
+                      : officer.role.toUpperCase() === "ADMIN"
+                      ? t.profile.roleAdmin
+                      : officer.role.toUpperCase() === "OFFICER"
+                      ? t.profile.roleOfficer
+                      : officer.role.toUpperCase() === "USER"
+                      ? t.profile.roleUser
+                      : officer.role.replace("_", " ")}
                   </span>
                 )}
               </div>
@@ -152,7 +170,9 @@ export function OfficerProfileContainer({
                     {officer.designation}
                   </span>
                 ) : (
-                  <span className="text-muted-foreground italic">Rank not specified</span>
+                  <span className="text-muted-foreground italic">
+                    {t.profile.rankNotSpecified}
+                  </span>
                 )}
 
                 {officer.employeeCode && (
@@ -160,7 +180,8 @@ export function OfficerProfileContainer({
                     <span className="text-border">•</span>
                     <span className="inline-flex items-center gap-1 font-mono text-xs bg-muted px-2 py-0.5 rounded-md text-foreground">
                       <BadgeCheck className="size-3 text-amber-500" />
-                      Buckle #{officer.employeeCode}
+                      {t.profile.bucklePrefix}
+                      {isGujarati ? toGujaratiNumerals(officer.employeeCode) : officer.employeeCode}
                     </span>
                   </>
                 )}
@@ -194,13 +215,13 @@ export function OfficerProfileContainer({
               type="button"
               onClick={() => setActiveTab("timeline")}
               className="text-center px-2.5 py-1.5 rounded-xl hover:bg-muted/80 transition-all cursor-pointer group"
-              title="View Career Timeline"
+              title={t.profile.viewCareerTimeline}
             >
               <span className="block text-xl font-bold text-foreground group-hover:scale-105 transition-transform">
-                {timelineEvents.length}
+                {isGujarati ? toGujaratiNumerals(timelineEvents.length) : timelineEvents.length}
               </span>
               <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider group-hover:text-foreground">
-                Milestones
+                {t.profile.milestones}
               </span>
             </button>
             <div className="h-8 w-px bg-border" />
@@ -208,17 +229,23 @@ export function OfficerProfileContainer({
               type="button"
               onClick={() => setActiveTab("timeline")}
               className="text-center px-2.5 py-1.5 rounded-xl hover:bg-muted/80 transition-all cursor-pointer group"
-              title="View Postings in Timeline"
+              title={t.profile.viewPostingsTimeline}
             >
               <span className="block text-xl font-bold text-indigo-600 dark:text-indigo-400 group-hover:scale-105 transition-transform">
                 {
-                  timelineEvents.filter(
-                    (e) => e.event_type === "POSTING" || e.event_type === "TRANSFER"
-                  ).length
+                  isGujarati
+                    ? toGujaratiNumerals(
+                        timelineEvents.filter(
+                          (e) => e.event_type === "POSTING" || e.event_type === "TRANSFER"
+                        ).length
+                      )
+                    : timelineEvents.filter(
+                        (e) => e.event_type === "POSTING" || e.event_type === "TRANSFER"
+                      ).length
                 }
               </span>
               <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider group-hover:text-foreground">
-                Postings
+                {t.profile.postings}
               </span>
             </button>
             <div className="h-8 w-px bg-border" />
@@ -226,13 +253,13 @@ export function OfficerProfileContainer({
               type="button"
               onClick={() => setActiveTab("achievements")}
               className="text-center px-2.5 py-1.5 rounded-xl hover:bg-amber-500/10 transition-all cursor-pointer group"
-              title="View Honours & Awards"
+              title={t.profile.viewHonoursAwards}
             >
               <span className="block text-xl font-bold text-amber-500 group-hover:scale-110 transition-transform">
-                {honours.length}
+                {isGujarati ? toGujaratiNumerals(honours.length) : honours.length}
               </span>
               <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider group-hover:text-amber-600 dark:group-hover:text-amber-400">
-                Honours
+                {t.profile.honours}
               </span>
             </button>
           </div>
@@ -242,8 +269,16 @@ export function OfficerProfileContainer({
       {/* Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 border-b border-border/80 no-scrollbar">
         {[
-          { id: "timeline", label: "Career Timeline", icon: Clock },
-          { id: "achievements", label: "Honours & Awards", icon: Award },
+          {
+            id: "timeline",
+            label: t.profile.careerTimelineTab,
+            icon: Clock,
+          },
+          {
+            id: "achievements",
+            label: t.profile.honoursAwardsTab,
+            icon: Award,
+          },
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -347,14 +382,14 @@ export function OfficerProfileContainer({
                     <div>
                       <div className="flex items-center gap-2">
                         <h3 className="text-base font-bold text-foreground">
-                          Honours &amp; Commendations
+                          {t.profile.honoursAndCommendations}
                         </h3>
                         <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 text-xs font-bold border border-amber-500/30">
-                          {honours.length}
+                          {isGujarati ? toGujaratiNumerals(honours.length) : honours.length}
                         </span>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        Official medals, commendation discs, President&apos;s awards, and career citations.
+                        {t.profile.honoursSubtitle}
                       </p>
                     </div>
                   </div>
@@ -369,7 +404,7 @@ export function OfficerProfileContainer({
                       className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs sm:text-sm font-bold shadow-xs shadow-amber-500/25 transition-all active:scale-[0.98] cursor-pointer self-start sm:self-auto"
                     >
                       <Plus className="size-4" />
-                      <span>Add Honour / Award</span>
+                      <span>{t.profile.addHonour}</span>
                     </button>
                   )}
                 </div>
@@ -534,7 +569,7 @@ export function OfficerProfileContainer({
                                     setIsHonourModalOpen(true);
                                   }}
                                   className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-                                  title="Edit Honour"
+                                  title={t.profile.editHonour}
                                 >
                                   <Pencil className="size-3.5" />
                                 </button>
@@ -542,7 +577,7 @@ export function OfficerProfileContainer({
                                   type="button"
                                   onClick={() => setHonourToDelete(honour)}
                                   className="p-1.5 rounded-lg text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
-                                  title="Delete Honour"
+                                  title={t.profile.deleteHonour}
                                 >
                                   <Trash2 className="size-3.5" />
                                 </button>
@@ -554,7 +589,7 @@ export function OfficerProfileContainer({
                             {honour.start_date && (
                               <div className="flex items-center gap-1 text-foreground/80">
                                 <Calendar className="size-3 text-amber-500" />
-                                <span>{formatTimelineDate(honour.start_date, true)}</span>
+                                <span>{formatTimelineDate(honour.start_date, true, isGujarati)}</span>
                               </div>
                             )}
                             {(honour.location || honour.department) && (
@@ -582,10 +617,10 @@ export function OfficerProfileContainer({
                       <Trophy className="size-6" />
                     </div>
                     <p className="text-sm font-semibold text-foreground">
-                      No Official Honours Recorded Yet
+                      {t.profile.noHonoursRecorded}
                     </p>
                     <p className="text-xs text-muted-foreground max-w-md">
-                      Click the &ldquo;Add Honour / Award&rdquo; button above to record your medals, DGP commendation rolls, or meritorious service awards. Each honour recorded will automatically increment your official Honours badge.
+                      {t.profile.noHonoursRecordedDesc}
                     </p>
                   </div>
                 )}
@@ -599,10 +634,10 @@ export function OfficerProfileContainer({
                   </div>
                   <div>
                     <h3 className="text-base font-bold text-foreground">
-                      Service Bio &amp; Summary Notes
+                      {t.profile.serviceBioTitle}
                     </h3>
                     <p className="text-xs text-muted-foreground">
-                      Freeform executive summary, career highlights, and general service remarks.
+                      {t.profile.serviceBioSubtitle}
                     </p>
                   </div>
                 </div>
@@ -613,11 +648,11 @@ export function OfficerProfileContainer({
                     rows={5}
                     key={`bio-${officer.bio}`}
                     defaultValue={officer.bio ?? ""}
-                    placeholder="Record your career overview, notable cases, or summary:&#10;• Served across Ahmedabad and Surat city units&#10;• Specialized in cyber crime and forensic investigation&#10;• Commended for flood relief operation"
+                    placeholder={t.profile.serviceBioPlaceholder}
                     className="w-full rounded-xl border border-border bg-background p-3.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-indigo-500 focus:outline-hidden focus:ring-1 focus:ring-indigo-500 leading-relaxed"
                   />
                   <p className="mt-1.5 text-[11px] text-muted-foreground">
-                    Tip: Use this text area for general remarks and notes. Specific awards and medals should be added using &ldquo;Add Honour / Award&rdquo; above.
+                    {t.profile.serviceBioTip}
                   </p>
                 </div>
               </Card>
@@ -634,12 +669,12 @@ export function OfficerProfileContainer({
                 {isPending ? (
                   <>
                     <Loader2 className="size-4 animate-spin" />
-                    <span>Saving Profile...</span>
+                    <span>{t.profile.savingProfile}</span>
                   </>
                 ) : (
                   <>
                     <Check className="size-4" />
-                    <span>Save Profile Changes</span>
+                    <span>{t.profile.saveProfileChanges}</span>
                   </>
                 )}
               </button>
@@ -664,9 +699,13 @@ export function OfficerProfileContainer({
         onClose={() => setHonourToDelete(null)}
         onConfirm={handleDeleteHonourConfirm}
         isPending={isDeletingHonour}
-        title="Delete Honour / Award"
-        description={`Are you sure you want to delete "${honourToDelete?.title}" from your official honours?`}
-        confirmLabel="Delete Record"
+        title={t.profile.deleteHonourConfirmTitle}
+        description={
+          isGujarati
+            ? `શું તમે ખરેખર "${honourToDelete?.title}" ને તમારા સત્તાવાર સન્માનમાંથી કાઢી નાખવા માંગો છો?`
+            : `Are you sure you want to delete "${honourToDelete?.title}" from your official honours?`
+        }
+        confirmLabel={t.profile.deleteRecord}
       />
     </div>
   );

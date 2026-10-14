@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Loader2, User, CalendarDays, Sparkles, Scale, Printer } from "lucide-react";
+import { Loader2, User, CalendarDays, Sparkles, Scale, Printer, Globe } from "lucide-react";
 
 import type { TabDef, TabIconName } from "@/lib/ui/tabs";
 
@@ -15,6 +15,7 @@ const TAB_ICONS: Record<TabIconName, React.ElementType> = {
   sparkles: Sparkles,
   scale: Scale,
   printer: Printer,
+  globe: Globe,
 };
 
 /**

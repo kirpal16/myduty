@@ -1,6 +1,8 @@
 import { isSunday, isSecondOrFourthSaturday } from "./weekendRules";
 import { toDateKey } from "@/lib/format/datetime";
 import type { HolidayScope } from "@/types/database";
+import { en } from "@/lib/i18n/dictionaries/en";
+import { gu } from "@/lib/i18n/dictionaries/gu";
 
 /**
  * Holiday classification, and whether working it earns extra pay.
@@ -162,17 +164,18 @@ export function countHolidays(range: Map<string, HolidayResolution>): number {
 }
 
 /** Human label for a badge or accordion heading. */
-export function holidayKindLabel(kind: HolidayKind | undefined): string {
+export function holidayKindLabel(kind: HolidayKind | undefined, isGujarati?: boolean): string {
+  const dict = isGujarati ? gu : en;
   switch (kind) {
     case "public_holiday":
-      return "Public Holiday";
+      return dict.reports.dayTypes.publicHoliday;
     case "optional_holiday":
-      return "Optional Holiday";
+      return dict.reports.dayTypes.optionalHoliday;
     case "weekend":
-      return "Weekend Off";
+      return dict.reports.dayTypes.weekendOff;
     case "day_off":
-      return "Day Off";
+      return dict.reports.dayTypes.dayOff;
     default:
-      return "Working Day";
+      return dict.reports.dayTypes.workingDay;
   }
 }

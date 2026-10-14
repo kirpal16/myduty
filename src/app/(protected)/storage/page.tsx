@@ -15,6 +15,8 @@ import { CollapsibleFilterBar } from "@/components/ui/collapsible-filter-bar";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { NavLink as Link } from "@/components/ui/nav-link";
 import { getYearOptions } from "@/lib/format/year";
+import { getServerTranslations } from "@/lib/i18n/server";
+import { toGujaratiNumerals } from "@/lib/reports/gujaratiReportUtils";
 
 export default async function StoragePage({
   searchParams,
@@ -29,6 +31,9 @@ export default async function StoragePage({
     limit?: string;
   }>;
 }) {
+  const { lang, t } = await getServerTranslations();
+  const isGu = lang === "gu";
+
   const user = await getCurrentUser();
   const canAccess =
     user?.role === "SUPER_ADMIN" ||
@@ -49,12 +54,15 @@ export default async function StoragePage({
   const currentPage = Math.max(1, parseInt(page, 10) || 1);
   const pageSize = Math.max(5, parseInt(limit, 10) || 10);
 
-  const yearOptions = getYearOptions(4, 1);
+  const yearOptions = getYearOptions(4, 1).map((opt) => ({
+    ...opt,
+    label: isGu ? toGujaratiNumerals(opt.label) : opt.label,
+  }));
 
   const typeOptions = [
-    { value: "image", label: "Images (JPG, PNG)" },
-    { value: "pdf", label: "PDF Documents" },
-    { value: "doc", label: "Word Documents" },
+    { value: "image", label: t.storage.imagesOnly },
+    { value: "pdf", label: t.storage.pdfOnly },
+    { value: "doc", label: t.storage.wordOnly },
   ];
 
   const supabase = await createClient();
@@ -104,14 +112,12 @@ export default async function StoragePage({
     <main className="w-full px-4 sm:px-6 lg:px-8 py-6 max-w-7xl 2xl:max-w-full mx-auto space-y-6">
       {/* Sky Blue Header */}
       <PageHeader
-        title="Document & File Vault"
-        // So the file count fits beside it on a phone rather than dropping
-        // to a line of its own.
-        shortTitle="File Vault"
-        subtitle="Securely upload, store, and manage duty attachments, receipts, and official records."
+        title={t.storage.pageTitle}
+        shortTitle={t.storage.fileVaultShort}
+        subtitle={t.storage.pageSubtitle}
         badge={
           <Badge variant="info" dot>
-            {totalItems} Files
+            {isGu ? toGujaratiNumerals(totalItems) : totalItems} {t.storage.filesCount}
           </Badge>
         }
         compactActions
@@ -133,7 +139,7 @@ export default async function StoragePage({
           }
           searchSlot={
             <SearchInput
-              placeholder="Search name or description..."
+              placeholder={t.storage.searchPlaceholder}
               defaultValue={search}
             />
           }
@@ -142,9 +148,9 @@ export default async function StoragePage({
               <Link
                 href="/storage"
                 className="h-9 inline-flex items-center justify-center rounded-xl border border-rose-500/20 bg-rose-500/10 px-3 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 transition-colors shrink-0"
-                title="Reset all filters"
+                title={t.common.resetFilters}
               >
-                Reset Filters
+                {t.common.resetFilters}
               </Link>
             ) : null
           }
@@ -153,7 +159,7 @@ export default async function StoragePage({
             <div className="w-full sm:w-32">
               <FilterSelect
                 paramName="type"
-                placeholder="All Types"
+                placeholder={t.storage.allTypes}
                 icon="tag"
                 options={typeOptions}
               />
@@ -162,7 +168,7 @@ export default async function StoragePage({
             <div className="w-full sm:w-28">
               <FilterSelect
                 paramName="year"
-                placeholder="All years"
+                placeholder={t.storage.allYears}
                 icon="calendar"
                 options={yearOptions}
               />
@@ -172,7 +178,7 @@ export default async function StoragePage({
               <DateRangeFilter
                 fromParamName="from"
                 toParamName="to"
-                label="Date Range"
+                label={t.storage.dateRange}
               />
             </div>
           </div>

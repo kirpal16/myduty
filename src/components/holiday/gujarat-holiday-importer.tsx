@@ -24,6 +24,8 @@ import {
 } from "@/lib/holidays/weekendRules";
 import { AutoDismissBanner } from "@/components/ui/auto-dismiss-banner";
 import { getCurrentYear } from "@/lib/format/year";
+import { useLanguage } from "@/lib/i18n/language-context";
+import { toGujaratiNumerals } from "@/lib/reports/gujaratiReportUtils";
 
 export function GujaratHolidayImporter({
   currentYear = getCurrentYear(),
@@ -33,6 +35,7 @@ export function GujaratHolidayImporter({
   scope?: "GLOBAL" | "USER";
 }) {
   const router = useRouter();
+  const { isGujarati, t } = useLanguage();
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [category, setCategory] = useState<"gazetted" | "optional">("gazetted");
   const [isExpanded, setIsExpanded] = useState(false);
@@ -109,17 +112,17 @@ export function GujaratHolidayImporter({
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
               <h4 className="text-sm sm:text-base font-bold text-foreground">
-                Gujarat Govt Published Holiday Calendar
+                {t.settings.gujaratGovtCalendar}
               </h4>
               <span className="text-[10px] font-bold bg-amber-500/20 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full border border-amber-500/30 whitespace-nowrap">
-                {category === "gazetted" ? "જાહેર રજાઓ" : "મરજિયાત રજાઓ"}
+                {category === "gazetted" ? t.settings.gazettedHolidaysBadge : t.settings.optionalHolidaysBadge}
               </span>
               <span className="text-[10px] font-semibold bg-card/90 text-muted-foreground px-2 py-0.5 rounded-md border border-border shadow-2xs whitespace-nowrap">
-                {selectedYear} • {holidays.length} Holidays
+                {isGujarati ? toGujaratiNumerals(selectedYear) : selectedYear} • {isGujarati ? toGujaratiNumerals(holidays.length) : holidays.length} {t.settings.holidaysCount}
               </span>
             </div>
             <p className="text-xs text-muted-foreground mt-0.5 hidden sm:block truncate">
-              Official gazetted public festivals and declared optional holidays for Gujarat State.
+              {t.settings.gujaratGovtCalendarSubtitle}
             </p>
           </div>
         </div>
@@ -134,10 +137,10 @@ export function GujaratHolidayImporter({
             }`}
           >
             <span className="hidden sm:inline">
-              {isExpanded ? "Hide List" : "View & Sync"}
+              {isExpanded ? t.settings.hideList : t.settings.viewAndSync}
             </span>
             <span className="sm:hidden">
-              {isExpanded ? "Hide" : "View"}
+              {isExpanded ? t.settings.hideList : t.settings.viewAndSync}
             </span>
             <ChevronDown
               className={`size-3.5 transition-transform duration-300 ${
@@ -171,7 +174,7 @@ export function GujaratHolidayImporter({
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  Gazetted (જાહેર)
+                  {t.settings.categoryGazetted}
                 </button>
                 <button
                   type="button"
@@ -182,7 +185,7 @@ export function GujaratHolidayImporter({
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  Optional (મરજિયાત)
+                  {t.settings.categoryOptional}
                 </button>
               </div>
 
@@ -194,7 +197,7 @@ export function GujaratHolidayImporter({
                   className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground shadow-2xs hover:border-amber-500/50 hover:bg-muted/50 transition-all cursor-pointer"
                 >
                   <Calendar className="size-3.5 text-amber-500" />
-                  <span>Year {selectedYear}</span>
+                  <span>{t.settings.yearPrefix} {isGujarati ? toGujaratiNumerals(selectedYear) : selectedYear}</span>
                   <ChevronDown
                     className={`size-3.5 text-muted-foreground transition-transform duration-200 ${
                       isYearOpen ? "rotate-180 text-amber-600 dark:text-amber-400" : ""
@@ -220,7 +223,7 @@ export function GujaratHolidayImporter({
                               : "text-foreground hover:bg-muted/70 font-medium"
                           }`}
                         >
-                          <span>Year {year}</span>
+                          <span>{t.settings.yearPrefix} {isGujarati ? toGujaratiNumerals(year) : year}</span>
                           {isSelected && <Check className="size-3.5 text-amber-600 dark:text-amber-400 shrink-0" />}
                         </button>
                       );
@@ -244,12 +247,19 @@ export function GujaratHolidayImporter({
               {isPending ? (
                 <>
                   <Loader2 className="size-3.5 animate-spin" />
-                  <span>Importing...</span>
+                  <span>{t.settings.importing}</span>
                 </>
               ) : (
                 <>
                   <DownloadCloud className="size-3.5" />
-                  <span>Sync {category === "gazetted" ? "Gazetted" : "Optional"} to Calendar</span>
+                  <span>
+                    {t.settings.syncToCalendar.replace(
+                      "{type}",
+                      category === "gazetted"
+                        ? (isGujarati ? "જાહેર" : "Gazetted")
+                        : (isGujarati ? "મરજિયાત" : "Optional"),
+                    )}
+                  </span>
                 </>
               )}
             </button>
@@ -257,10 +267,10 @@ export function GujaratHolidayImporter({
 
           {!hasCatalog && (
             <p className="rounded-2xl border-2 border-dashed border-border p-6 text-center text-xs text-muted-foreground">
-              No published Gujarat Government list for {selectedYear} yet — it is
-              announced each year. Add {selectedYear}&apos;s festivals by hand in
-              the calendar below; Sundays and 2nd/4th Saturdays already count
-              automatically.
+              {t.settings.noPublishedGovtList.replace(
+                /\{year\}/g,
+                isGujarati ? toGujaratiNumerals(selectedYear) : String(selectedYear),
+              )}
             </p>
           )}
 
@@ -268,13 +278,18 @@ export function GujaratHolidayImporter({
             <>
               <div className="flex items-center justify-between px-1 text-xs text-muted-foreground">
                 <span>
-                  Showing{" "}
-                  <strong className="text-foreground">{holidays.length}</strong>{" "}
-                  {category === "gazetted" ? "gazetted public holidays" : "optional holidays"}{" "}
-                  for {selectedYear}:
+                  {t.settings.showingHolidaysCount
+                    .replace("{year}", isGujarati ? toGujaratiNumerals(selectedYear) : String(selectedYear))
+                    .replace("{count}", isGujarati ? toGujaratiNumerals(holidays.length) : String(holidays.length))
+                    .replace(
+                      "{type}",
+                      category === "gazetted"
+                        ? (isGujarati ? "જાહેર રજાઓ" : "gazetted public holidays")
+                        : (isGujarati ? "મરજિયાત રજાઓ" : "optional holidays"),
+                    )}
                 </span>
                 <span className="text-[11px] font-medium text-amber-600 dark:text-amber-400">
-                  Official Gujarat State Gazette
+                  {t.settings.officialStateGazette}
                 </span>
               </div>
 
@@ -287,7 +302,7 @@ export function GujaratHolidayImporter({
                   >
                     <span className="font-semibold text-foreground truncate">{h.name}</span>
                     <span className="text-[11px] font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-lg border border-amber-500/20 shrink-0">
-                      {h.date}
+                      {isGujarati ? toGujaratiNumerals(h.date) : h.date}
                     </span>
                   </div>
                 ))}

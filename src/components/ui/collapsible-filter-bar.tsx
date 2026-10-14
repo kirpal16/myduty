@@ -3,6 +3,8 @@
 import { useState, type ReactNode } from "react";
 import { Filter, ChevronDown } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { useLanguage } from "@/lib/i18n/language-context";
+import { toGujaratiNumerals } from "@/lib/reports/gujaratiReportUtils";
 
 interface CollapsibleFilterBarProps {
   searchSlot: ReactNode;
@@ -30,6 +32,7 @@ export function CollapsibleFilterBar({
   defaultOpen = false,
 }: CollapsibleFilterBarProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
+  const { dictionary, isGujarati } = useLanguage();
 
   const renderFilterButton = (key: string) => (
     <button
@@ -50,10 +53,10 @@ export function CollapsibleFilterBar({
             : "text-muted-foreground"
         }`}
       />
-      <span>Filters</span>
+      <span>{dictionary.common.filters}</span>
       {activeCount > 0 && (
         <span className="flex size-4.5 items-center justify-center rounded-full bg-indigo-600 text-[10px] font-bold text-white dark:bg-indigo-500">
-          {activeCount}
+          {isGujarati ? toGujaratiNumerals(activeCount) : activeCount}
         </span>
       )}
       <ChevronDown

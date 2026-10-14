@@ -6,6 +6,7 @@ import { Pencil, X, Loader2, FileText, Image as ImageIcon, File, AlertCircle } f
 import { ModalPortal, MODAL_Z } from "@/components/ui/modal-portal";
 import { useBodyScrollLock } from "@/lib/hooks/useBodyScrollLock";
 import { useModalBackClose } from "@/lib/hooks/useModalBackClose";
+import { useLanguage } from "@/lib/i18n/language-context";
 
 export interface EditFileModalProps {
   isOpen: boolean;
@@ -48,6 +49,7 @@ export function EditFileModal({
   file,
   onUpdated,
 }: EditFileModalProps) {
+  const { dictionary } = useLanguage();
   const router = useRouter();
   const [, startTransition] = useTransition();
 
@@ -168,10 +170,10 @@ export function EditFileModal({
                   id="edit-file-modal-title"
                   className="text-base font-bold text-foreground"
                 >
-                  Edit Document Details
+                  {dictionary.storage.editDocument}
                 </h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Update the file name and description for this record.
+                  {dictionary.storage.pageSubtitle}
                 </p>
               </div>
             </div>
@@ -181,7 +183,7 @@ export function EditFileModal({
               disabled={isSaving}
               onClick={onClose}
               className="p-1.5 rounded-xl border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50 cursor-pointer"
-              title="Close modal"
+              title={dictionary.common.close}
             >
               <X className="size-4" />
             </button>
@@ -228,10 +230,10 @@ export function EditFileModal({
                 htmlFor="edit-file-name"
                 className="text-xs font-bold text-foreground flex items-center justify-between"
               >
-                <span>Document Name</span>
+                <span>{dictionary.storage.documentName}</span>
                 {parsed.ext && (
                   <span className="text-[11px] font-normal text-muted-foreground">
-                    Extension automatically preserved
+                    .{parsed.ext}
                   </span>
                 )}
               </label>
@@ -242,7 +244,7 @@ export function EditFileModal({
                   type="text"
                   value={baseName}
                   onChange={(e) => setBaseName(e.target.value)}
-                  placeholder="Enter file name..."
+                  placeholder={dictionary.storage.documentName}
                   disabled={isSaving}
                   required
                   maxLength={200}
@@ -263,7 +265,7 @@ export function EditFileModal({
                   htmlFor="edit-file-desc"
                   className="text-xs font-bold text-foreground"
                 >
-                  Description <span className="font-normal text-muted-foreground">(Optional)</span>
+                  {dictionary.storage.description}
                 </label>
                 <span className="text-[11px] text-muted-foreground">
                   {description.length} / 1000
@@ -274,7 +276,7 @@ export function EditFileModal({
                 id="edit-file-desc"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Add notes, context, or details about this document..."
+                placeholder={dictionary.storage.descriptionPlaceholder}
                 disabled={isSaving}
                 rows={3}
                 maxLength={1000}
@@ -290,7 +292,7 @@ export function EditFileModal({
                 onClick={onClose}
                 className="px-4 py-2 rounded-xl border border-border bg-card text-xs font-semibold text-foreground hover:bg-muted transition-colors disabled:opacity-50 cursor-pointer"
               >
-                Cancel
+                {dictionary.common.cancel}
               </button>
 
               <button
@@ -301,12 +303,12 @@ export function EditFileModal({
                 {isSaving ? (
                   <>
                     <Loader2 className="size-3.5 animate-spin" />
-                    <span>Saving...</span>
+                    <span>{dictionary.common.saving}</span>
                   </>
                 ) : (
                   <>
                     <Pencil className="size-3.5" />
-                    <span>Save Changes</span>
+                    <span>{dictionary.common.save}</span>
                   </>
                 )}
               </button>

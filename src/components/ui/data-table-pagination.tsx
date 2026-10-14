@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ChevronDown, Check, Loader2 } from "lucide-react";
+import { useLanguage } from "@/lib/i18n/language-context";
+import { toGujaratiNumerals } from "@/lib/reports/gujaratiReportUtils";
 
 export interface DataTablePaginationProps {
   currentPage: number;
@@ -28,6 +30,7 @@ export function DataTablePagination({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { dictionary, isGujarati } = useLanguage();
   const [isPageSizeOpen, setIsPageSizeOpen] = useState(false);
   /**
    * Paging is a server round trip on every page in this app, and nothing
@@ -86,23 +89,37 @@ export function DataTablePagination({
     <div className="flex flex-col items-stretch gap-3 border-t border-border px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-4 sm:px-6">
       <div className="text-center text-[11px] text-muted-foreground sm:text-left sm:text-sm">
         <span>
-          Showing <span className="font-semibold text-foreground">{startItem}</span> to{" "}
-          <span className="font-semibold text-foreground">{endItem}</span> of{" "}
-          <span className="font-semibold text-foreground">{totalItems}</span> results
+          {dictionary.common.showing}{" "}
+          <span className="font-semibold text-foreground">
+            {isGujarati ? toGujaratiNumerals(startItem) : startItem}
+          </span>{" "}
+          -{" "}
+          <span className="font-semibold text-foreground">
+            {isGujarati ? toGujaratiNumerals(endItem) : endItem}
+          </span>{" "}
+          {dictionary.common.of}{" "}
+          <span className="font-semibold text-foreground">
+            {isGujarati ? toGujaratiNumerals(totalItems) : totalItems}
+          </span>{" "}
+          {dictionary.common.entries}
         </span>
       </div>
 
       <div className="flex items-center justify-between gap-3 sm:flex-wrap sm:justify-end sm:gap-6">
         <div className="flex items-center gap-2 text-xs sm:text-sm">
-          <span className="hidden text-muted-foreground sm:inline">Rows per page:</span>
-          <span className="text-muted-foreground sm:hidden">Rows:</span>
+          <span className="hidden text-muted-foreground sm:inline">
+            {dictionary.common.rowsPerPage}
+          </span>
+          <span className="text-muted-foreground sm:hidden">
+            {dictionary.common.rowsLabel}
+          </span>
           <div ref={pageSizeRef} className="relative">
             <button
               type="button"
               onClick={() => setIsPageSizeOpen((prev) => !prev)}
               className="flex items-center gap-1.5 rounded-xl border border-border bg-card px-2.5 py-1 text-xs font-semibold text-foreground shadow-xs hover:border-slate-400 dark:hover:border-slate-600 focus:outline-hidden cursor-pointer"
             >
-              <span>{pageSize}</span>
+              <span>{isGujarati ? toGujaratiNumerals(pageSize) : pageSize}</span>
               <ChevronDown
                 className={`size-3 text-muted-foreground transition-transform duration-200 ${
                   isPageSizeOpen ? "rotate-180" : ""
@@ -126,7 +143,7 @@ export function DataTablePagination({
                         : "text-foreground hover:bg-muted/70"
                     }`}
                   >
-                    <span>{opt}</span>
+                    <span>{isGujarati ? toGujaratiNumerals(opt) : opt}</span>
                     {pageSize === opt && <Check className="size-3" />}
                   </button>
                 ))}
@@ -141,7 +158,9 @@ export function DataTablePagination({
               <Loader2 aria-hidden className="size-3.5 shrink-0 animate-spin text-indigo-500" />
             )}
             <span>
-              Page {currentPage} of {Math.max(1, totalPages)}
+              {isGujarati
+                ? `પાનું ${toGujaratiNumerals(currentPage)} / ${toGujaratiNumerals(Math.max(1, totalPages))}`
+                : `Page ${currentPage} of ${Math.max(1, totalPages)}`}
             </span>
           </span>
           <button

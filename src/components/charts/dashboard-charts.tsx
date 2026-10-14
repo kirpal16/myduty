@@ -15,6 +15,7 @@ import {
 } from "recharts";
 import { formatCurrency } from "@/lib/format/currency";
 import { useHasHover } from "@/lib/hooks/useHasHover";
+import { useLanguage } from "@/lib/i18n/language-context";
 import {
   seriesColor,
   CHART_CHROME,
@@ -24,22 +25,18 @@ import {
 
 export type NamedValue = { name: string; value: number; color?: string | null };
 
-const EMPTY = (
-  <p className="flex h-full min-h-40 items-center justify-center rounded-2xl border-2 border-dashed border-border p-6 text-center text-xs text-muted-foreground">
-    Nothing recorded for this period yet.
-  </p>
-);
-
 function ChartCard({
   title,
   subtitle,
   children,
   isEmpty,
+  emptyText,
 }: {
   title: string;
   subtitle?: string;
   children: React.ReactNode;
   isEmpty: boolean;
+  emptyText?: string;
 }) {
   return (
     /* The tap-focus ring and tap highlight are suppressed in globals.css,
@@ -54,7 +51,15 @@ function ChartCard({
           <p className="mt-0.5 text-[11px] text-muted-foreground">{subtitle}</p>
         )}
       </div>
-      <div className="h-56 w-full">{isEmpty ? EMPTY : children}</div>
+      <div className="h-56 w-full">
+        {isEmpty ? (
+          <p className="flex h-full min-h-40 items-center justify-center rounded-2xl border-2 border-dashed border-border p-6 text-center text-xs text-muted-foreground">
+            {emptyText ?? "Nothing recorded for this period yet."}
+          </p>
+        ) : (
+          children
+        )}
+      </div>
     </div>
   );
 }
@@ -79,12 +84,14 @@ const tooltipStyle = {
 /** Which kinds of duty the officer actually performed. */
 export function DutyTypeDonut({ data }: { data: NamedValue[] }) {
   const trigger = useTooltipTrigger();
+  const { t } = useLanguage();
 
   return (
     <ChartCard
-      title="Duty Distribution"
-      subtitle="Shifts by duty type"
+      title={t.charts.dutyDistribution}
+      subtitle={t.charts.shiftsByDutyType}
       isEmpty={data.length === 0}
+      emptyText={t.charts.nothingRecorded}
     >
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
@@ -124,17 +131,19 @@ export function WorkedDaysDonut({
   holiday: number;
 }) {
   const trigger = useTooltipTrigger();
+  const { t } = useLanguage();
 
   const data: NamedValue[] = [
-    { name: "Working days", value: working, color: WORKING_COLOR },
-    { name: "Holidays worked", value: holiday, color: HOLIDAY_COLOR },
+    { name: t.charts.workingDays, value: working, color: WORKING_COLOR },
+    { name: t.charts.holidaysWorked, value: holiday, color: HOLIDAY_COLOR },
   ].filter((d) => d.value > 0);
 
   return (
     <ChartCard
-      title="Working vs Holiday Duty"
-      subtitle="Holidays counted only when worked"
+      title={t.charts.workingVsHolidayDuty}
+      subtitle={t.charts.holidaysCountedOnly}
       isEmpty={data.length === 0}
+      emptyText={t.charts.nothingRecorded}
     >
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
@@ -165,12 +174,14 @@ export function WorkedDaysDonut({
  */
 export function LeaveUsageBar({ data }: { data: NamedValue[] }) {
   const trigger = useTooltipTrigger();
+  const { t } = useLanguage();
 
   return (
     <ChartCard
-      title="Leave Days Taken"
-      subtitle="By leave type, in your own colours"
+      title={t.charts.leaveDaysTaken}
+      subtitle={t.charts.byLeaveTypeColours}
       isEmpty={data.length === 0}
+      emptyText={t.charts.nothingRecorded}
     >
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} layout="vertical" margin={{ left: 8, right: 16 }}>
@@ -193,7 +204,7 @@ export function LeaveUsageBar({ data }: { data: NamedValue[] }) {
             cursor={{ fill: CHART_CHROME.grid }}
             trigger={trigger}
           />
-          <Bar dataKey="value" radius={[0, 6, 6, 0]} name="Days">
+          <Bar dataKey="value" radius={[0, 6, 6, 0]} name={t.charts.days}>
             {data.map((d, i) => (
               <Cell key={d.name} fill={d.color ?? seriesColor(i)} />
             ))}
@@ -207,12 +218,14 @@ export function LeaveUsageBar({ data }: { data: NamedValue[] }) {
 /** TA claimed month by month across the selected year. */
 export function MonthlyTaBar({ data }: { data: NamedValue[] }) {
   const trigger = useTooltipTrigger();
+  const { t } = useLanguage();
   const isEmpty = data.every((d) => d.value === 0);
   return (
     <ChartCard
-      title="Travelling Allowance by Month"
-      subtitle="Claims across the year"
+      title={t.charts.travellingAllowanceByMonth}
+      subtitle={t.charts.claimsAcrossYear}
       isEmpty={isEmpty}
+      emptyText={t.charts.nothingRecorded}
     >
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ left: 4, right: 8 }}>
@@ -231,9 +244,9 @@ export function MonthlyTaBar({ data }: { data: NamedValue[] }) {
             contentStyle={tooltipStyle}
             cursor={{ fill: CHART_CHROME.grid }}
             trigger={trigger}
-            formatter={(v) => [formatCurrency(Number(v ?? 0)), "TA claimed"]}
+            formatter={(v) => [formatCurrency(Number(v ?? 0)), t.charts.taClaimed]}
           />
-          <Bar dataKey="value" fill={seriesColor(1)} radius={[6, 6, 0, 0]} name="TA" />
+          <Bar dataKey="value" fill={seriesColor(1)} radius={[6, 6, 0, 0]} name={t.charts.ta} />
         </BarChart>
       </ResponsiveContainer>
     </ChartCard>

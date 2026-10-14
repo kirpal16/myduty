@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import { formatSafeDateFull } from "@/lib/format/safeDate";
 import type { HolidayDay, HolidayYearSummary } from "@/lib/holidays/holidayYearSummary";
+import { useLanguage } from "@/lib/i18n/language-context";
+import { toGujaratiNumerals } from "@/lib/reports/gujaratiReportUtils";
 
 /**
  * Where the Holiday Leave total comes from, itemised.
@@ -24,6 +26,7 @@ import type { HolidayDay, HolidayYearSummary } from "@/lib/holidays/holidayYearS
  * the general Holiday Leave total.
  */
 export function HolidayBreakdown({ summary }: { summary: HolidayYearSummary }) {
+  const { isGujarati, t } = useLanguage();
   const [open, setOpen] = useState<string | null>(null);
   const [showOptionalList, setShowOptionalList] = useState(false);
 
@@ -38,39 +41,39 @@ export function HolidayBreakdown({ summary }: { summary: HolidayYearSummary }) {
   }[] = [
     {
       id: "sundays",
-      label: "Sundays",
-      hint: "Every Sunday in the year",
+      label: t.settings.sundays,
+      hint: t.settings.everySunday,
       icon: Sun,
       accent: "text-purple-500",
       days: summary.sundays,
-      signed: `+${summary.sundays.length}`,
+      signed: `+${isGujarati ? toGujaratiNumerals(summary.sundays.length) : summary.sundays.length}`,
     },
     {
       id: "saturdays",
-      label: "2nd & 4th Saturdays",
-      hint: "The 1st, 3rd and 5th are working days",
+      label: t.settings.secondFourthSaturdays,
+      hint: t.settings.secondFourthSaturdaysHint,
       icon: CalendarDays,
       accent: "text-sky-500",
       days: summary.weekendSaturdays,
-      signed: `+${summary.weekendSaturdays.length}`,
+      signed: `+${isGujarati ? toGujaratiNumerals(summary.weekendSaturdays.length) : summary.weekendSaturdays.length}`,
     },
     {
       id: "festivals",
-      label: "Festivals & gazetted days",
-      hint: "Public holidays from the list below (excluding optional)",
+      label: t.settings.festivalsGazetted,
+      hint: t.settings.festivalsGazettedHint,
       icon: Sparkles,
       accent: "text-amber-500",
       days: summary.festivals,
-      signed: `+${summary.festivals.length}`,
+      signed: `+${isGujarati ? toGujaratiNumerals(summary.festivals.length) : summary.festivals.length}`,
     },
     {
       id: "overlaps",
-      label: "Already counted",
-      hint: "Festivals that fall on a Sunday or a 2nd/4th Saturday",
+      label: t.settings.alreadyCounted,
+      hint: t.settings.alreadyCountedHint,
       icon: Minus,
       accent: "text-rose-500",
       days: summary.overlaps,
-      signed: `−${summary.overlaps.length}`,
+      signed: `−${isGujarati ? toGujaratiNumerals(summary.overlaps.length) : summary.overlaps.length}`,
     },
   ];
 
@@ -80,10 +83,10 @@ export function HolidayBreakdown({ summary }: { summary: HolidayYearSummary }) {
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
         <div className="border-b border-border bg-muted/30 px-3 py-2.5 sm:px-4">
           <p className="text-xs font-bold text-foreground">
-            Public Holidays &amp; Off-Days Breakdown
+            {t.settings.publicHolidaysBreakdown}
           </p>
           <p className="text-[11px] text-muted-foreground">
-            Itemized breakdown of statutory off-days forming your Holiday Leave entitlement.
+            {t.settings.publicHolidaysBreakdownSubtitle}
           </p>
         </div>
 
@@ -129,7 +132,7 @@ export function HolidayBreakdown({ summary }: { summary: HolidayYearSummary }) {
                         className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 px-3 py-2 sm:px-4"
                       >
                         <span className="text-[11px] font-semibold text-foreground">
-                          {formatSafeDateFull(new Date(`${d.date}T12:00:00`))}
+                          {formatSafeDateFull(new Date(`${d.date}T12:00:00`), isGujarati)}
                         </span>
                         <span className="text-[11px] text-muted-foreground">
                           {d.label}
@@ -147,14 +150,16 @@ export function HolidayBreakdown({ summary }: { summary: HolidayYearSummary }) {
         <div className="flex items-center justify-between gap-3 border-t-2 border-border bg-muted/50 px-3 py-3 sm:px-4">
           <div>
             <p className="text-xs font-bold text-foreground">
-              Total Public Holidays in {summary.year}
+              {isGujarati
+                ? `${t.settings.totalPublicHolidaysInYear} ${toGujaratiNumerals(summary.year)}`
+                : `Total Public Holidays in ${summary.year}`}
             </p>
             <p className="text-[11px] text-muted-foreground">
-              Statutory Holiday Leave (HL) allocation (excludes optional holidays)
+              {t.settings.totalPublicHolidaysHint}
             </p>
           </div>
           <span className="font-mono text-xl font-bold text-foreground">
-            {summary.total}
+            {isGujarati ? toGujaratiNumerals(summary.total) : summary.total}
           </span>
         </div>
       </div>
@@ -169,13 +174,13 @@ export function HolidayBreakdown({ summary }: { summary: HolidayYearSummary }) {
               </div>
               <div>
                 <h3 className="text-xs font-bold text-foreground flex items-center gap-2">
-                  Optional Holidays (મરજિયાત રજા)
+                  {t.settings.optionalHolidaysTitle}
                   <span className="rounded-full bg-purple-500/20 px-2 py-0.5 text-[10px] font-semibold text-purple-700 dark:text-purple-300">
-                    Max 2 / Year
+                    {t.settings.maxTwoPerYear}
                   </span>
                 </h3>
                 <p className="text-[11px] text-muted-foreground">
-                  Choice of <strong>any 2 days</strong> per calendar year from all declared optional holidays.
+                  {t.settings.optionalHolidaysChoice}
                 </p>
               </div>
             </div>
@@ -185,7 +190,10 @@ export function HolidayBreakdown({ summary }: { summary: HolidayYearSummary }) {
               onClick={() => setShowOptionalList((prev) => !prev)}
               className="flex items-center gap-1.5 rounded-xl border border-purple-500/30 bg-card px-2.5 py-1.5 text-xs font-semibold text-purple-700 dark:text-purple-300 transition-colors hover:bg-purple-500/10"
             >
-              <span>{summary.optionalHolidays.length} declared</span>
+              <span>
+                {isGujarati ? toGujaratiNumerals(summary.optionalHolidays.length) : summary.optionalHolidays.length}{" "}
+                {t.settings.declaredCount}
+              </span>
               <ChevronDown
                 className={`size-3.5 transition-transform ${
                   showOptionalList ? "rotate-180" : ""
@@ -197,8 +205,17 @@ export function HolidayBreakdown({ summary }: { summary: HolidayYearSummary }) {
           <div className="mt-2.5 flex items-start gap-1.5 text-[11px] text-muted-foreground">
             <Info className="mt-0.5 size-3.5 shrink-0 text-purple-500" />
             <span>
-              Optional holidays are treated as a separate leave type (OH) with a yearly quota of 2 days.
-              They are <strong>not counted</strong> in the {summary.total} general Holiday Leave days above.
+              {isGujarati ? (
+                <>
+                  મરજિયાત રજાઓને ૨ દિવસના વાર્ષિક ક્વોટા સાથે અલગ રજા પ્રકાર (OH) તરીકે ગણવામાં આવે છે.
+                  તેઓ ઉપરના {toGujaratiNumerals(summary.total)} સામાન્ય રજા દિવસોમાં <strong>ગણવામાં આવતા નથી</strong>.
+                </>
+              ) : (
+                <>
+                  Optional holidays are treated as a separate leave type (OH) with a yearly quota of 2 days.
+                  They are <strong>not counted</strong> in the {summary.total} general Holiday Leave days above.
+                </>
+              )}
             </span>
           </div>
         </div>
@@ -207,7 +224,10 @@ export function HolidayBreakdown({ summary }: { summary: HolidayYearSummary }) {
           <div className="border-t border-purple-500/20 bg-background/50">
             {summary.optionalHolidays.length === 0 ? (
               <p className="px-4 py-4 text-center text-xs text-muted-foreground">
-                No optional holidays declared for {summary.year}. You can import them using the Gujarat Holiday Importer above or add one below.
+                {t.settings.optionalHolidaysEmptyHint.replace(
+                  "{year}",
+                  isGujarati ? toGujaratiNumerals(summary.year) : String(summary.year),
+                )}
               </p>
             ) : (
               <ul className="max-h-64 divide-y divide-purple-500/10 overflow-y-auto">
@@ -217,7 +237,7 @@ export function HolidayBreakdown({ summary }: { summary: HolidayYearSummary }) {
                     className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 px-3 py-2 sm:px-4"
                   >
                     <span className="text-[11px] font-semibold text-foreground">
-                      {formatSafeDateFull(new Date(`${d.date}T12:00:00`))}
+                      {formatSafeDateFull(new Date(`${d.date}T12:00:00`), isGujarati)}
                     </span>
                     <span className="text-[11px] text-muted-foreground">
                       {d.label}

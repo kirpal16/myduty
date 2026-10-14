@@ -14,6 +14,8 @@ import {
 import { DeleteFileButton } from "./delete-file-button";
 import { EditFileModal } from "./edit-file-modal";
 import { FilePreviewModal } from "@/components/ui/file-preview-modal";
+import { useLanguage } from "@/lib/i18n/language-context";
+import { toGujaratiNumerals } from "@/lib/reports/gujaratiReportUtils";
 
 export interface FileAttachmentItem {
   id: string;
@@ -29,6 +31,7 @@ export function StorageFileTable({
 }: {
   files: FileAttachmentItem[];
 }) {
+  const { dictionary, isGujarati } = useLanguage();
   const [items, setItems] = useState<FileAttachmentItem[]>(files);
   const [previewFile, setPreviewFile] = useState<FileAttachmentItem | null>(null);
   const [editingFile, setEditingFile] = useState<FileAttachmentItem | null>(null);
@@ -67,9 +70,23 @@ export function StorageFileTable({
   };
 
   const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    if (bytes < 1024) return isGujarati ? `${toGujaratiNumerals(bytes)} B` : `${bytes} B`;
+    if (bytes < 1024 * 1024) {
+      const val = (bytes / 1024).toFixed(1);
+      return isGujarati ? `${toGujaratiNumerals(val)} KB` : `${val} KB`;
+    }
+    const val = (bytes / (1024 * 1024)).toFixed(1);
+    return isGujarati ? `${toGujaratiNumerals(val)} MB` : `${val} MB`;
+  };
+
+  const formatDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return "";
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const year = d.getFullYear();
+    const formatted = `${day}/${month}/${year}`;
+    return isGujarati ? toGujaratiNumerals(formatted) : formatted;
   };
 
   const getFileIcon = (mime: string) => {
@@ -87,11 +104,11 @@ export function StorageFileTable({
         <table className="w-full text-left text-xs sm:text-sm">
           <thead className="bg-muted/50 border-b border-border text-muted-foreground uppercase text-[11px] font-semibold tracking-wider">
             <tr>
-              <th className="py-3.5 px-4 sm:px-6">Document Name</th>
-              <th className="py-3.5 px-4">Description</th>
-              <th className="py-3.5 px-4">Size</th>
-              <th className="py-3.5 px-4">Uploaded</th>
-              <th className="py-3.5 px-4 sm:px-6 text-right">Actions</th>
+              <th className="py-3.5 px-4 sm:px-6">{dictionary.storage.documentName}</th>
+              <th className="py-3.5 px-4">{dictionary.storage.description}</th>
+              <th className="py-3.5 px-4">{dictionary.storage.fileSize}</th>
+              <th className="py-3.5 px-4">{dictionary.storage.uploadedOn}</th>
+              <th className="py-3.5 px-4 sm:px-6 text-right">{dictionary.common.actions}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border/60">
@@ -138,7 +155,7 @@ export function StorageFileTable({
                   <td className="py-3.5 px-4 text-muted-foreground whitespace-nowrap">
                     <div className="flex items-center gap-1.5">
                       <Calendar className="size-3.5 text-slate-400" />
-                      <span>{new Date(f.created_at).toLocaleDateString()}</span>
+                      <span>{formatDate(f.created_at)}</span>
                     </div>
                   </td>
                   <td className="py-3.5 px-4 sm:px-6 text-right whitespace-nowrap">
@@ -148,10 +165,10 @@ export function StorageFileTable({
                         type="button"
                         onClick={() => setPreviewFile(f)}
                         className="inline-flex items-center gap-1 rounded-xl border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-muted hover:border-indigo-500/50 transition-colors shadow-2xs cursor-pointer"
-                        title="View / Preview File"
+                        title={dictionary.common.preview}
                       >
                         <Eye className="size-3.5 text-sky-500" />
-                        <span>Preview</span>
+                        <span>{dictionary.common.preview}</span>
                       </button>
 
                       {/* Edit (Pencil) */}
@@ -159,10 +176,10 @@ export function StorageFileTable({
                         type="button"
                         onClick={() => setEditingFile(f)}
                         className="inline-flex items-center gap-1 rounded-xl border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-muted hover:border-amber-500/50 transition-colors shadow-2xs cursor-pointer"
-                        title="Edit File Name & Description"
+                        title={dictionary.common.edit}
                       >
                         <Pencil className="size-3.5 text-amber-500" />
-                        <span>Edit</span>
+                        <span>{dictionary.common.edit}</span>
                       </button>
 
                       {/* Download */}
@@ -172,10 +189,10 @@ export function StorageFileTable({
                         className="inline-flex items-center gap-1 rounded-xl border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-colors shadow-2xs"
                         target="_blank"
                         rel="noopener noreferrer"
-                        title="Download Document"
+                        title={dictionary.common.download}
                       >
                         <Download className="size-3.5 text-indigo-500" />
-                        <span>Download</span>
+                        <span>{dictionary.common.download}</span>
                       </a>
 
                       {/* Delete (Trash2) */}
@@ -222,7 +239,7 @@ export function StorageFileTable({
                   <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                     <span>{formatFileSize(f.size_bytes)}</span>
                     <span>•</span>
-                    <span>{new Date(f.created_at).toLocaleDateString()}</span>
+                    <span>{formatDate(f.created_at)}</span>
                   </div>
                 </div>
               </div>
@@ -234,7 +251,7 @@ export function StorageFileTable({
                   className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-border bg-card py-2 text-xs font-semibold text-foreground hover:bg-muted shadow-2xs transition-colors cursor-pointer"
                 >
                   <Eye className="size-3.5 text-sky-500" />
-                  <span>Preview</span>
+                  <span>{dictionary.common.preview}</span>
                 </button>
                 <button
                   type="button"
@@ -242,7 +259,7 @@ export function StorageFileTable({
                   className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-border bg-card py-2 text-xs font-semibold text-foreground hover:bg-muted shadow-2xs transition-colors cursor-pointer"
                 >
                   <Pencil className="size-3.5 text-amber-500" />
-                  <span>Edit</span>
+                  <span>{dictionary.common.edit}</span>
                 </button>
                 <a
                   href={`/api/storage/${f.id}`}
@@ -252,7 +269,7 @@ export function StorageFileTable({
                   rel="noopener noreferrer"
                 >
                   <Download className="size-3.5 text-indigo-500" />
-                  <span>Download</span>
+                  <span>{dictionary.common.download}</span>
                 </a>
                 <DeleteFileButton id={f.id} />
               </div>
@@ -266,10 +283,10 @@ export function StorageFileTable({
           <div className="flex flex-col items-center justify-center gap-2">
             <FolderArchive className="size-8 text-slate-300 dark:text-slate-700" />
             <p className="text-sm font-medium text-foreground">
-              No files found in vault
+              {dictionary.storage.noFilesFound}
             </p>
             <p className="text-xs text-muted-foreground">
-              Use the Upload button above to add your first attachment.
+              {dictionary.storage.noFilesHelp}
             </p>
           </div>
         </div>

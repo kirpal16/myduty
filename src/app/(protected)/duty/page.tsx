@@ -48,11 +48,19 @@ import { getYearOptions, clampYear } from "@/lib/format/year";
 import {
   formatDutyTypeDropdownLabel,
   sortDutyTypesForDropdown,
+  translateDutyTypeToGujarati,
+  toGujaratiNumerals,
 } from "@/lib/reports/gujaratiReportUtils";
+import { getServerTranslations } from "@/lib/i18n/server";
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
+];
+
+const GUJARATI_MONTH_NAMES = [
+  "જાન્યુઆરી", "ફેબ્રુઆરી", "માર્ચ", "એપ્રિલ", "મે", "જૂન",
+  "જુલાઈ", "ઓગસ્ટ", "સપ્ટેમ્બર", "ઓક્ટોબર", "નવેમ્બર", "ડિસેમ્બર",
 ];
 
 export default async function DutyListPage({
@@ -100,6 +108,9 @@ export default async function DutyListPage({
    * whole log with rows missing.
    */
   const now = new Date();
+  const { lang, t } = await getServerTranslations();
+  const isGu = lang === "gu";
+  const monthNames = isGu ? GUJARATI_MONTH_NAMES : MONTH_NAMES;
   const hasExplicitRange = Boolean(rawFrom || rawTo);
   const selectedYear = clampYear(year);
 
@@ -211,13 +222,13 @@ export default async function DutyListPage({
   return (
     <main className="w-full px-4 sm:px-6 lg:px-8 py-6 max-w-7xl 2xl:max-w-full mx-auto space-y-6">
       <DutySelectionProvider selectableIds={ownIds}>
-        {/* Page Header with distinct Indigo Glow Theme */}
+        {/* Page Header */}
         <PageHeader
-          title="Duty Log Book"
-          subtitle="Manage and view all registered duty rosters, travel routes, and allowances."
+          title={t.duty.pageTitle}
+          subtitle={t.duty.pageSubtitle}
           badge={
             <Badge variant="purple" dot>
-              {totalItems} Total Records
+              {isGu ? toGujaratiNumerals(totalItems) : totalItems} {t.common.records}
             </Badge>
           }
           compactActions
@@ -229,8 +240,7 @@ export default async function DutyListPage({
                 className="flex items-center gap-1.5 whitespace-nowrap rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 px-2.5 py-2 text-xs font-semibold text-white shadow-md shadow-indigo-600/30 transition-all hover:from-indigo-500 hover:to-indigo-600 sm:gap-2 sm:px-4 sm:py-2.5 sm:text-sm"
               >
                 <Plus className="size-4 shrink-0" />
-                <span className="sm:hidden">Log Duty</span>
-                <span className="hidden sm:inline">Log New Duty</span>
+                <span>{t.duty.addDuty}</span>
               </Link>
             </div>
           }
@@ -243,8 +253,10 @@ export default async function DutyListPage({
             <Briefcase className="size-5" />
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total Duty Logs</p>
-            <p className="text-xl sm:text-2xl font-bold text-foreground">{totalItems}</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t.dashboard.dutyLogs}</p>
+            <p className="text-xl sm:text-2xl font-bold text-foreground">
+              {isGu ? toGujaratiNumerals(totalItems) : totalItems}
+            </p>
           </div>
         </div>
 
@@ -253,9 +265,11 @@ export default async function DutyListPage({
             <Compass className="size-5" />
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total TA Distance</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t.dashboard.travelDistance}</p>
             <p className="text-xl sm:text-2xl font-bold text-foreground">
-              {totalTaDistance.toLocaleString()} km
+              {isGu
+                ? `${toGujaratiNumerals(totalTaDistance.toLocaleString())} કિ.મી.`
+                : `${totalTaDistance.toLocaleString()} km`}
             </p>
           </div>
         </div>
@@ -265,45 +279,45 @@ export default async function DutyListPage({
             <IndianRupee className="size-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">TA Claimed</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t.dashboard.taAllowance}</p>
             <p className="text-xl sm:text-2xl font-bold text-foreground">
-              {formatCurrency(totalTaAmount)}
+              {isGu ? toGujaratiNumerals(formatCurrency(totalTaAmount)) : formatCurrency(totalTaAmount)}
             </p>
           </div>
         </div>
 
-        {/* Holiday Pay: prominent currency amount with duties worked hint */}
+        {/* Holiday Pay */}
         <div className="flex items-center gap-3.5 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 shadow-xs">
           <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
             <Sparkles className="size-5" />
           </div>
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Holiday Pay
+              {t.dashboard.holidaysWorked}
             </p>
             <p className="text-xl sm:text-2xl font-bold text-foreground">
-              {formatCurrency(totalHolidayPay)}
+              {isGu ? toGujaratiNumerals(formatCurrency(totalHolidayPay)) : formatCurrency(totalHolidayPay)}
             </p>
             <p className="truncate text-[11px] text-muted-foreground">
-              {holidayDutiesWorked} {holidayDutiesWorked === 1 ? "holiday duty" : "holiday duties"} worked
+              {isGu ? toGujaratiNumerals(holidayDutiesWorked) : holidayDutiesWorked} {t.duty.holidayDuty}
             </p>
           </div>
         </div>
 
-        {/* Total Extra Pay: Combined TA Claimed + Holiday Pay payout */}
+        {/* Total Extra Pay */}
         <div className="col-span-2 sm:col-span-1 flex items-center gap-3.5 rounded-2xl border border-indigo-500/30 bg-indigo-500/[0.08] dark:bg-indigo-500/15 p-4 shadow-xs">
           <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-indigo-600/15 text-indigo-600 dark:text-indigo-400">
             <IndianRupee className="size-5" />
           </div>
           <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
-              Total Extra Pay
+              {t.dashboard.extraPay}
             </p>
             <p className="text-xl sm:text-2xl font-black text-foreground">
-              {formatCurrency(totalExtraPay)}
+              {isGu ? toGujaratiNumerals(formatCurrency(totalExtraPay)) : formatCurrency(totalExtraPay)}
             </p>
             <p className="truncate text-[11px] text-muted-foreground">
-              TA + Holiday payout
+              TA + {t.duty.holidayDuty}
             </p>
           </div>
         </div>
@@ -338,9 +352,9 @@ export default async function DutyListPage({
             <Link
               href="/duty"
               className="h-9 inline-flex items-center justify-center rounded-xl border border-rose-500/20 bg-rose-500/10 px-3 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 transition-colors shrink-0"
-              title="Reset all filters"
+              title={t.common.resetFilters}
             >
-              Reset Filters
+              {t.common.resetFilters}
             </Link>
           ) : null
         }
@@ -351,7 +365,7 @@ export default async function DutyListPage({
             <div className="w-full sm:w-44">
               <FilterSelect
                 paramName="userId"
-                placeholder="All Officers"
+                placeholder={t.profile.officerName}
                 icon="user"
                 options={(usersList ?? []).map((u) => ({
                   value: u.id,
@@ -366,42 +380,42 @@ export default async function DutyListPage({
             <div className="w-full sm:w-36">
               <FilterSelect
                 paramName="dutyTypeId"
-                placeholder="All Types"
+                placeholder={t.duty.allDutyTypes}
                 icon="briefcase"
                 options={sortDutyTypesForDropdown(dutyTypes ?? []).map((dt) => ({
                   value: dt.id,
-                  label: formatDutyTypeDropdownLabel(dt.name),
+                  label: isGu
+                    ? translateDutyTypeToGujarati(dt.name)
+                    : formatDutyTypeDropdownLabel(dt.name),
                 }))}
               />
             </div>
           )}
 
-          {/* Working vs holiday days. Reads is_holiday_duty, so it selects
-              holidays the officer actually WORKED, not holiday dates. */}
+          {/* Working vs holiday days */}
           <div className="w-full sm:w-36">
             <FilterSelect
               paramName="dayType"
-              placeholder="All Days"
+              placeholder={t.common.all}
               icon="calendar"
               options={[
-                { value: "working", label: "Working days" },
-                { value: "holiday", label: "Holidays worked" },
+                { value: "working", label: t.dashboard.workingDays },
+                { value: "holiday", label: t.dashboard.holidaysWorked },
               ]}
             />
           </div>
 
-          {/* Month. Defaults to the current one, so the list says what it
-              is showing instead of quietly narrowing itself. */}
+          {/* Month */}
           <div className="w-full sm:w-36">
             <FilterSelect
               paramName="month"
-              placeholder="Whole year"
+              placeholder={t.dashboard.wholeYear}
               value={monthParam}
               icon="calendar"
               clearable={true}
               options={[
-                { value: "all", label: "Whole year" },
-                ...MONTH_NAMES.map((m, i) => ({ value: String(i + 1), label: m })),
+                { value: "all", label: t.dashboard.wholeYear },
+                ...monthNames.map((m, i) => ({ value: String(i + 1), label: m })),
               ]}
             />
           </div>
@@ -410,11 +424,14 @@ export default async function DutyListPage({
           <div className="w-full sm:w-28">
             <FilterSelect
               paramName="year"
-              placeholder={String(selectedYear)}
+              placeholder={isGu ? toGujaratiNumerals(selectedYear) : String(selectedYear)}
               value={hasExplicitRange && !year ? undefined : String(selectedYear)}
               icon="calendar"
               clearable={false}
-              options={yearOptions}
+              options={yearOptions.map((opt) => ({
+                value: opt.value,
+                label: isGu ? toGujaratiNumerals(opt.value) : opt.label,
+              }))}
             />
           </div>
 
@@ -438,15 +455,15 @@ export default async function DutyListPage({
             <thead className="bg-muted/50 border-b border-border text-muted-foreground uppercase text-[11px] font-semibold tracking-wider">
               <tr>
                 <DutyTableSelectHeader />
-                <th className="py-3.5 px-4 sm:px-6">Officer</th>
-                <th className="py-3.5 px-4">Duty Type</th>
-                <th className="py-3.5 px-4">Start Time</th>
-                <th className="py-3.5 px-4">End Time</th>
-                <th className="py-3.5 px-4">Location</th>
-                <th className="py-3.5 px-4">TA Route</th>
-                <th className="py-3.5 px-4 text-center">Distance</th>
-                <th className="py-3.5 px-4">TA Amount</th>
-                <th className="py-3.5 px-4 sm:px-6 text-right">Actions</th>
+                <th className="py-3.5 px-4 sm:px-6">{t.profile.officerName}</th>
+                <th className="py-3.5 px-4">{t.duty.dutyType}</th>
+                <th className="py-3.5 px-4">{t.duty.startTime}</th>
+                <th className="py-3.5 px-4">{t.duty.endTime}</th>
+                <th className="py-3.5 px-4">{t.duty.location}</th>
+                <th className="py-3.5 px-4">{t.duty.taClaim}</th>
+                <th className="py-3.5 px-4 text-center">{t.dashboard.travelDistance}</th>
+                <th className="py-3.5 px-4">{t.duty.taAmount}</th>
+                <th className="py-3.5 px-4 sm:px-6 text-right">{t.common.actions}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/60">
@@ -454,16 +471,20 @@ export default async function DutyListPage({
                 const officerName =
                   (d.users as unknown as { full_name: string } | null)
                     ?.full_name ?? "—";
-                const typeName =
+                const rawTypeName =
                   (d.duty_types as unknown as { name: string } | null)?.name ??
                   "—";
+                const typeName =
+                  isGu && rawTypeName !== "—"
+                    ? translateDutyTypeToGujarati(rawTypeName)
+                    : rawTypeName;
 
                 return (
                   <tr
                     key={d.id}
                     className="hover:bg-muted/30 transition-colors group"
                   >
-                    <DutyTableSelectCell id={d.id} label={`${typeName} duty on ${formatDateTime(d.starts_at, timeFormat)}`} />
+                    <DutyTableSelectCell id={d.id} label={`${typeName} duty on ${formatDateTime(d.starts_at, timeFormat, isGu ? "gu" : "en-US")}`} />
                     <td className="py-3.5 px-4 sm:px-6 font-semibold text-foreground whitespace-nowrap">
                       <Link
                         href={`/duty/${d.id}`}
@@ -475,14 +496,14 @@ export default async function DutyListPage({
                     <td className="py-3.5 px-4 whitespace-nowrap">
                       <div className="flex flex-wrap items-center gap-1.5">
                         <Badge variant="secondary">{typeName}</Badge>
-                        <DutyHolidayBadge duty={d} />
+                        <DutyHolidayBadge duty={d} isGujarati={isGu} />
                       </div>
                     </td>
                     <td className="py-3.5 px-4 text-muted-foreground whitespace-nowrap">
-                      {formatDateTime(d.starts_at, timeFormat)}
+                      {formatDateTime(d.starts_at, timeFormat, isGu ? "gu" : "en-US")}
                     </td>
                     <td className="py-3.5 px-4 text-muted-foreground whitespace-nowrap">
-                      {formatDateTime(d.ends_at, timeFormat)}
+                      {formatDateTime(d.ends_at, timeFormat, isGu ? "gu" : "en-US")}
                     </td>
                     <td className="py-3.5 px-4 text-muted-foreground">
                       {d.location ? (
@@ -509,21 +530,23 @@ export default async function DutyListPage({
                       {d.ta_distance_km ? (
                         <Badge variant="info">
                           <Compass className="size-3" />
-                          {d.ta_distance_km} km
+                          {isGu
+                            ? `${toGujaratiNumerals(d.ta_distance_km)} કિ.મી.`
+                            : `${d.ta_distance_km} km`}
                         </Badge>
                       ) : (
                         "—"
                       )}
                     </td>
                     <td className="py-3.5 px-4 font-semibold">
-                      {d.ta_amount ? <DutyTaBadge duty={d} /> : "—"}
+                      {d.ta_amount ? <DutyTaBadge duty={d} isGujarati={isGu} /> : "—"}
                     </td>
                     <td className="py-3.5 px-4 sm:px-6 text-right whitespace-nowrap">
                       <Link
                         href={`/duty/${d.id}`}
                         className="inline-flex items-center justify-center rounded-lg border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted transition-colors shadow-2xs"
                       >
-                        View Details
+                        {t.common.details}
                       </Link>
                     </td>
                   </tr>
@@ -535,14 +558,16 @@ export default async function DutyListPage({
                 <tr>
                   <td />
                   <td className="py-3 px-4 sm:px-6 uppercase tracking-wider text-[11px] text-muted-foreground">
-                    Total ({totalItems} records)
+                    {t.common.total} ({isGu ? toGujaratiNumerals(totalItems) : totalItems} {t.common.records})
                   </td>
                   <td colSpan={5} />
                   <td className="py-3 px-4 text-center font-bold">
-                    {totalTaDistance.toLocaleString()} km
+                    {isGu
+                      ? `${toGujaratiNumerals(totalTaDistance.toLocaleString())} કિ.મી.`
+                      : `${totalTaDistance.toLocaleString()} km`}
                   </td>
                   <td className="py-3 px-4 font-black text-emerald-600 dark:text-emerald-400">
-                    {formatCurrency(totalTaAmount)}
+                    {isGu ? toGujaratiNumerals(formatCurrency(totalTaAmount)) : formatCurrency(totalTaAmount)}
                   </td>
                   <td className="py-3 px-4 sm:px-6" />
                 </tr>
@@ -557,8 +582,12 @@ export default async function DutyListPage({
             const officerName =
               (d.users as unknown as { full_name: string } | null)?.full_name ??
               "—";
-            const typeName =
+            const rawTypeName =
               (d.duty_types as unknown as { name: string } | null)?.name ?? "Duty";
+            const typeName =
+              isGu
+                ? (rawTypeName !== "Duty" ? translateDutyTypeToGujarati(rawTypeName) : "ફરજ")
+                : rawTypeName;
 
             return (
               <div key={d.id} className="p-3.5 space-y-2.5 bg-card hover:bg-muted/20 transition-colors">
@@ -578,9 +607,9 @@ export default async function DutyListPage({
                     </span>
                   </div>
                   <div className="flex shrink-0 items-center gap-1.5">
-                    <DutyStatusBadge status={d.status} />
-                    <DutyHolidayBadge duty={d} iconOnly />
-                    <DutyTaBadge duty={d} iconOnly />
+                    <DutyStatusBadge status={d.status} isGujarati={isGu} />
+                    <DutyHolidayBadge duty={d} iconOnly isGujarati={isGu} />
+                    <DutyTaBadge duty={d} iconOnly isGujarati={isGu} />
                   </div>
                 </div>
 
@@ -589,13 +618,13 @@ export default async function DutyListPage({
                   <div className="flex items-center gap-1.5 min-w-0">
                     <Clock className="size-3.5 text-indigo-500 shrink-0" />
                     <span className="font-medium text-foreground truncate">
-                      {formatDateTime(d.starts_at, timeFormat)}
+                      {formatDateTime(d.starts_at, timeFormat, isGu ? "gu" : "en-US")}
                     </span>
                   </div>
                   <span className="text-muted-foreground/60 shrink-0">→</span>
                   <div className="flex items-center gap-1.5 min-w-0 text-right">
                     <span className="font-medium text-foreground truncate">
-                      {formatDateTime(d.ends_at, timeFormat)}
+                      {formatDateTime(d.ends_at, timeFormat, isGu ? "gu" : "en-US")}
                     </span>
                   </div>
                 </div>
@@ -614,14 +643,16 @@ export default async function DutyListPage({
                       {d.ta_distance_km ? (
                         <Badge variant="info" className="text-[10px] py-0 px-1.5">
                           <Compass className="size-3" />
-                          {d.ta_distance_km} km
+                          {isGu
+                            ? `${toGujaratiNumerals(d.ta_distance_km)} કિ.મી.`
+                            : `${d.ta_distance_km} km`}
                         </Badge>
                       ) : null}
                     </span>
                     {d.ta_amount && (
                       <Badge variant="success" className="text-[10px] py-0 px-1.5">
                         <Route className="size-3" />
-                        {formatCurrency(d.ta_amount)}
+                        {isGu ? toGujaratiNumerals(formatCurrency(d.ta_amount)) : formatCurrency(d.ta_amount)}
                       </Badge>
                     )}
                   </div>
@@ -631,11 +662,11 @@ export default async function DutyListPage({
                   <div className="flex items-center justify-between text-xs pt-1.5 border-t border-border/40">
                     <span className="text-muted-foreground flex items-center gap-1">
                       <Sparkles className="size-3 text-amber-500 shrink-0" />
-                      Holiday Pay
+                      {isGu ? "રજા ડ્યુટી ભથ્થું" : "Holiday Pay"}
                     </span>
                     <Badge variant="warning" className="text-[10px] py-0 px-1.5">
                       <Sparkles className="size-3" />
-                      {formatCurrency(Number(d.holiday_allowance))}
+                      {isGu ? toGujaratiNumerals(formatCurrency(Number(d.holiday_allowance))) : formatCurrency(Number(d.holiday_allowance))}
                     </Badge>
                   </div>
                 )}
@@ -644,7 +675,7 @@ export default async function DutyListPage({
                   href={`/duty/${d.id}`}
                   className="w-full flex items-center justify-center gap-1.5 rounded-lg border border-border bg-card py-1.5 text-xs font-semibold text-foreground hover:bg-muted/70 shadow-2xs transition-colors"
                 >
-                  <span>View Details</span>
+                  <span>{t.common.details}</span>
                   <ArrowRight className="size-3 text-muted-foreground" />
                 </Link>
               </div>
@@ -657,10 +688,10 @@ export default async function DutyListPage({
             <div className="flex flex-col items-center justify-center gap-2">
               <Briefcase className="size-8 text-slate-300 dark:text-slate-700" />
               <p className="text-sm font-medium text-foreground">
-                No duty records found
+                {t.duty.noDutiesFound}
               </p>
               <p className="text-xs text-muted-foreground">
-                Try adjusting your search terms or filters.
+                {t.duty.noDutiesHelp}
               </p>
             </div>
           </div>
