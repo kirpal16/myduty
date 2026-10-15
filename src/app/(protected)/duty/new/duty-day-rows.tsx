@@ -12,6 +12,7 @@ import {
   Copy,
   Car,
   ShieldCheck,
+  Check,
 } from "lucide-react";
 import type { DutyDaySlot } from "@/lib/duty/splitDuty";
 import {
@@ -329,21 +330,56 @@ function ManualClaim({
   const { t } = useLanguage();
 
   return (
-    <div className="rounded-xl border border-border bg-card p-3">
-      <label className="flex cursor-pointer select-none items-center gap-2">
-        <input
-          type="checkbox"
-          name={`${name}.manualHolidayClaim`}
-          checked={claiming}
-          onChange={(e) => setClaiming(e.target.checked)}
-          className="size-4 rounded border-amber-500/40 text-amber-600 focus:ring-amber-500/30"
-        />
-        <span className="text-xs font-semibold text-foreground">
-          {t.duty.claimHolidayPayLabel}
-        </span>
+    <div
+      className={`rounded-xl border transition-all duration-150 overflow-hidden ${
+        claiming
+          ? "border-amber-500/40 bg-amber-500/[0.03] dark:bg-amber-950/20 shadow-2xs"
+          : "border-border/70 bg-card/60 hover:border-amber-500/30"
+      }`}
+    >
+      <label className="flex w-full cursor-pointer items-center justify-between gap-2 px-3 py-2 text-left group select-none transition-colors">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <Sparkles
+            className="size-3.5 shrink-0 text-amber-500 fill-amber-500/20"
+          />
+          <span className="text-xs font-bold text-foreground group-hover:text-amber-600 dark:group-hover:text-amber-400 truncate transition-colors">
+            {t.duty.claimHolidayPayLabel}
+          </span>
+          <span className="text-[10px] text-muted-foreground hidden sm:inline truncate">
+            {t.duty.holidayExtraPayTag}
+          </span>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-1.5">
+          <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10">
+            {claiming ? t.duty.holidayDutyExtraPayTitle : t.duty.notClaimed}
+          </span>
+
+          <input
+            type="checkbox"
+            name={`${name}.manualHolidayClaim`}
+            checked={claiming}
+            onChange={(e) => setClaiming(e.target.checked)}
+            className="sr-only"
+          />
+
+          <div
+            aria-hidden="true"
+            className={`size-4.5 rounded-md border flex items-center justify-center transition-all duration-150 shadow-2xs ${
+              claiming
+                ? "bg-amber-500 border-amber-500 text-white shadow-xs shadow-amber-500/30"
+                : "border-slate-300 dark:border-slate-600 bg-background group-hover:border-amber-400"
+            }`}
+          >
+            {claiming && (
+              <Check className="size-3 stroke-[3] animate-in zoom-in-75 duration-100" />
+            )}
+          </div>
+        </div>
       </label>
+
       {claiming && (
-        <div className="mt-3">
+        <div className="p-3 pt-2.5 border-t border-amber-500/20 bg-muted/20 animate-in fade-in slide-in-from-top-1 duration-200">
           <Field
             name={`${name}.holidayAllowance`}
             label={t.duty.holidayExtraPayFieldLabel}

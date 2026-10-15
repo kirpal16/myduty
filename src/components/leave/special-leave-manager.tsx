@@ -45,6 +45,8 @@ import {
   Trash2,
   RotateCcw,
   ListFilter,
+  Check,
+  FileCheck2,
 } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/language-context";
 import { toGujaratiNumerals } from "@/lib/reports/gujaratiReportUtils";
@@ -1887,27 +1889,76 @@ function ApplyForm({
         />
       </div>
 
-      {/* Sanction Details Toggle */}
-      <div className="rounded-xl border border-border p-3.5 bg-muted/40 space-y-3">
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            name="isApproved"
-            value="true"
-            checked={hasSanction}
-            onChange={(e) => {
-              setHasSanction(e.target.checked);
-              if (e.target.checked) setApprovedDaysVal(appliedDaysVal);
-            }}
-            className="rounded border-border text-indigo-600 focus:ring-indigo-500"
-          />
-          <span className="text-xs font-semibold text-foreground">
-            {isGujarati ? "મારી પાસે પહેલેથી જ સત્તાવાર મંજૂરી ઓર્ડર છે" : "I already have the official sanction order"}
-          </span>
+      {/* Sanction Details Toggle Card */}
+      <div
+        className={`rounded-2xl border transition-all duration-200 overflow-hidden ${
+          hasSanction
+            ? "border-indigo-500/50 bg-gradient-to-b from-indigo-500/5 via-card to-card shadow-xs ring-1 ring-indigo-500/20"
+            : "border-border/80 bg-card hover:border-slate-300 dark:hover:border-slate-700"
+        }`}
+      >
+        <label className="group flex items-center justify-between gap-3 p-3.5 sm:p-4 cursor-pointer select-none transition-colors hover:bg-muted/30">
+          <div className="flex items-center gap-3 min-w-0">
+            <div
+              className={`flex size-9 sm:size-10 shrink-0 items-center justify-center rounded-xl transition-all duration-200 ${
+                hasSanction
+                  ? "bg-indigo-600 text-white shadow-xs shadow-indigo-600/30 scale-105"
+                  : "bg-muted text-muted-foreground group-hover:text-foreground"
+              }`}
+            >
+              <FileCheck2 className="size-4.5 sm:size-5" />
+            </div>
+
+            <div className="flex flex-col min-w-0">
+              <span
+                className={`text-xs sm:text-sm font-bold tracking-tight transition-colors ${
+                  hasSanction
+                    ? "text-indigo-950 dark:text-indigo-200"
+                    : "text-foreground group-hover:text-indigo-600 dark:group-hover:text-indigo-400"
+                }`}
+              >
+                {isGujarati
+                  ? "મારી પાસે પહેલેથી જ સત્તાવાર મંજૂરી ઓર્ડર છે"
+                  : "I already have the official sanction order"}
+              </span>
+              <span className="text-[10.5px] sm:text-xs text-muted-foreground">
+                {isGujarati
+                  ? "ઓર્ડર નંબર, મંજૂર દિવસો અને સત્તાધિકારીની વિગતો દાખલ કરો"
+                  : "Enter official order number, approved days and sanction authority"}
+              </span>
+            </div>
+          </div>
+
+          <div className="shrink-0 flex items-center">
+            <input
+              type="checkbox"
+              name="isApproved"
+              value="true"
+              checked={hasSanction}
+              onChange={(e) => {
+                setHasSanction(e.target.checked);
+                if (e.target.checked) setApprovedDaysVal(appliedDaysVal);
+              }}
+              className="sr-only"
+            />
+            {/* Custom Modern Animated Checkbox */}
+            <div
+              aria-hidden="true"
+              className={`size-5 sm:size-5.5 rounded-lg border flex items-center justify-center transition-all duration-200 shadow-2xs ${
+                hasSanction
+                  ? "bg-indigo-600 border-indigo-600 text-white shadow-xs shadow-indigo-600/30 scale-105"
+                  : "border-slate-300 dark:border-slate-600 bg-background group-hover:border-indigo-400"
+              }`}
+            >
+              {hasSanction && (
+                <Check className="size-3.5 stroke-[3] animate-in zoom-in-75 duration-150" />
+              )}
+            </div>
+          </div>
         </label>
 
         {hasSanction && (
-          <div className="space-y-3 pt-2 border-t border-border">
+          <div className="p-3.5 sm:p-4 pt-3 space-y-3.5 border-t border-indigo-500/20 bg-muted/20 animate-in fade-in slide-in-from-top-1 duration-200">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <label htmlFor="approvedDate" className="text-xs font-semibold text-foreground">

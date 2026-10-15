@@ -20,6 +20,7 @@ import {
   Moon,
   Trash2,
   AlertTriangle,
+  Check,
 } from "lucide-react";
 import { FormFileInput } from "@/components/ui/form-file-input";
 import { FormSelect } from "@/components/ui/form-select";
@@ -623,75 +624,95 @@ export function DutyForm({
               </div>
             </CollapsibleSection>
           </div>
-        ) : !manualClaim ? (
-          <div className="rounded-lg border border-dashed border-border/80 bg-card/50 px-3 py-2 hover:border-amber-500/40 hover:bg-amber-500/5 transition-all">
-            <label className="flex items-center justify-between gap-2 cursor-pointer select-none">
-              <div className="flex items-center gap-2">
+        ) : (
+          <div
+            className={`rounded-xl border transition-all duration-150 overflow-hidden ${
+              manualClaim
+                ? "border-amber-500/40 bg-amber-500/[0.03] dark:bg-amber-950/20 shadow-2xs"
+                : "border-border/70 bg-card/60 hover:border-amber-500/30"
+            }`}
+          >
+            <label className="flex w-full cursor-pointer items-center justify-between gap-2 px-3 py-2 text-left group select-none transition-colors">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Sparkles
+                  className="size-3.5 shrink-0 text-amber-500 fill-amber-500/20"
+                />
+                <span className="text-xs font-bold text-foreground group-hover:text-amber-600 dark:group-hover:text-amber-400 truncate transition-colors">
+                  {t.duty.claimHolidayPayLabel}
+                </span>
+                <span className="text-[10px] text-muted-foreground hidden sm:inline truncate">
+                  {t.duty.holidayExtraPayTag}
+                </span>
+              </div>
+
+              <div className="flex shrink-0 items-center gap-1.5">
+                {manualClaim && holidayPayVal ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/20">
+                    <span>₹{holidayPayVal}</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10">
+                    {manualClaim ? t.duty.holidayDutyExtraPayTitle : t.duty.notClaimed}
+                  </span>
+                )}
+
                 <input
                   type="checkbox"
                   name="manualHolidayClaim"
                   checked={manualClaim}
                   onChange={(e) => setManualClaim(e.target.checked)}
-                  className="size-3.5 rounded border-border text-amber-600 focus:ring-amber-500/30 cursor-pointer"
+                  className="sr-only"
                 />
-                <div className="flex items-center gap-1.5 flex-wrap text-xs">
-                  <Sparkles className="size-3 text-amber-500" />
-                  <span className="font-semibold text-foreground">
-                    {t.duty.claimHolidayPayLabel}
-                  </span>
-                  <span className="text-muted-foreground text-[10px]">
-                    {t.duty.holidayExtraPayTag}
-                  </span>
+
+                {/* Compact Custom Checkbox matching TA button height */}
+                <div
+                  aria-hidden="true"
+                  className={`size-4.5 rounded-md border flex items-center justify-center transition-all duration-150 shadow-2xs ${
+                    manualClaim
+                      ? "bg-amber-500 border-amber-500 text-white shadow-xs shadow-amber-500/30"
+                      : "border-slate-300 dark:border-slate-600 bg-background group-hover:border-amber-400"
+                  }`}
+                >
+                  {manualClaim && (
+                    <Check className="size-3 stroke-[3] animate-in zoom-in-75 duration-100" />
+                  )}
                 </div>
               </div>
-              <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded-md hidden sm:inline">
-                {t.duty.tickToClaim}
-              </span>
             </label>
-          </div>
-        ) : (
-          <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 space-y-2.5 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b border-amber-500/20 pb-2">
-              <div className="flex items-center gap-1.5">
-                <Sparkles className="size-3.5 text-amber-500" />
-                <h4 className="text-xs font-bold text-foreground">
-                  {t.duty.holidayDutyExtraPayTitle}
-                </h4>
-              </div>
-              <button
-                type="button"
-                onClick={() => setManualClaim(false)}
-                className="text-[11px] text-muted-foreground hover:text-foreground underline cursor-pointer"
-              >
-                {t.common.cancel}
-              </button>
-            </div>
 
-            <div className="flex flex-col gap-1">
-              <label
-                htmlFor="holidayAllowance"
-                className="text-xs font-semibold text-foreground flex items-center gap-1"
-              >
-                <IndianRupee className="size-3 text-amber-500" />
-                <span>{t.duty.holidayExtraPayFieldLabel}</span>
-              </label>
-              <input
-                id="holidayAllowance"
-                name="holidayAllowance"
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="e.g. 500.00"
-                defaultValue={
-                  defaults?.holidayAllowance != null
-                    ? String(defaults.holidayAllowance)
-                    : holidayDayRate > 0
-                      ? String(holidayDayRate)
-                      : ""
-                }
-                className="w-full h-9 rounded-lg border border-amber-500/30 bg-card px-3 py-1.5 text-xs sm:text-sm shadow-2xs focus:border-amber-500 focus:outline-hidden"
-              />
-            </div>
+            {manualClaim && (
+              <div className="p-3 pt-2.5 border-t border-amber-500/20 space-y-2.5 animate-in fade-in-50 duration-150">
+                <div className="flex items-center justify-between pb-0.5">
+                  <div className="flex items-center gap-1.5">
+                    <IndianRupee className="size-3 text-amber-500" />
+                    <label
+                      htmlFor="holidayAllowance"
+                      className="text-xs font-semibold text-foreground"
+                    >
+                      {t.duty.holidayExtraPayFieldLabel}
+                    </label>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setManualClaim(false)}
+                    className="text-[11px] font-medium text-muted-foreground hover:text-rose-600 dark:hover:text-rose-400 transition-colors cursor-pointer"
+                  >
+                    {t.common.cancel}
+                  </button>
+                </div>
+                <input
+                  id="holidayAllowance"
+                  name="holidayAllowance"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder={holidayDayRate > 0 ? String(holidayDayRate) : "e.g. 500.00"}
+                  value={holidayPayVal}
+                  onChange={(e) => setHolidayPayVal(e.target.value)}
+                  className="w-full h-9 rounded-lg border border-amber-500/30 bg-card px-3 py-1.5 text-xs sm:text-sm shadow-2xs focus:border-amber-500 focus:outline-hidden"
+                />
+              </div>
+            )}
           </div>
         )}
 
