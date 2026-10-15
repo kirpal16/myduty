@@ -31,7 +31,6 @@ import {
 } from "lucide-react";
 import { LanguageToggle } from "./language-toggle";
 import { LogoutModal } from "./logout-modal";
-import { RouteLanguageSkeleton } from "./route-language-skeleton";
 import { useLanguage } from "@/lib/i18n/language-context";
 
 export type NavItem = { href: string; label: string; icon?: string };
@@ -431,13 +430,7 @@ export function AppShell({
 
       {/* Main content body with responsive padding and mobile safe-area */}
       <div className="mobile-main-safe flex-1 min-w-0 flex flex-col pt-16 md:pt-0 overflow-x-hidden print:pt-0 print:overflow-visible">
-        {isChangingLanguage ? (
-          <div className="animate-in fade-in-50 duration-150">
-            <RouteLanguageSkeleton pathname={pathname} />
-          </div>
-        ) : (
-          children
-        )}
+        {children}
       </div>
 
       <LogoutModal

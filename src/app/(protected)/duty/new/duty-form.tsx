@@ -230,6 +230,12 @@ export function DutyForm({
   const [taAmountVal, setTaAmountVal] = useState(defaults?.taAmount?.toString() ?? "");
   const [taKmVal, setTaKmVal] = useState(defaults?.taDistanceKm?.toString() ?? "");
 
+  const [dutyTypeIdVal, setDutyTypeIdVal] = useState(defaults?.dutyTypeId ?? "");
+  const [locationVal, setLocationVal] = useState(defaults?.location ?? "");
+  const [notesVal, setNotesVal] = useState(defaults?.notes ?? "");
+  const [taFromPlaceVal, setTaFromPlaceVal] = useState(defaults?.taFromPlace ?? "");
+  const [taToPlaceVal, setTaToPlaceVal] = useState(defaults?.taToPlace ?? "");
+
   const [additionalShifts, setAdditionalShifts] = useState<AdditionalShiftItem[]>(
     initialAdditionalShifts
   );
@@ -429,7 +435,8 @@ export function DutyForm({
               {...fieldProps("dutyTypeId")}
               required
               placeholder={t.duty.selectDutyTypePlaceholder}
-              defaultValue={defaults?.dutyTypeId ?? ""}
+              value={dutyTypeIdVal}
+              onChange={(val) => setDutyTypeIdVal(val)}
               icon={Briefcase}
               error={!!errorProps("dutyTypeId").message}
               options={sortDutyTypesForDropdown(dutyTypes).map((d) => ({
@@ -529,7 +536,8 @@ export function DutyForm({
               id="location"
               name="location"
               placeholder={t.duty.stationPlaceholder}
-              defaultValue={defaults?.location ?? ""}
+              value={locationVal}
+              onChange={(e) => setLocationVal(e.target.value)}
               className="w-full h-9 sm:h-10 rounded-lg border border-border bg-card px-3 py-1.5 text-xs sm:text-sm shadow-2xs hover:border-slate-400 dark:hover:border-slate-600 transition-colors focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20"
             />
           </div>
@@ -549,7 +557,8 @@ export function DutyForm({
               id="notes"
               name="notes"
               placeholder={t.duty.operationalNotesPlaceholder}
-              defaultValue={defaults?.notes ?? ""}
+              value={notesVal}
+              onChange={(e) => setNotesVal(e.target.value)}
               className="w-full h-9 sm:h-10 rounded-lg border border-border bg-card px-3 py-1.5 text-xs sm:text-sm shadow-2xs hover:border-slate-400 dark:hover:border-slate-600 transition-colors focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20"
             />
           </div>
@@ -751,7 +760,8 @@ export function DutyForm({
                     id="taFromPlace"
                     name="taFromPlace"
                     placeholder={t.duty.departurePlaceholder}
-                    defaultValue={defaults?.taFromPlace ?? ""}
+                    value={taFromPlaceVal}
+                    onChange={(e) => setTaFromPlaceVal(e.target.value)}
                     className="w-full h-9 rounded-lg border border-border bg-card px-3 py-1.5 text-xs sm:text-sm shadow-2xs hover:border-slate-400 dark:hover:border-slate-600 transition-colors focus:border-indigo-500 focus:outline-hidden"
                   />
                 </div>
@@ -768,7 +778,8 @@ export function DutyForm({
                     id="taToPlace"
                     name="taToPlace"
                     placeholder={t.duty.arrivalPlaceholder}
-                    defaultValue={defaults?.taToPlace ?? ""}
+                    value={taToPlaceVal}
+                    onChange={(e) => setTaToPlaceVal(e.target.value)}
                     className="w-full h-9 rounded-lg border border-border bg-card px-3 py-1.5 text-xs sm:text-sm shadow-2xs hover:border-slate-400 dark:hover:border-slate-600 transition-colors focus:border-indigo-500 focus:outline-hidden"
                   />
                 </div>
@@ -822,7 +833,7 @@ export function DutyForm({
                     step="0.1"
                     min="0"
                     placeholder="24.5"
-                    defaultValue={defaults?.taDistanceKm ?? ""}
+                    value={taKmVal}
                     onChange={(e) => setTaKmVal(e.target.value)}
                     className={`w-full h-9 rounded-lg border bg-card px-3 py-1.5 text-xs sm:text-sm shadow-2xs transition-colors focus:border-indigo-500 focus:outline-hidden ${
                       errorProps("taDistanceKm").message
@@ -848,7 +859,7 @@ export function DutyForm({
                     step="0.01"
                     min="0"
                     placeholder="50.00"
-                    defaultValue={defaults?.taAmount ?? ""}
+                    value={taAmountVal}
                     onChange={(e) => setTaAmountVal(e.target.value)}
                     className={`w-full h-9 rounded-lg border bg-card px-3 py-1.5 text-xs sm:text-sm shadow-2xs transition-colors focus:border-indigo-500 focus:outline-hidden ${
                       errorProps("taAmount").message
