@@ -4,7 +4,6 @@ import { PwaInstallButton } from "@/components/pwa/install-button";
 import { SignupForm } from "./signup-form";
 import { NavLink as Link } from "@/components/ui/nav-link";
 import Image from "next/image";
-import { LanguageToggle } from "@/components/layout/language-toggle";
 
 export default async function SignupPage() {
   const supabase = await createClient();
@@ -23,9 +22,6 @@ export default async function SignupPage() {
       </div>
 
       <div className="relative w-full max-w-xl">
-        <div className="flex justify-end mb-3">
-          <LanguageToggle variant="auth" />
-        </div>
         <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-6 sm:p-10 shadow-2xl backdrop-blur-xl">
           {/* Brand header */}
           <div className="flex flex-col items-center text-center mb-8">

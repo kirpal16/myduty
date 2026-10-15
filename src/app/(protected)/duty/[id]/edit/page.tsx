@@ -29,7 +29,7 @@ export default async function EditDutyPage({
     supabase
       .from("duties")
       .select(
-        "id, user_id, duty_type_id, starts_at, ends_at, location, notes, ta_from_place, ta_to_place, ta_vehicle_type, ta_distance_km, ta_amount, holiday_allowance, manual_holiday_claim",
+        "id, user_id, duty_group_id, duty_type_id, starts_at, ends_at, location, notes, ta_from_place, ta_to_place, ta_vehicle_type, ta_distance_km, ta_amount, holiday_allowance, manual_holiday_claim",
       )
       .eq("id", id)
       .single(),
@@ -50,14 +50,15 @@ export default async function EditDutyPage({
     getServerTranslations(),
   ]);
 
-  const { t } = translations;
+  const { t, lang } = translations;
+  const isGu = lang === "gu";
+  const timeFormat = user?.timeFormat ?? "24h";
 
   if (!duty) notFound();
   // Only the owner edits their own entry (RLS would reject the write anyway).
   if (duty.user_id !== user?.id) redirect(`/duty/${id}`);
 
-  // Holidays around this entry, so moving the date re-classifies it live. The
-  // server recomputes the classification on save regardless.
+  // Holidays around this entry, so moving the date re-classifies it live.
   const atKey = toDateKey(duty.starts_at);
   const [atYear, atMonth] = atKey.split("-").map(Number);
   const { data: holidays } = await supabase
@@ -67,7 +68,7 @@ export default async function EditDutyPage({
     .lte("holiday_date", toDateKey(new Date(atYear, atMonth - 1 + 4, 0)));
 
   return (
-    <main className="w-full px-4 sm:px-6 lg:px-8 py-6 max-w-7xl 2xl:max-w-full mx-auto space-y-6">
+    <main className="w-full px-3 sm:px-6 lg:px-8 py-4 sm:py-6 max-w-7xl 2xl:max-w-full mx-auto space-y-4 sm:space-y-6">
       <div className="flex items-center gap-2">
         <Link
           href={`/duty/${duty.id}`}
@@ -88,9 +89,9 @@ export default async function EditDutyPage({
         }
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         <div className="lg:col-span-2">
-          <Card className="p-6 sm:p-8">
+          <Card className="p-3.5 sm:p-6">
             <DutyForm
               dutyTypes={dutyTypes ?? []}
               dutyId={duty.id}
@@ -111,6 +112,7 @@ export default async function EditDutyPage({
               holidays={(holidays ?? []) as HolidayRecord[]}
               holidayDayRate={settings.holidayDayRate}
               defaultShiftEnd={settings.defaultShiftEnd}
+              enableMultiDuty={settings.enableMultiDuty}
               defaults={{
                 dutyTypeId: duty.duty_type_id,
                 startsAt: isoToLocalInput(duty.starts_at),

@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { NavLink as Link } from "@/components/ui/nav-link";
 import { Plus, CalendarOff, Palmtree } from "lucide-react";
 import { getServerTranslations } from "@/lib/i18n/server";
+import { getUserSettings } from "@/lib/settings/getUserSettings";
 import { translateDutyTypeToGujarati, toGujaratiNumerals } from "@/lib/reports/gujaratiReportUtils";
 
 export default async function CalendarPage() {
@@ -22,6 +23,7 @@ export default async function CalendarPage() {
     { data: leaves },
     { data: holidays },
     { data: leaveDays },
+    settings,
   ] = await Promise.all([
     supabase
       .from("duties")
@@ -40,6 +42,7 @@ export default async function CalendarPage() {
     supabase
       .from("leave_log_days")
       .select("id, leave_log_id, leave_date, fraction, leave_types(name, code, color)"),
+    getUserSettings(),
   ]);
 
   // Index leave days by log id for fast lookup
@@ -248,6 +251,7 @@ export default async function CalendarPage() {
         events={events}
         timeFormat={user?.timeFormat ?? "24h"}
         dbHolidays={holidays ?? []}
+        enableMultiDuty={settings.enableMultiDuty}
       />
     </main>
   );

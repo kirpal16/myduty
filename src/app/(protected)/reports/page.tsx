@@ -20,6 +20,7 @@ import {
   CalendarOff,
   Route,
   Clock,
+  MapPin,
 } from "lucide-react";
 import {
   buildMonthlyReport,
@@ -43,7 +44,11 @@ import {
 import type { SanctionItem, DbLeaveTypeItem } from "@/lib/reports/reportTemplates";
 import { getServerTranslations } from "@/lib/i18n/server";
 import type { Translations } from "@/lib/i18n/types";
-import { translateDutyTypeToGujarati, toGujaratiNumerals } from "@/lib/reports/gujaratiReportUtils";
+import {
+  translateDutyTypeToGujarati,
+  toGujaratiNumerals,
+  formatVehicleAcronym,
+} from "@/lib/reports/gujaratiReportUtils";
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
@@ -165,16 +170,61 @@ function ReportCell({
   if (column.badge === "status") return <DutyStatusBadge status={String(value)} isGujarati={isGu} />;
 
   if (column.badge === "ta") {
+    if (compact) {
+      return (
+        <Badge variant="success" aria-label="TA" title="TA">
+          <Route className="size-3" />
+        </Badge>
+      );
+    }
+    if (text.includes("\n")) {
+      const lines = text.split("\n");
+      return (
+        <div className="flex flex-col gap-1 items-end">
+          {lines.map((line, i) => {
+            const displayAmount = isGu ? toGujaratiNumerals(line) : line;
+            return (
+              <Badge key={i} variant="success" aria-label={`TA ${displayAmount}`} title={`TA ${displayAmount}`}>
+                <Route className="size-3" />
+                {displayAmount}
+              </Badge>
+            );
+          })}
+        </div>
+      );
+    }
     const displayAmount = isGu ? toGujaratiNumerals(text) : text;
     return (
       <Badge variant="success" aria-label={`TA ${displayAmount}`} title={`TA ${displayAmount}`}>
         <Route className="size-3" />
-        {!compact && displayAmount}
+        {displayAmount}
       </Badge>
     );
   }
 
   if (column.badge === "holiday") {
+    const rawVal = String(value ?? "");
+    if (rawVal.includes("\n")) {
+      const lines = rawVal.split("\n");
+      return (
+        <div className="flex flex-col gap-1 items-end">
+          {lines.map((line, i) => {
+            const amount = Number(line.trim());
+            if (!amount) return <span key={i}>—</span>;
+            const displayAmount = isGu
+              ? toGujaratiNumerals(formatReportCell(column, amount))
+              : formatReportCell(column, amount);
+            const holidayLabel = `${t?.reports.columns.holidayPay ?? "Holiday Pay"} ${displayAmount}`;
+            return (
+              <Badge key={i} variant="warning" aria-label={holidayLabel} title={holidayLabel}>
+                <Sparkles className="size-3" />
+                {!compact && displayAmount}
+              </Badge>
+            );
+          })}
+        </div>
+      );
+    }
     const amount = Number(value ?? 0);
     if (!amount) return <>—</>;
     const displayAmount = isGu ? toGujaratiNumerals(text) : text;
@@ -192,6 +242,32 @@ function ReportCell({
   }
 
   if (column.badge === "distance") {
+    const rawVal = String(value ?? "");
+    if (rawVal.includes("\n")) {
+      const lines = rawVal.split("\n");
+      return (
+        <div className="flex flex-col gap-1 items-end">
+          {lines.map((line, i) => {
+            const km = Number(line.trim());
+            if (!km) return <span key={i}>—</span>;
+            const kmStr = isGu
+              ? `${toGujaratiNumerals(km.toLocaleString())} ${t?.reports.km ?? "કિમી"}`
+              : `${km.toLocaleString()} km`;
+            return (
+              <Badge
+                key={i}
+                variant="info"
+                aria-label={`Distance ${km} km`}
+                title={`Distance ${km} km`}
+              >
+                <Compass className="size-3" />
+                {!compact && kmStr}
+              </Badge>
+            );
+          })}
+        </div>
+      );
+    }
     const km = Number(value ?? 0);
     if (!km) return <>—</>;
     const kmStr = isGu
@@ -231,36 +307,56 @@ function ReportCell({
 
   if (column.badge === "time") {
     const raw = String(value ?? "").trim();
-    if (!raw) return <>—</>;
+    if (!raw || raw === "—") return <>—</>;
 
-    const isNextDay = raw.includes("(Next Day)");
-    const cleanRaw = raw.replace(/\s*\(Next Day\)/i, "").trim();
+    const lines = raw.split("\n").map((l) => l.trim()).filter(Boolean);
+    if (lines.length === 0) return <>—</>;
 
-    const parts = cleanRaw.split(/\s*[-–]\s*/);
-    const start = parts[0];
-    const end = parts[1];
+    const renderShiftBadge = (line: string, key?: number | string) => {
+      const isNextDay =
+        /\(next\s*day\)|બીજે\s*દિવસે|બીજા\s*દિવસે/i.test(line);
+      const cleanLine = line
+        .replace(/\s*\((next\s*day|બીજે\s*દિવસે|બીજા\s*દિવસે)\)/gi, "")
+        .trim();
+      const parts = cleanLine.split(/\s*[-–→]\s*/);
+      const start = parts[0]?.trim();
+      const end = parts[1]?.trim();
 
-    if (!start) return <>—</>;
+      if (!start) return key !== undefined ? <span key={key}>—</span> : <>—</>;
 
-    const displayStart = isGu ? toGujaratiNumerals(start) : start;
-    const displayEnd = end ? (isGu ? toGujaratiNumerals(end) : end) : null;
+      const displayStart = isGu ? toGujaratiNumerals(start) : start;
+      const displayEnd = end ? (isGu ? toGujaratiNumerals(end) : end) : null;
+
+      return (
+        <span
+          key={key}
+          className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/60 dark:bg-muted/40 border border-border/60 text-xs font-medium text-foreground shadow-2xs whitespace-nowrap"
+        >
+          <Clock className="size-3 text-muted-foreground shrink-0" />
+          <span className="font-semibold text-foreground">{displayStart}</span>
+          {displayEnd ? (
+            <>
+              <span className="text-muted-foreground/60 text-[10px] font-bold">→</span>
+              <span className="font-semibold text-foreground">{displayEnd}</span>
+            </>
+          ) : null}
+          {isNextDay && (
+            <span className="inline-flex items-center text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-500/15 px-1.5 py-0.2 rounded border border-amber-500/30">
+              {t?.reports.nextDay ?? "Next Day"}
+            </span>
+          )}
+        </span>
+      );
+    };
+
+    if (lines.length === 1) {
+      return renderShiftBadge(lines[0]);
+    }
 
     return (
-      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/60 dark:bg-muted/40 border border-border/60 text-xs font-medium text-foreground shadow-2xs">
-        <Clock className="size-3 text-muted-foreground shrink-0" />
-        <span className="font-semibold text-foreground">{displayStart}</span>
-        {displayEnd ? (
-          <>
-            <span className="text-muted-foreground/60 text-[10px] font-bold">→</span>
-            <span className="font-semibold text-foreground">{displayEnd}</span>
-          </>
-        ) : null}
-        {isNextDay && (
-          <span className="inline-flex items-center text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-500/15 px-1.5 py-0.2 rounded border border-amber-500/30">
-            {t?.reports.nextDay ?? "Next Day"}
-          </span>
-        )}
-      </span>
+      <div className="flex flex-col gap-1 items-end md:items-start">
+        {lines.map((line, i) => renderShiftBadge(line, i))}
+      </div>
     );
   }
 
@@ -309,14 +405,20 @@ export default async function ReportsPage({
   // Without REPORT_VIEW the report is pinned to the caller's own records.
   const userId = canViewAll ? params.userId : user?.id;
 
-  const report = await buildMonthlyReport({ type, year, month, userId });
+  const isOwnReport = !userId || userId === user?.id;
+  const { dailySalaryRate, enableMultiDuty } = await getUserSettings();
+  const report = await buildMonthlyReport({
+    type,
+    year,
+    month,
+    userId,
+    enableMultiDuty,
+  });
 
   // Unpaid leave is priced with the viewer's own daily rate, so it is only
   // shown on a report they are looking at for themselves -- pricing another
   // officer's Binpagari days with this officer's rate would be a wrong number
   // stated confidently.
-  const isOwnReport = !userId || userId === user?.id;
-  const { dailySalaryRate } = await getUserSettings();
   const binpagariDays = isOwnReport ? report.totals.binpagariDays ?? 0 : 0;
   const binpagariDeduction = binpagariDays * dailySalaryRate;
 
@@ -759,7 +861,7 @@ export default async function ReportsPage({
                   {report.columns.map((c) => (
                     <td
                       key={c.key}
-                      className={`px-4 py-3 whitespace-nowrap ${
+                      className={`px-4 py-3 align-top whitespace-pre-line ${
                         c.numeric ? "text-right font-semibold text-foreground" : "text-muted-foreground"
                       }`}
                     >
@@ -854,23 +956,82 @@ export default async function ReportsPage({
                — the exceptions are what a reader is scanning for. Status
                still appears when it is NOT the default, so a cancelled duty
                does not go silent on a phone. */
+            const isHoliday = Boolean(
+              row.holiday_name ||
+                row.is_holiday ||
+                row.is_holiday_duty ||
+                (row.day_type && !String(row.day_type).toLowerCase().startsWith("working")),
+            );
             const badgeColumns = report.columns.filter((c) => {
               if (!c.badge || isEmptyReportCell(row[c.key])) return false;
               if (c.badge === "time" || c.badge === "holiday" || c.badge === "distance") return false; // Time, Holiday Pay, and Distance render as dedicated rows in detailColumns
               if (c.badge === "status") return String(row[c.key]) !== "SCHEDULED";
-              if (c.badge === "dayType") return String(row[c.key]) !== "Working Day";
+              if (c.badge === "dayType") return false; // Handled directly as the holiday Sparkles badge
               return true;
             });
             const [headColumn, ...restColumns] = report.columns.filter(
               (c) => !c.badge || c.badge === "time",
             );
+            const hasItinerary = Boolean(row.ta_from || row.ta_to);
             const detailColumns = [
               ...restColumns,
               // Distance, TA and Holiday Pay come back as rows with their full styled badges
               ...report.columns.filter(
                 (c) => c.badge === "ta" || c.badge === "holiday" || c.badge === "distance",
               ),
-            ].filter((c) => !isEmptyReportCell(row[c.key]));
+            ].filter((c) => {
+              if (isEmptyReportCell(row[c.key])) return false;
+              if (
+                hasItinerary &&
+                (c.key === "ta_from" ||
+                  c.key === "ta_to" ||
+                  c.key === "ta_distance_km" ||
+                  c.key === "ta_amount")
+              ) {
+                return false;
+              }
+              return true;
+            });
+
+            const legs = hasItinerary
+              ? (() => {
+                  const fList = String(row.ta_from ?? "").split("\n");
+                  const toList = String(row.ta_to ?? "").split("\n");
+                  const dList = String(row.ta_distance_km ?? "").split("\n");
+                  const aList = String(row.ta_amount ?? "").split("\n");
+                  const vList = String(row.ta_vehicle_type ?? "").split("\n");
+                  const count = Math.max(
+                    fList.length,
+                    toList.length,
+                    dList.length,
+                    aList.length,
+                  );
+                  const result: Array<{
+                    from: string;
+                    to: string;
+                    dist: string | null;
+                    amount: string | null;
+                    vehicle: string | null;
+                  }> = [];
+                  for (let idx = 0; idx < count; idx++) {
+                    const from = fList[idx]?.trim();
+                    const to = toList[idx]?.trim();
+                    const dist = dList[idx]?.trim();
+                    const amount = aList[idx]?.trim();
+                    const vehicle = vList[idx]?.trim();
+                    if (from || to || (dist && dist !== "—") || (amount && amount !== "—")) {
+                      result.push({
+                        from: from || "—",
+                        to: to || "—",
+                        dist: dist && dist !== "—" ? dist : null,
+                        amount: amount && amount !== "—" ? amount : null,
+                        vehicle: vehicle ? formatVehicleAcronym(vehicle) : null,
+                      });
+                    }
+                  }
+                  return result;
+                })()
+              : [];
 
             return (
               <div key={i} className="space-y-2.5 p-4">
@@ -885,8 +1046,18 @@ export default async function ReportsPage({
                         : formatReportCell(headColumn, row[headColumn.key])
                       : ""}
                   </span>
-                  {badgeColumns.length > 0 && (
+                  {/* Top-Right Badge Cluster */}
+                  {(isHoliday || badgeColumns.length > 0) && (
                     <div className="ml-auto flex flex-wrap items-center gap-1.5">
+                      {isHoliday && (
+                        <Badge
+                          variant="warning"
+                          aria-label={String(row.holiday_name || row.day_type || "Holiday")}
+                          title={String(row.holiday_name || row.day_type || "Holiday")}
+                        >
+                          <Sparkles className="size-3" />
+                        </Badge>
+                      )}
                       {badgeColumns.map((c) => (
                         <ReportCell
                           key={c.key}
@@ -912,7 +1083,7 @@ export default async function ReportsPage({
                         <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                           {getColumnLabel(c, t)}
                         </span>
-                        <div className="text-right text-xs font-medium text-foreground">
+                        <div className="text-right text-xs font-medium text-foreground whitespace-pre-line">
                           <ReportCell
                             column={c}
                             value={row[c.key]}
@@ -923,6 +1094,69 @@ export default async function ReportsPage({
                         </div>
                       </div>
                     ))}
+                  </div>
+                )}
+
+                {hasItinerary && legs.length > 0 && (
+                  <div className="mt-2.5 rounded-xl border border-border/70 bg-muted/40 p-2.5 space-y-2">
+                    <div className="flex items-center justify-between text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+                      <span className="flex items-center gap-1.5">
+                        <MapPin className="size-3 text-indigo-500 shrink-0" />
+                        <span>{lang === "gu" ? "મુસાફરી વિગત (રૂટ / ભથ્થું)" : "Travel Itinerary"}</span>
+                      </span>
+                      {legs.length > 1 && (
+                        <span className="text-[10px] bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-semibold px-1.5 py-0.5 rounded-full">
+                          {lang === "gu" ? `${toGujaratiNumerals(legs.length)} રૂટ` : `${legs.length} routes`}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="space-y-2 divide-y divide-border/40">
+                      {legs.map((leg, idx) => (
+                        <div key={idx} className={idx > 0 ? "pt-2" : ""}>
+                          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                            {/* Origin → Destination */}
+                            <div className="flex items-center gap-1.5 min-w-0 text-xs text-foreground">
+                              {legs.length > 1 && (
+                                <span className="text-[10px] font-bold text-muted-foreground bg-background border border-border/60 px-1 py-0.5 rounded shrink-0">
+                                  {lang === "gu" ? `#${toGujaratiNumerals(idx + 1)}` : `#${idx + 1}`}
+                                </span>
+                              )}
+                              <span className="font-medium text-foreground truncate">{leg.from}</span>
+                              <span className="text-muted-foreground/60 text-[10px] font-bold shrink-0">→</span>
+                              <span className="font-semibold text-foreground truncate">{leg.to}</span>
+                            </div>
+
+                            {/* Badges: Vehicle, Distance, TA */}
+                            <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-auto">
+                              {leg.vehicle && leg.vehicle !== "—" && (
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded border border-border/60 bg-background text-muted-foreground shrink-0">
+                                  {leg.vehicle}
+                                </span>
+                              )}
+                              {leg.dist && (
+                                <Badge
+                                  variant="info"
+                                  className="text-[10px] px-1.5 py-0.5 gap-1 font-semibold"
+                                >
+                                  <Compass className="size-2.5 shrink-0" />
+                                  {lang === "gu" ? `${toGujaratiNumerals(leg.dist)} ${t.reports.km}` : `${leg.dist} km`}
+                                </Badge>
+                              )}
+                              {leg.amount && (
+                                <Badge
+                                  variant="success"
+                                  className="text-[10px] px-1.5 py-0.5 gap-1 font-semibold"
+                                >
+                                  <Route className="size-2.5 shrink-0" />
+                                  {lang === "gu" ? toGujaratiNumerals(formatCurrency(Number(leg.amount))) : formatCurrency(Number(leg.amount))}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>

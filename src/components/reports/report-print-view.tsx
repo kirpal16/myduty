@@ -108,7 +108,7 @@ export function ReportPrintView({
           <tr>
             <td className="rp-body">
               {isGujarati ? (
-                <div className="rp-gujarati-layout font-sans text-black">
+                <div className="rp-gujarati-layout text-black font-['Shruti',_'Gujarati_Saral',_var(--font-gujarati),_'Noto_Sans_Gujarati',_'Nirmala_UI',_sans-serif]">
                   {/* Gujarat Police Official Header */}
                   <div className="flex items-center justify-between border-b-2 border-black pb-3 mb-4">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -161,46 +161,117 @@ export function ReportPrintView({
                   </div>
 
                   {/* Salutation & Intro */}
-                  <div className="mb-4 text-xs leading-relaxed text-gray-900">
+                  <div className="mb-4 text-sm leading-relaxed text-gray-900">
                     <p className="font-semibold">મહેરબાન સાહેબ,</p>
                     <p className="indent-6 mt-1">{report.salutation || fallbackHeaders.salutation}</p>
                   </div>
 
                   {/* Table */}
-                  {report.rows.length === 0 ? (
-                    <p className="rp-empty py-8 text-center text-sm font-semibold">
-                      માહે {report.periodLabel} માટે કોઈ રેકોર્ડ મળેલ નથી.
-                    </p>
-                  ) : (
-                    <table className="rp-table w-full border-collapse text-xs">
-                      <thead>
-                        <tr>
-                          <th className="rp-idx text-center w-8">અ.નં.</th>
-                          {report.columns.map((c) => (
-                            <th key={c.key} className={c.align === "right" ? "rp-num text-right" : "text-left"}>
-                              {c.label}
+                  {(() => {
+                    const hasOfficer = report.columns.some((c) => c.key === "officer");
+                    const isHolidayReport = report.columns.some((c) => c.key === "dateDay" || c.key === "remarks" || c.key === "holiday");
+                    const getPrintColStyle = (key: string, align?: string) => {
+                      if (key === "officer") return { width: "12%", textAlign: "left" as const };
+                      if (isHolidayReport) {
+                        if (key === "dateDay" || key === "date")
+                          return { width: hasOfficer ? "22%" : "25%", textAlign: "left" as const };
+                        if (key === "time")
+                          return { width: hasOfficer ? "16%" : "18%", textAlign: "left" as const };
+                        if (key === "details" || key === "duty")
+                          return { width: hasOfficer ? "24%" : "27%", textAlign: "left" as const };
+                        if (key === "remarks" || key === "holiday")
+                          return { width: hasOfficer ? "22%" : "25%", textAlign: "left" as const };
+                        if (key === "station")
+                          return { width: hasOfficer ? "12%" : "14%", textAlign: "left" as const };
+                        if (key === "travel")
+                          return { width: hasOfficer ? "14%" : "16%", textAlign: "left" as const };
+                      }
+                      if (key === "startDate" || key === "endDate")
+                        return { width: hasOfficer ? "17.5%" : "19.5%", textAlign: "left" as const };
+                      if (key === "route")
+                        return { width: hasOfficer ? "19%" : "21%", textAlign: "left" as const };
+                      if (key === "reason" || key === "duty" || key === "details")
+                        return { width: hasOfficer ? "20%" : "23%", textAlign: "left" as const };
+                      if (key === "vehicle")
+                        return { width: hasOfficer ? "4.5%" : "5%", textAlign: "center" as const };
+                      if (key === "distance")
+                        return { width: hasOfficer ? "6.5%" : "7%", textAlign: "right" as const };
+                      return {
+                        width: "auto",
+                        textAlign: (align === "right" ? "right" : align === "center" ? "center" : "left") as "right" | "center" | "left",
+                      };
+                    };
+
+                    return report.rows.length === 0 ? (
+                      <p className="rp-empty py-8 text-center text-sm font-semibold">
+                        માહે {report.periodLabel} માટે કોઈ રેકોર્ડ મળેલ નથી.
+                      </p>
+                    ) : (
+                      <table className="rp-table w-full border-collapse text-xs table-fixed">
+                        <thead>
+                          <tr>
+                            <th className="rp-idx text-center whitespace-nowrap" style={{ width: hasOfficer ? "4%" : "5%" }}>
+                              અ.નં.
                             </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {report.rows.map((row, i) => (
-                          <tr key={i}>
-                            <td className="rp-idx text-center font-semibold">
-                              {report.useGujaratiDigits
-                                ? String(i + 1).replace(/\d/g, (d) => "૦૧૨૩૪૫૬૭૮૯"[Number(d)])
-                                : i + 1}
-                            </td>
-                            {report.columns.map((c) => (
-                              <td key={c.key} className={c.align === "right" ? "rp-num text-right font-medium" : "text-left"}>
-                                {row[c.key] ?? "—"}
-                              </td>
-                            ))}
+                            {report.columns.map((c) => {
+                              const col = getPrintColStyle(c.key, c.align);
+                              const isRight = c.align === "right" || col.textAlign === "right";
+                              const isCenter = c.align === "center" || col.textAlign === "center" || c.key === "vehicle";
+                              return (
+                                <th
+                                  key={c.key}
+                                  style={{ width: col.width, textAlign: col.textAlign }}
+                                  className={
+                                    isRight
+                                      ? "rp-num text-right"
+                                      : isCenter
+                                        ? "rp-center text-center"
+                                        : "text-left"
+                                  }
+                                >
+                                  {c.label}
+                                </th>
+                              );
+                            })}
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
+                        </thead>
+                        <tbody>
+                          {report.rows.map((row, i) => (
+                            <tr key={i}>
+                              <td
+                                className="rp-idx text-center font-semibold align-top whitespace-nowrap"
+                                style={{ width: hasOfficer ? "4%" : "5%", verticalAlign: "top" }}
+                              >
+                                {report.useGujaratiDigits
+                                  ? String(i + 1).replace(/\d/g, (d) => "૦૧૨૩૪૫૬૭૮૯"[Number(d)])
+                                  : i + 1}
+                              </td>
+                              {report.columns.map((c) => {
+                                const col = getPrintColStyle(c.key, c.align);
+                                const isRight = c.align === "right" || col.textAlign === "right";
+                                const isCenter = c.align === "center" || col.textAlign === "center" || c.key === "vehicle";
+                                return (
+                                  <td
+                                    key={c.key}
+                                    style={{ width: col.width, textAlign: col.textAlign, verticalAlign: "top" }}
+                                    className={`align-top ${
+                                      isRight
+                                        ? "rp-num text-right font-medium whitespace-pre"
+                                        : isCenter
+                                          ? "rp-center text-center whitespace-pre-line"
+                                          : "whitespace-pre-line text-left"
+                                    }`}
+                                  >
+                                    {row[c.key] ?? "—"}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    );
+                  })()}
 
                   {/* Footer & Signature */}
                   <div className="mt-8 pt-4 flex justify-between items-end text-xs break-inside-avoid">
@@ -266,22 +337,48 @@ export function ReportPrintView({
                       <thead>
                         <tr>
                           <th className="rp-idx">#</th>
-                          {report.columns.map((c) => (
-                            <th key={c.key} className={c.align === "right" ? "rp-num" : undefined}>
-                              {c.label}
-                            </th>
-                          ))}
+                          {report.columns.map((c) => {
+                            const isRight = c.align === "right";
+                            const isCenter = c.align === "center" || c.key === "vehicle";
+                            return (
+                              <th
+                                key={c.key}
+                                className={
+                                  isRight
+                                    ? "rp-num whitespace-nowrap min-w-[75px]"
+                                    : isCenter
+                                      ? "rp-center text-center"
+                                      : undefined
+                                }
+                              >
+                                {c.label}
+                              </th>
+                            );
+                          })}
                         </tr>
                       </thead>
                       <tbody>
                         {report.rows.map((row, i) => (
                           <tr key={i}>
-                            <td className="rp-idx">{i + 1}</td>
-                            {report.columns.map((c) => (
-                              <td key={c.key} className={c.align === "right" ? "rp-num" : undefined}>
-                                {row[c.key] ?? "—"}
-                              </td>
-                            ))}
+                            <td className="rp-idx align-top">{i + 1}</td>
+                            {report.columns.map((c) => {
+                              const isRight = c.align === "right";
+                              const isCenter = c.align === "center" || c.key === "vehicle";
+                              return (
+                                <td
+                                  key={c.key}
+                                  className={`align-top ${
+                                    isRight
+                                      ? "rp-num text-right font-medium whitespace-pre min-w-[75px]"
+                                      : isCenter
+                                        ? "rp-center text-center whitespace-pre-line"
+                                        : "whitespace-pre-line text-left"
+                                  }`}
+                                >
+                                  {row[c.key] ?? "—"}
+                                </td>
+                              );
+                            })}
                           </tr>
                         ))}
                       </tbody>

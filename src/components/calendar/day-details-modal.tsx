@@ -22,6 +22,7 @@ import { DeleteLeaveButton } from "@/components/leave/delete-leave-button";
 import { DeleteDutyButton } from "@/components/duty/delete-duty-button";
 import { DutyHolidayBadge, DutyTaBadge } from "@/components/duty/duty-badges";
 import { formatSafeDateFull, formatSafeTime } from "@/lib/format/safeDate";
+import { calculateMinutes, formatMinutes } from "@/lib/duty/groupDuties";
 import { useBodyScrollLock } from "@/lib/hooks/useBodyScrollLock";
 import { useModalBackClose } from "@/lib/hooks/useModalBackClose";
 import { useLanguage } from "@/lib/i18n/language-context";
@@ -33,6 +34,7 @@ export interface DayDetailsModalProps {
   onClose: () => void;
   date: Date;
   events: CalendarEvent[];
+  enableMultiDuty?: boolean;
 }
 
 const cleanHolidayTitle = (title: string) =>
@@ -51,6 +53,7 @@ export function DayDetailsModal({
   onClose,
   date,
   events,
+  enableMultiDuty = false,
 }: DayDetailsModalProps) {
   useBodyScrollLock(isOpen);
   useModalBackClose(isOpen, onClose);
@@ -187,65 +190,147 @@ export function DayDetailsModal({
           )}
 
           {/* Duty Shifts Section */}
-          {duties.length > 0 && (
-            <div className="space-y-2">
-              <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                <Briefcase className="size-3.5 text-indigo-500" />
-                <span>
-                  {t.calendar.dutyShiftsSection} ({isGujarati ? toGujaratiNumerals(duties.length) : duties.length})
-                </span>
-              </span>
-              <div className="space-y-2">
-                {duties.map((d) => (
-                  <div
-                    key={d.id}
-                    className="p-3.5 rounded-2xl border border-indigo-500/30 bg-indigo-500/5 dark:bg-indigo-950/20 space-y-2"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="text-xs font-bold text-foreground">
-                        {d.title.replace("Duty: ", "").replace("ફરજ: ", "")}
+          {duties.length > 0 && (() => {
+            const totalDutyDurationMins = duties.reduce((acc, d) => {
+              return acc + (d.start && d.end ? calculateMinutes(d.start, d.end) : 0);
+            }, 0);
+            const totalDutyDurationLabel = formatMinutes(totalDutyDurationMins, isGujarati);
+
+            if (enableMultiDuty && duties.length > 1) {
+              return (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                      <Briefcase className="size-3.5 text-indigo-500" />
+                      <span>
+                        {t.calendar.dutyShiftsSection} ({isGujarati ? toGujaratiNumerals(duties.length) : duties.length})
                       </span>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        {/* Same badges as the duty log and the agenda list,
-                            icon-only because "Active Shift" and the delete
-                            control already share this row. */}
-                        <DutyHolidayBadge
-                          duty={{
-                            is_holiday_duty: d.isHolidayDuty,
-                            manual_holiday_claim: d.manualHolidayClaim,
-                          }}
-                          iconOnly
-                        />
-                        <DutyTaBadge duty={{ ta_amount: d.taAmount }} iconOnly />
-                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-lg border border-indigo-500/20 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
-                          {t.calendar.activeShiftBadge}
-                        </span>
-                        <DeleteDutyButton id={d.id} iconOnly size="sm" />
-                      </div>
+                    </span>
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-indigo-600 text-white shadow-2xs">
+                      {totalDutyDurationLabel}
+                    </span>
+                  </div>
+
+                  <div className="rounded-2xl border border-indigo-500/30 bg-indigo-500/5 dark:bg-indigo-950/20 p-3 space-y-2.5">
+                    <div className="flex items-center justify-between pb-2 border-b border-indigo-500/20">
+                      <span className="text-xs font-bold text-foreground">
+                        {duties.map((d) => d.title.replace("Duty: ", "").replace("ફરજ: ", "")).join(" + ")}
+                      </span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/20">
+                        {isGujarati ? `${toGujaratiNumerals(duties.length)} શિફ્ટ` : `${duties.length} shifts`}
+                      </span>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground pt-1 border-t border-border/50">
-                      {d.start && (
-                        <div className="flex items-center gap-1">
-                          <Clock className="size-3 text-indigo-500" />
-                          <span>
-                            {formatSafeTime(d.start)}
-                            {d.end && ` → ${formatSafeTime(d.end)}`}
-                          </span>
+                    <div className="space-y-2">
+                      {duties.map((d, idx) => (
+                        <div
+                          key={d.id}
+                          className="p-2.5 rounded-xl border border-border/70 bg-card/80 space-y-1.5 shadow-2xs"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-muted text-muted-foreground border border-border/60">
+                                {isGujarati ? `શિફ્ટ ${toGujaratiNumerals(idx + 1)}` : `Shift ${idx + 1}`}
+                              </span>
+                              <span className="text-xs font-bold text-foreground">
+                                {d.title.replace("Duty: ", "").replace("ફરજ: ", "")}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <DutyHolidayBadge
+                                duty={{
+                                  is_holiday_duty: d.isHolidayDuty,
+                                  manual_holiday_claim: d.manualHolidayClaim,
+                                }}
+                                iconOnly
+                              />
+                              <DutyTaBadge duty={{ ta_amount: d.taAmount }} iconOnly />
+                              <DeleteDutyButton id={d.id} iconOnly size="sm" />
+                            </div>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground pt-1 border-t border-border/40">
+                            {d.start && (
+                              <div className="flex items-center gap-1">
+                                <Clock className="size-3 text-indigo-500" />
+                                <span>
+                                  {formatSafeTime(d.start)}
+                                  {d.end && ` → ${formatSafeTime(d.end)}`}
+                                </span>
+                              </div>
+                            )}
+                            {d.details && (
+                              <div className="flex items-center gap-1">
+                                <MapPin className="size-3 text-rose-500" />
+                                <span>{d.details}</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      )}
-                      {d.details && (
-                        <div className="flex items-center gap-1">
-                          <MapPin className="size-3 text-rose-500" />
-                          <span>{d.details}</span>
-                        </div>
-                      )}
+                      ))}
                     </div>
                   </div>
-                ))}
+                </div>
+              );
+            }
+
+            return (
+              <div className="space-y-2">
+                <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                  <Briefcase className="size-3.5 text-indigo-500" />
+                  <span>
+                    {t.calendar.dutyShiftsSection} ({isGujarati ? toGujaratiNumerals(duties.length) : duties.length})
+                  </span>
+                </span>
+                <div className="space-y-2">
+                  {duties.map((d) => (
+                    <div
+                      key={d.id}
+                      className="p-3.5 rounded-2xl border border-indigo-500/30 bg-indigo-500/5 dark:bg-indigo-950/20 space-y-2"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="text-xs font-bold text-foreground">
+                          {d.title.replace("Duty: ", "").replace("ફરજ: ", "")}
+                        </span>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <DutyHolidayBadge
+                            duty={{
+                              is_holiday_duty: d.isHolidayDuty,
+                              manual_holiday_claim: d.manualHolidayClaim,
+                            }}
+                            iconOnly
+                          />
+                          <DutyTaBadge duty={{ ta_amount: d.taAmount }} iconOnly />
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-lg border border-indigo-500/20 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+                            {t.calendar.activeShiftBadge}
+                          </span>
+                          <DeleteDutyButton id={d.id} iconOnly size="sm" />
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground pt-1 border-t border-border/50">
+                        {d.start && (
+                          <div className="flex items-center gap-1">
+                            <Clock className="size-3 text-indigo-500" />
+                            <span>
+                              {formatSafeTime(d.start)}
+                              {d.end && ` → ${formatSafeTime(d.end)}`}
+                            </span>
+                          </div>
+                        )}
+                        {d.details && (
+                          <div className="flex items-center gap-1">
+                            <MapPin className="size-3 text-rose-500" />
+                            <span>{d.details}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Leaves & Absences Section */}
           {leaves.length > 0 && (

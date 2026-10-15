@@ -10,6 +10,7 @@ import {
   type ColumnDef,
   type ReportRow,
 } from "@/lib/reports/buildMonthlyReport";
+import { getUserSettings } from "@/lib/settings/getUserSettings";
 
 function csvEscape(value: unknown): string {
   const s = value === null || value === undefined ? "" : String(value);
@@ -61,11 +62,13 @@ export async function GET(request: NextRequest) {
       ? Math.min(12, Math.max(1, Number(monthParam)))
       : null;
 
+  const settings = await getUserSettings();
   const report = await buildMonthlyReport({
     type,
     year,
     month,
     userId: sp.get("userId") ?? undefined,
+    enableMultiDuty: settings.enableMultiDuty,
   });
 
   const csv = toCsv(report.rows, report.columns);

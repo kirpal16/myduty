@@ -471,7 +471,7 @@
 /* The printed report (visible only when printing — see ReportPrintView). */
 .report-print {
   color: #000;
-  font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+  font-family: "Shruti", "Gujarati Saral", var(--font-gujarati), "Noto Sans Gujarati", "Nirmala UI", "Gujarati Sangam MN", Arial, sans-serif;
 }
 
 .report-print .rp-page {
@@ -519,7 +519,7 @@
 }
 
 .report-print .rp-org-name {
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: inherit;
   font-size: 17pt;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -550,11 +550,10 @@
 .report-print .rp-title {
   margin: 6mm 0 5mm;
   text-align: center;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: inherit;
   font-size: 14pt;
   font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  letter-spacing: 0.02em;
   text-decoration: underline;
   text-underline-offset: 4px;
 }
@@ -585,23 +584,28 @@
 
 .report-print .rp-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 9.5pt;
+  line-height: 1.45;
 }
 
 .report-print .rp-table th,
 .report-print .rp-table td {
   border: 1px solid #444;
-  padding: 1.8mm 2.2mm;
+  padding: 2.2mm 2mm;
   text-align: left;
-  vertical-align: top;
+  vertical-align: top !important;
+  white-space: pre-line;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .report-print .rp-table th {
+  padding: 2mm 2mm;
   font-size: 8.5pt;
   font-weight: 700;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
 .report-print .rp-table tr {
@@ -610,13 +614,20 @@
 }
 
 .report-print .rp-idx {
-  width: 8mm;
   text-align: center !important;
+  vertical-align: top !important;
+  white-space: nowrap !important;
+}
+
+.report-print .rp-center {
+  text-align: center !important;
+  vertical-align: top !important;
 }
 
 .report-print .rp-num {
   text-align: right !important;
-  white-space: nowrap;
+  vertical-align: top !important;
+  white-space: pre !important;
 }
 
 .report-print .rp-empty {

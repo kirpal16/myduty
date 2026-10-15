@@ -29,7 +29,10 @@ import {
   holidayLeaveConflictMessage,
   datesInRange,
 } from "@/lib/leave/holidayLeaveRules";
-import { toDateKey, toWallClockISO } from "@/lib/format/datetime";
+import {
+  toDateKey,
+  toWallClockISO,
+} from "@/lib/format/datetime";
 import type { DutyStatus } from "@/types/database";
 
 export type DutyFormState =
@@ -156,7 +159,16 @@ export async function createDuty(
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return { message: "Not authenticated" };
 
-  const slots = splitIntoDailyDuties(new Date(d.startsAt), new Date(d.endsAt));
+  const isExplicitOvernight = formData.get("isNextDay") === "true";
+  const slots = isExplicitOvernight
+    ? [
+        {
+          dateKey: toDateKey(new Date(d.startsAt)),
+          startsAt: new Date(d.startsAt),
+          endsAt: new Date(d.endsAt),
+        },
+      ]
+    : splitIntoDailyDuties(new Date(d.startsAt), new Date(d.endsAt));
   const settings = await getUserSettings();
   const holidays = await loadHolidays(
     supabase,
@@ -172,6 +184,33 @@ export async function createDuty(
   const overrides = new Map((d.perDay ?? []).map((row) => [row.date, row]));
   const groupId = crypto.randomUUID();
   const status: DutyStatus = "SCHEDULED";
+
+  // Check overlaps between primary slots and any additional shifts logged
+  if (d.additionalShifts && d.additionalShifts.length > 0) {
+    const allIntervals = [
+      ...slots.map((s) => ({
+        startsAt: new Date(toWallClockISO(s.startsAt)),
+        endsAt: new Date(toWallClockISO(s.endsAt)),
+      })),
+      ...d.additionalShifts.map((s) => ({
+        startsAt: new Date(toWallClockISO(s.startsAt)),
+        endsAt: new Date(toWallClockISO(s.endsAt)),
+      })),
+    ];
+    for (let i = 0; i < allIntervals.length; i++) {
+      for (let j = i + 1; j < allIntervals.length; j++) {
+        if (
+          allIntervals[i].startsAt < allIntervals[j].endsAt &&
+          allIntervals[j].startsAt < allIntervals[i].endsAt
+        ) {
+          return {
+            message:
+              "Shift timings overlap with each other on this day. Please adjust the hours.",
+          };
+        }
+      }
+    }
+  }
 
   const rows = slots.map((slot: DutyDaySlot) => {
     const o = overrides.get(slot.dateKey);
@@ -207,6 +246,42 @@ export async function createDuty(
       created_by: auth.user!.id,
     };
   });
+
+  if (d.additionalShifts && d.additionalShifts.length > 0) {
+    for (const shift of d.additionalShifts) {
+      const sStart = new Date(shift.startsAt);
+      const sEnd = new Date(shift.endsAt);
+      const resolution = resolveHoliday(sStart, holidays);
+      const pay = resolveHolidayPay({
+        resolution,
+        status,
+        holidayDayRate: settings.holidayDayRate,
+        submittedAllowance: shift.holidayAllowance,
+        manualClaim: shift.manualHolidayClaim ?? false,
+      });
+
+      rows.push({
+        user_id: auth.user!.id,
+        duty_type_id: shift.dutyTypeId,
+        starts_at: toWallClockISO(shift.startsAt),
+        ends_at: toWallClockISO(shift.endsAt),
+        location: shift.location ?? null,
+        notes: shift.notes ?? null,
+        status,
+        duty_group_id: groupId,
+        ta_from_place: shift.taFromPlace ?? null,
+        ta_to_place: shift.taToPlace ?? null,
+        ta_distance_km: shift.taDistanceKm ?? null,
+        ta_amount: shift.taAmount ?? null,
+        ta_vehicle_type: shift.taVehicleType ?? "private",
+        is_holiday: pay.isHoliday,
+        is_holiday_duty: pay.isHolidayDuty,
+        manual_holiday_claim: pay.manualHolidayClaim,
+        holiday_allowance: pay.holidayAllowance,
+        created_by: auth.user!.id,
+      });
+    }
+  }
 
   // One insert, so a collision on any day rolls the whole batch back rather
   // than leaving half a multi-day duty behind.
@@ -283,7 +358,7 @@ export async function updateDuty(
   // depend on a policy staying correct.
   const { data: existing } = await supabase
     .from("duties")
-    .select("id, user_id, status")
+    .select("id, user_id, status, duty_group_id")
     .eq("id", dutyId)
     .maybeSingle();
   if (!existing) return { message: "That duty no longer exists." };
@@ -291,8 +366,34 @@ export async function updateDuty(
     return { message: "You can only edit your own duty log." };
   }
 
-  const startsAt = new Date(toWallClockISO(d.startsAt));
-  const endsAt = new Date(toWallClockISO(d.endsAt));
+  const startsAtISO = toWallClockISO(d.startsAt);
+  const endsAtISO = toWallClockISO(d.endsAt);
+  const startsAt = new Date(startsAtISO);
+  const endsAt = new Date(endsAtISO);
+
+  // Check overlaps between updated primary shift and any newly added shifts
+  if (d.additionalShifts && d.additionalShifts.length > 0) {
+    const allIntervals = [
+      { startsAt, endsAt },
+      ...d.additionalShifts.map((s) => ({
+        startsAt: new Date(toWallClockISO(s.startsAt)),
+        endsAt: new Date(toWallClockISO(s.endsAt)),
+      })),
+    ];
+    for (let i = 0; i < allIntervals.length; i++) {
+      for (let j = i + 1; j < allIntervals.length; j++) {
+        if (
+          allIntervals[i].startsAt < allIntervals[j].endsAt &&
+          allIntervals[j].startsAt < allIntervals[i].endsAt
+        ) {
+          return {
+            message:
+              "Shift timings overlap with each other on this day. Please adjust the hours.",
+          };
+        }
+      }
+    }
+  }
 
   // Editing can move the duty onto a day already taken as Holiday Leave, so
   // the same exclusion applies here as on create.
@@ -318,8 +419,8 @@ export async function updateDuty(
     .from("duties")
     .update({
       duty_type_id: d.dutyTypeId,
-      starts_at: toWallClockISO(startsAt),
-      ends_at: toWallClockISO(endsAt),
+      starts_at: startsAtISO,
+      ends_at: endsAtISO,
       location: d.location ?? null,
       notes: d.notes ?? null,
       ta_from_place: d.taFromPlace ?? null,
@@ -338,6 +439,55 @@ export async function updateDuty(
     return {
       message: error.code === EXCLUSION_VIOLATION ? CONFLICT_MESSAGE : error.message,
     };
+  }
+
+  // If new additional shifts were added during edit, insert them
+  if (d.additionalShifts && d.additionalShifts.length > 0) {
+    const groupId = existing.duty_group_id ?? crypto.randomUUID();
+    if (!existing.duty_group_id) {
+      await supabase.from("duties").update({ duty_group_id: groupId }).eq("id", dutyId);
+    }
+
+    const newRows = d.additionalShifts.map((shift) => {
+      const sStartISO = toWallClockISO(shift.startsAt);
+      const sEndISO = toWallClockISO(shift.endsAt);
+      const res = resolveHoliday(shift.startsAt, holidays);
+      const p = resolveHolidayPay({
+        resolution: res,
+        status,
+        holidayDayRate: settings.holidayDayRate,
+        submittedAllowance: shift.holidayAllowance,
+        manualClaim: shift.manualHolidayClaim ?? false,
+      });
+
+      return {
+        user_id: auth.user!.id,
+        duty_type_id: shift.dutyTypeId,
+        starts_at: sStartISO,
+        ends_at: sEndISO,
+        location: shift.location ?? null,
+        notes: shift.notes ?? null,
+        status,
+        duty_group_id: groupId,
+        ta_from_place: shift.taFromPlace ?? null,
+        ta_to_place: shift.taToPlace ?? null,
+        ta_distance_km: shift.taDistanceKm ?? null,
+        ta_amount: shift.taAmount ?? null,
+        ta_vehicle_type: shift.taVehicleType ?? "private",
+        is_holiday: p.isHoliday,
+        is_holiday_duty: p.isHolidayDuty,
+        manual_holiday_claim: p.manualHolidayClaim,
+        holiday_allowance: p.holidayAllowance,
+        created_by: auth.user!.id,
+      };
+    });
+
+    const { error: insertErr } = await supabase.from("duties").insert(newRows);
+    if (insertErr) {
+      return {
+        message: insertErr.code === EXCLUSION_VIOLATION ? CONFLICT_MESSAGE : insertErr.message,
+      };
+    }
   }
 
   const file = formData.get("file");

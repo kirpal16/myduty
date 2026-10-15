@@ -543,3 +543,113 @@ describe("consolidateLeaveRows", () => {
     expect(consolidateLeaveRows([LEAVE_ROWS[1], halfNext])).toHaveLength(2);
   });
 });
+
+describe("Multi-shift duty in Print Reports", () => {
+  it("stacks both shifts in TA report when both shifts have TA", () => {
+    const multiTaRow: ReportRow = {
+      officer: "K. B. Vaghela",
+      duty_type: "Point Duty\nPatrolling",
+      date: "2026-10-15",
+      shift_time: "08:00 - 12:00\n14:00 - 18:00",
+      starts_at: "08:00\n14:00",
+      ends_at: "12:00\n18:00",
+      notes: "VIP Route\nNight Round",
+      location: "Modasa\nGandhinagar",
+      status: "COMPLETED",
+      ta_from: "મોડાસા\nગાંધીનગર",
+      ta_to: "ગાંધીનગર\nમોડાસા",
+      ta_vehicle_type: "govt\nprivate",
+      ta_distance_km: "120\n120",
+      ta_amount: "500\n500",
+    };
+
+    const guTa = buildPrintReport({
+      type: "ta",
+      rows: [multiTaRow],
+      periodLabel: "ઓક્ટોબર ૨૦૨૬",
+      includeOfficer: false,
+      language: "gu",
+      useGujaratiDigits: true,
+    });
+
+    expect(guTa.rows).toHaveLength(1);
+    const row = guTa.rows[0];
+    expect(row.route).toBe("મોડાસા થી ગાંધીનગર,\nગાંધીનગર થી મોડાસા");
+    expect(row.vehicle).toBe("સ.વા.,\nખ.વા.");
+    expect(row.distance).toBe("૧૨૦ કિ.મી.,\n૧૨૦ કિ.મી.");
+    expect(row.reason).toContain("પોઈન્ટ ડ્યુટી (VIP Route)");
+    expect(row.reason).toContain("પેટ્રોલિંગ (નાઈટ રાઉન્ડ)");
+  });
+
+  it("accurately gives each shift its own start and end date when one shift ends same day and another ends next day", () => {
+    const multiRowWithNextDay: ReportRow = {
+      officer: "K. B. Vaghela",
+      duty_type: "Patrolling\nStandby Duty",
+      date: "2026-10-02 to 2026-10-03",
+      start_date: "2026-10-02",
+      end_date: "2026-10-03",
+      start_dates: "2026-10-02\n2026-10-02",
+      end_dates: "2026-10-02\n2026-10-03",
+      shift_time: "10:00 - 18:00\n20:00 - 05:00 (Next Day)",
+      starts_at: "10:00\n20:00",
+      ends_at: "18:00\n05:00",
+      location: "Vidhansabha",
+      ta_from: "મોડાસા\nમોડાસા",
+      ta_to: "ગાંધીનગર 1\nમોડાસા 12",
+      ta_vehicle_type: "govt\ngovt",
+      ta_distance_km: "123\n22",
+    };
+
+    const guTa = buildPrintReport({
+      type: "ta",
+      rows: [multiRowWithNextDay],
+      periodLabel: "ઓક્ટોબર ૨૦૨૬",
+      includeOfficer: false,
+      language: "gu",
+      useGujaratiDigits: true,
+    });
+
+    const row = guTa.rows[0];
+    expect(row.startDate).toBe("૦૨/૧૦/૨૦૨૬ ૧૦/૦૦,\n૦૨/૧૦/૨૦૨૬ ૨૦/૦૦");
+    expect(row.endDate).toBe("૦૨/૧૦/૨૦૨૬ ૧૮/૦૦,\n૦૩/૧૦/૨૦૨૬ ૦૫/૦૦");
+    expect(row.distance).toBe("૧૨૩ કિ.મી.,\n૦૨૨ કિ.મી.");
+  });
+
+  it("stacks both shifts in Holiday Worked report under the same row", () => {
+    const holidayRow: ReportRow = {
+      officer: "K. B. Vaghela",
+      duty_type: "Point Duty\nNight Patrolling",
+      date: "2026-10-15",
+      shift_time: "08:00 - 12:00\n14:00 - 18:00",
+      starts_at: "08:00\n14:00",
+      ends_at: "12:00\n18:00",
+      notes: "VIP Route\nRound",
+      location: "Modasa",
+      status: "COMPLETED",
+      holiday_name: "Diwali",
+      day_type: "Public Holiday",
+      ta_from: "મોડાસા",
+      ta_to: "ગાંધીનગર",
+      ta_vehicle_type: "govt",
+      ta_distance_km: "120",
+      holiday_allowance: 900,
+    };
+
+    const guHoliday = buildPrintReport({
+      type: "holiday",
+      rows: [holidayRow],
+      periodLabel: "ઓક્ટોબર ૨૦૨૬",
+      includeOfficer: false,
+      language: "gu",
+      useGujaratiDigits: true,
+    });
+
+    expect(guHoliday.rows).toHaveLength(1);
+    const row = guHoliday.rows[0];
+    expect(row.time).toBe("૦૮/૦૦ થી ૧૨/૦૦,\n૧૪/૦૦ થી ૧૮/૦૦");
+    expect(row.details).toContain("પોઈન્ટ ડ્યુટી (VIP Route)");
+    expect(row.details).toContain("નાઈટ પેટ્રોલિંગ (Round)");
+    expect(row.remarks).toContain("દિવાળી");
+    expect(row.remarks).toContain("મોડાસા થી ગાંધીનગર (સ.વા. / ૧૨૦ કિ.મી.)");
+  });
+});

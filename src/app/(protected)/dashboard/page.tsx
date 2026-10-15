@@ -44,6 +44,7 @@ import {
 import { redirect } from "next/navigation";
 import { getYearOptions, clampYear } from "@/lib/format/year";
 import { translateDutyTypeToGujarati, toGujaratiNumerals } from "@/lib/reports/gujaratiReportUtils";
+import { groupDutiesByDayOrGroup } from "@/lib/duty/groupDuties";
 import { getPureGujaratiLeaveTypeName } from "@/lib/leave/leaveTranslation";
 import {
   CompactCareerTimeline,
@@ -137,7 +138,7 @@ async function DashboardBody({
     supabase
       .from("duties")
       .select(
-        "id, starts_at, ends_at, location, status, ta_amount, ta_distance_km, is_holiday_duty, manual_holiday_claim, duty_types(name)",
+        "id, user_id, starts_at, ends_at, location, status, ta_amount, ta_distance_km, is_holiday_duty, manual_holiday_claim, duty_types(name), duty_group_id",
       )
       .eq("user_id", userId)
       // Bounded to the selected year. Without this the "Recent" cards showed
@@ -239,6 +240,8 @@ async function DashboardBody({
     return summary.length > 1 ? summary : null;
   };
 
+  const isGu = lang === "gu";
+  const groupedRecentDuties = groupDutiesByDayOrGroup(recentDuties ?? [], isGu, userSettings.enableMultiDuty).slice(0, RECENT_LIMIT);
   const duties = periodDuties ?? [];
   const dutyCount = duties.length;
   // Days, not entries: one five-day leave is five days off.
@@ -289,7 +292,6 @@ async function DashboardBody({
 
   // ---- chart data -------------------------------------------------------
 
-  const isGu = lang === "gu";
   const dutyTypeCounts = new Map<string, number>();
   for (const d of duties) {
     const rawName =
@@ -644,43 +646,51 @@ async function DashboardBody({
 
               {/* Mobile gets stacked cards */}
               <div className={`flex flex-col gap-2 md:hidden ${RECENT_SCROLL_CARDS}`}>
-                {(recentDuties ?? []).map((d) => {
-                  const rawTypeName =
-                    (d.duty_types as unknown as { name: string } | null)?.name ??
-                    "Standard Duty";
-                  const typeName = isGu
-                    ? (rawTypeName !== "Standard Duty" ? translateDutyTypeToGujarati(rawTypeName) : "સામાન્ય ફરજ")
-                    : rawTypeName;
+                {(groupedRecentDuties ?? []).map((g) => {
                   return (
                     <Link
-                      key={d.id}
-                      href={`/duty/${d.id}`}
+                      key={g.groupKey}
+                      href={`/duty/${g.primaryId}`}
                       className="flex flex-col gap-1.5 rounded-xl border border-border/60 bg-muted/30 p-3 transition-colors hover:bg-muted/60"
                     >
                       <div className="flex items-start justify-between gap-2">
-                        <span className="text-xs font-bold text-foreground">
-                          {typeName}
-                        </span>
-                        {d.ta_amount ? (
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-xs font-bold text-foreground">
+                            {g.combinedDutyTypeLabel}
+                          </span>
+                          {g.isMultiShift && (
+                            <Badge variant="purple" className="text-[10px] py-0 px-1 font-bold">
+                              {isGu ? `${toGujaratiNumerals(g.shiftCount)} શિફ્ટ` : `${g.shiftCount} shifts`}
+                            </Badge>
+                          )}
+                        </div>
+                        {g.totalTaAmount > 0 ? (
                           <Badge variant="success">
-                            {isGu ? toGujaratiNumerals(formatCurrency(d.ta_amount)) : formatCurrency(d.ta_amount)}
+                            {isGu ? toGujaratiNumerals(formatCurrency(g.totalTaAmount)) : formatCurrency(g.totalTaAmount)}
                           </Badge>
                         ) : null}
                       </div>
-                      <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                      <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground flex-wrap">
                         <Clock className="size-3 shrink-0 text-slate-400" />
-                        <span>{formatDateTime(d.starts_at, timeFormat, isGu ? "gu" : "en-US")}</span>
+                        <span>
+                          {formatDateTime(g.earliestStart, timeFormat, isGu ? "gu" : "en-US")} → {formatDateTime(g.latestEnd, timeFormat, isGu ? "gu" : "en-US")}
+                        </span>
+                        {g.isMultiShift && (
+                          <span className="text-indigo-600 dark:text-indigo-400 font-semibold ml-1">
+                            ({g.totalDurationLabel})
+                          </span>
+                        )}
                       </div>
-                      {d.location && (
+                      {g.locationDisplay !== "—" && (
                         <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
                           <MapPin className="size-3 shrink-0 text-slate-400" />
-                          <span className="truncate">{d.location}</span>
+                          <span className="truncate">{g.locationDisplay}</span>
                         </div>
                       )}
                     </Link>
                   );
                 })}
-                {(recentDuties ?? []).length === 0 && (
+                {(groupedRecentDuties ?? []).length === 0 && (
                   <p className="py-8 text-center text-xs text-muted-foreground">
                     {t.dashboard.noRecentDuties}
                   </p>
@@ -699,54 +709,63 @@ async function DashboardBody({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/40">
-                    {(recentDuties ?? []).map((d) => {
-                      const rawTypeName =
-                        (d.duty_types as unknown as { name: string } | null)?.name ?? "Standard Duty";
-                      const typeName = isGu
-                        ? (rawTypeName !== "Standard Duty" ? translateDutyTypeToGujarati(rawTypeName) : "સામાન્ય ફરજ")
-                        : rawTypeName;
+                    {(groupedRecentDuties ?? []).map((g) => {
                       return (
-                        <tr key={d.id} className="hover:bg-muted/40 transition-colors">
+                        <tr key={g.groupKey} className="hover:bg-muted/40 transition-colors">
                           <td className="py-3.5 font-medium text-foreground">
-                            {typeName}
-                          </td>
-                        <td className="py-3.5 text-muted-foreground whitespace-nowrap">
-                          <div className="flex items-center gap-1.5">
-                            <Clock className="size-3.5 text-slate-400" />
-                            <span>{formatDateTime(d.starts_at, timeFormat, isGu ? "gu" : "en-US")}</span>
-                          </div>
-                        </td>
-                        <td className="py-3.5 text-muted-foreground">
-                          {d.location ? (
-                            <div className="flex items-center gap-1">
-                              <MapPin className="size-3 text-slate-400 shrink-0" />
-                              <span className="truncate max-w-[140px]">{d.location}</span>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span>{g.combinedDutyTypeLabel}</span>
+                              {g.isMultiShift && (
+                                <Badge variant="purple" className="text-[10px] py-0 px-1 font-bold">
+                                  {isGu ? `${toGujaratiNumerals(g.shiftCount)} શિફ્ટ` : `${g.shiftCount} shifts`}
+                                </Badge>
+                              )}
                             </div>
-                          ) : (
-                            "—"
-                          )}
-                        </td>
-                        <td className="py-3.5">
-                          {d.ta_amount ? (
-                            <Badge variant="success">
-                              {isGu ? toGujaratiNumerals(formatCurrency(d.ta_amount)) : formatCurrency(d.ta_amount)}
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground text-xs">—</span>
-                          )}
-                        </td>
-                        <td className="py-3.5 pr-4 text-right">
-                          <Link
-                            href={`/duty/${d.id}`}
-                            className="inline-flex items-center justify-center rounded-lg border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted transition-colors shadow-2xs"
-                          >
-                            {t.common.view}
-                          </Link>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                    {(recentDuties ?? []).length === 0 && (
+                          </td>
+                          <td className="py-3.5 text-muted-foreground whitespace-nowrap">
+                            <div className="flex items-center gap-1.5">
+                              <Clock className="size-3.5 text-slate-400" />
+                              <span>
+                                {formatDateTime(g.earliestStart, timeFormat, isGu ? "gu" : "en-US")} → {formatDateTime(g.latestEnd, timeFormat, isGu ? "gu" : "en-US")}
+                              </span>
+                              {g.isMultiShift && (
+                                <span className="text-indigo-600 dark:text-indigo-400 font-medium text-xs">
+                                  ({g.totalDurationLabel})
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-3.5 text-muted-foreground">
+                            {g.locationDisplay !== "—" ? (
+                              <div className="flex items-center gap-1">
+                                <MapPin className="size-3 text-slate-400 shrink-0" />
+                                <span className="truncate max-w-[140px]">{g.locationDisplay}</span>
+                              </div>
+                            ) : (
+                              "—"
+                            )}
+                          </td>
+                          <td className="py-3.5">
+                            {g.totalTaAmount > 0 ? (
+                              <Badge variant="success">
+                                {isGu ? toGujaratiNumerals(formatCurrency(g.totalTaAmount)) : formatCurrency(g.totalTaAmount)}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground text-xs">—</span>
+                            )}
+                          </td>
+                          <td className="py-3.5 pr-4 text-right">
+                            <Link
+                              href={`/duty/${g.primaryId}`}
+                              className="inline-flex items-center justify-center rounded-lg border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted transition-colors shadow-2xs"
+                            >
+                              {t.common.view}
+                            </Link>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {(groupedRecentDuties ?? []).length === 0 && (
                       <tr>
                         <td colSpan={5} className="py-8 text-center text-muted-foreground">
                           {t.dashboard.noRecentDuties}

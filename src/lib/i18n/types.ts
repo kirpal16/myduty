@@ -321,6 +321,21 @@ export interface Translations {
     deleteDutyShiftTitle: string;
     deleteDutyShiftDesc: string;
     deleteShiftConfirm: string;
+    addAnotherShift: string;
+    removeShift: string;
+    shiftNumber: string;
+    tillNextDay: string;
+    endsNextDayBadge: string;
+    overnightDutyHint: string;
+    shiftTimeOverlapError: string;
+    submitMultipleDuties: string;
+    splitShiftHint: string;
+    shift1Title: string;
+    shift2Title: string;
+    deleteDutyConfirmSingle: string;
+    deleteDutyConfirmGroup: string;
+    singleDutyModeActiveHint: string;
+    multiDutyModeActiveHint: string;
   };
   leave: {
     pageTitle: string;
@@ -911,6 +926,10 @@ export interface Translations {
     salaryRate: string;
     defaultShiftStart: string;
     defaultShiftEnd: string;
+    multiDutyModeTitle: string;
+    multiDutyModeDesc: string;
+    multiDutyEnabledBadge: string;
+    multiDutyDisabledBadge: string;
     passwordChange: string;
     currentPassword: string;
     newPassword: string;

@@ -290,6 +290,7 @@ export type Database = {
           print_signatory_name: string | null;
           print_default_vehicle: string | null;
           print_use_gujarati_digits: boolean | null;
+          enable_multi_duty: boolean | null;
           created_at: string;
           updated_at: string;
         };
@@ -304,6 +305,7 @@ export type Database = {
           print_signatory_name?: string | null;
           print_default_vehicle?: string | null;
           print_use_gujarati_digits?: boolean | null;
+          enable_multi_duty?: boolean | null;
           created_at?: string;
           updated_at?: string;
         };

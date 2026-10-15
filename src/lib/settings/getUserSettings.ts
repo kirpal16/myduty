@@ -15,6 +15,7 @@ export type UserSettings = {
   printSignatoryName: string;
   printDefaultVehicle: "private" | "government";
   printUseGujaratiDigits: boolean;
+  enableMultiDuty: boolean;
   printHeaderLine1?: string;
   printHeaderLine2?: string;
   printHeaderLine1En?: string;
@@ -37,6 +38,7 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
   printSignatoryName: "",
   printDefaultVehicle: "private",
   printUseGujaratiDigits: true,
+  enableMultiDuty: false,
   printHeaderLine1: "ગુજરાત પોલીસ (GUJARAT POLICE)",
   printHeaderLine2: "QRT અરવલ્લી પોલીસ",
   printHeaderLine1En: "Gujarat Police",
@@ -65,7 +67,7 @@ export const getUserSettings = cache(async (): Promise<UserSettings> => {
 
   const { data } = await supabase
     .from("user_settings")
-    .select("holiday_day_rate, daily_salary_rate, default_shift_start, default_shift_end, print_recipient_title, print_station_name, print_signatory_name, print_default_vehicle, print_use_gujarati_digits")
+    .select("holiday_day_rate, daily_salary_rate, default_shift_start, default_shift_end, print_recipient_title, print_station_name, print_signatory_name, print_default_vehicle, print_use_gujarati_digits, enable_multi_duty")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -81,5 +83,6 @@ export const getUserSettings = cache(async (): Promise<UserSettings> => {
     printSignatoryName: data.print_signatory_name ?? DEFAULT_USER_SETTINGS.printSignatoryName,
     printDefaultVehicle: (data.print_default_vehicle as "private" | "government") || DEFAULT_USER_SETTINGS.printDefaultVehicle,
     printUseGujaratiDigits: data.print_use_gujarati_digits ?? DEFAULT_USER_SETTINGS.printUseGujaratiDigits,
+    enableMultiDuty: Boolean(data.enable_multi_duty ?? false),
   };
 });

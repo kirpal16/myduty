@@ -414,6 +414,16 @@ export default async function SettingsPage({
                 defaultValue: settings.defaultShiftEnd,
                 hint: t.settings.dutyDefaultsSubtitle,
               },
+              {
+                name: "enableMultiDuty",
+                label: t.settings.multiDutyModeTitle,
+                type: "toggle",
+                defaultValue: settings.enableMultiDuty,
+                hint: t.settings.multiDutyModeDesc,
+                icon: "sparkles",
+                activeLabel: isGu ? "ચાલુ (Active)" : "Active",
+                inactiveLabel: isGu ? "બંધ (Inactive)" : "Inactive",
+              },
             ]}
           />
         </Card>

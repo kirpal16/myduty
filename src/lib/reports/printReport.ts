@@ -37,7 +37,7 @@ export function isPrintableReport(type: string): type is PrintableReportType {
   return type === "ta" || type === "holiday" || type === "duty" || type === "leave";
 }
 
-export type PrintColumn = { key: string; label: string; align?: "right" };
+export type PrintColumn = { key: string; label: string; align?: "right" | "center" | "left" };
 
 export type PrintReport = {
   type?: PrintableReportType;
@@ -554,7 +554,7 @@ export function buildPrintReport(input: {
           { key: "endDate", label: "મુસાફરી પૂરૂ કર્યા તા.ટા." },
           { key: "route", label: "ક્યાંથી ક્યાં સુધી" },
           { key: "reason", label: "કારણ" },
-          { key: "vehicle", label: "સ.વા. / ખ.વા." },
+          { key: "vehicle", label: "સ.વા. / ખ.વા.", align: "center" },
           { key: "distance", label: "કિ.મી.", align: "right" },
         ],
         rows: rows.map((r) => {
@@ -568,6 +568,92 @@ export function buildPrintReport(input: {
               !String(r.notes ?? "").includes("દિવસ"));
           const startDateStr = formatGujaratiDate(startDateKey, { useGujaratiDigits });
           const endDateStr = formatGujaratiDate(endDateKey, { useGujaratiDigits });
+
+          const startsAtStr = String(r.starts_at ?? "");
+          const endsAtStr = String(r.ends_at ?? "");
+          const isMultiShift =
+            startsAtStr.includes("\n") ||
+            String(r.shift_time ?? "").includes("\n") ||
+            String(r.ta_from ?? "").includes("\n");
+
+          if (isMultiShift) {
+            const startsList = (startsAtStr || String(r.shift_time ?? "")).split("\n");
+            const endsList = endsAtStr.split("\n");
+            const startDatesList = String(r.start_dates ?? "").split("\n");
+            const endDatesList = String(r.end_dates ?? "").split("\n");
+            const dList = String(r.duty_type ?? "").split("\n");
+            const nList = String(r.notes ?? "").split("\n");
+            const fList = String(r.ta_from ?? "").split("\n");
+            const tList = String(r.ta_to ?? "").split("\n");
+            const vList = String(r.ta_vehicle_type ?? "").split("\n");
+            const distList = String(r.ta_distance_km ?? "").split("\n");
+
+            const count = Math.max(startsList.length, dList.length, fList.length);
+
+            const startDatesOut: string[] = [];
+            const endDatesOut: string[] = [];
+            const routesOut: string[] = [];
+            const reasonsOut: string[] = [];
+            const vehiclesOut: string[] = [];
+            const distancesOut: string[] = [];
+
+            let maxDistDigits = 0;
+            for (const dStr of distList) {
+              const n = Number(dStr.trim());
+              if (!isNaN(n) && n > 0) {
+                const intLen = String(Math.floor(n)).length;
+                if (intLen > maxDistDigits) maxDistDigits = intLen;
+              }
+            }
+
+            for (let i = 0; i < count; i++) {
+              const rawStart = startsList[i]?.trim();
+              const rawEnd = endsList[i]?.trim();
+              const sT = rawStart ? formatGujaratiShiftTime(rawStart, useGujaratiDigits) : "";
+              const eT = rawEnd ? formatGujaratiShiftTime(rawEnd, useGujaratiDigits) : "";
+              const reason_i = formatDutyReasonWithNotes(dList[i] || null, nList[i] || null);
+              const route_i = formatGujaratiRoute(fList[i] || null, tList[i] || null);
+              const vehicle_i = formatVehicleAcronym(vList[i] || null);
+              const dist_i = formatGujaratiDistance(distList[i] || null, useGujaratiDigits, maxDistDigits);
+
+              const sDateKey_i = startDatesList[i]?.trim() || startDateKey;
+              let eDateKey_i: string | null = endDatesList[i]?.trim() || null;
+              if (!eDateKey_i) {
+                if (rawStart && rawEnd && rawEnd < rawStart && sDateKey_i) {
+                  eDateKey_i = nextDayKey(sDateKey_i);
+                } else {
+                  eDateKey_i = sDateKey_i || endDateKey;
+                }
+              }
+
+              const sDateStr_i = formatGujaratiDate(sDateKey_i, { useGujaratiDigits });
+              const eDateStr_i = formatGujaratiDate(eDateKey_i, { useGujaratiDigits });
+
+              startDatesOut.push(sT ? `${sDateStr_i} ${sT}` : sDateStr_i);
+              endDatesOut.push(eT ? `${eDateStr_i} ${eT}` : eDateStr_i);
+              routesOut.push(route_i);
+              reasonsOut.push(reason_i);
+              vehiclesOut.push(vehicle_i);
+              distancesOut.push(dist_i);
+            }
+
+            return {
+              ...(includeOfficer ? { officer: text(r.officer) } : {}),
+              startDate: startDatesOut.join(",\n"),
+              endDate: endDatesOut.join(",\n"),
+              route: routesOut.join(",\n"),
+              reason: reasonsOut.join(",\n"),
+              vehicle: vehiclesOut.join(",\n"),
+              distance: distancesOut.join(",\n"),
+              // Backward-compatible fallback keys
+              date: startDateStr !== endDateStr ? `${startDateStr} થી ${endDateStr}` : startDateStr,
+              day: formatSafeWeekdayShort(noon(startDateKey)) || DASH,
+              duty: reasonsOut.join(",\n"),
+              time: formatGujaratiShiftTime(r.shift_time ? String(r.shift_time) : null, useGujaratiDigits),
+              station: text(r.location),
+            };
+          }
+
           const startT = r.starts_at ? formatGujaratiShiftTime(String(r.starts_at), useGujaratiDigits) : "";
           const endT = r.ends_at ? formatGujaratiShiftTime(String(r.ends_at), useGujaratiDigits) : "";
           const combinedReason = formatDutyReasonWithNotes(
@@ -640,19 +726,43 @@ export function buildPrintReport(input: {
           r.duty_type ? String(r.duty_type) : null,
           r.notes ? String(r.notes) : null,
         );
-        const vAcronym = formatVehicleAcronym(r.ta_vehicle_type ? String(r.ta_vehicle_type) : null);
-        const dist = r.ta_distance_km ? formatGujaratiDistance(String(r.ta_distance_km), useGujaratiDigits) : "";
         const rawHoliday = r.holiday_name ? String(r.holiday_name) : DASH;
         const translatedHoliday = translateDutyTypeToGujarati(rawHoliday) || rawHoliday;
         const hasTa = Boolean(r.ta_from || r.ta_to || r.ta_amount || (r.ta_distance_km && Number(r.ta_distance_km) > 0));
-        const routeStr = formatGujaratiRoute(r.ta_from ? String(r.ta_from) : null, r.ta_to ? String(r.ta_to) : null);
+
         let rem = translatedHoliday;
         if (hasTa) {
-          if (routeStr && routeStr !== "—") {
-            rem = dist && dist !== "—" ? `${routeStr} (${vAcronym} / ${dist})` : routeStr;
-          } else if (dist && dist !== "—") {
-            rem = `${vAcronym} / ${dist}`;
+          const fromList = String(r.ta_from ?? "").split("\n");
+          const toList = String(r.ta_to ?? "").split("\n");
+          const vList = String(r.ta_vehicle_type ?? "").split("\n");
+          const distList = String(r.ta_distance_km ?? "").split("\n");
+          let maxDistDigits = 0;
+          for (const dStr of distList) {
+            const n = Number(dStr.trim());
+            if (!isNaN(n) && n > 0) {
+              const intLen = String(Math.floor(n)).length;
+              if (intLen > maxDistDigits) maxDistDigits = intLen;
+            }
           }
+          const taLines: string[] = [];
+          for (let i = 0; i < fromList.length; i++) {
+            const routeStr = formatGujaratiRoute(fromList[i] || null, toList[i] || null);
+            const vAcronym = formatVehicleAcronym(vList[i] || null);
+            const dist = distList[i] ? formatGujaratiDistance(distList[i], useGujaratiDigits, maxDistDigits) : "";
+            if (routeStr && routeStr !== "—") {
+              taLines.push(dist && dist !== "—" ? `${routeStr} (${vAcronym} / ${dist})` : routeStr);
+            } else if (dist && dist !== "—") {
+              taLines.push(`${vAcronym} / ${dist}`);
+            }
+          }
+          const parts: string[] = [];
+          if (translatedHoliday && translatedHoliday !== DASH) {
+            parts.push(translatedHoliday);
+          }
+          for (const line of taLines) {
+            if (line.trim()) parts.push(line.trim());
+          }
+          rem = parts.length > 0 ? parts.join(",\n") : DASH;
         }
 
         return {
@@ -667,7 +777,7 @@ export function buildPrintReport(input: {
           holiday: holidayLabel(r.holiday_name, r.day_type),
           duty: combinedReason,
           station: text(r.location),
-          travel: dist ? `${route(r.ta_from, r.ta_to)} · ${dist}` : DASH,
+          travel: hasTa ? rem : DASH,
         };
       }),
       rawRows: input.rows,
@@ -707,9 +817,47 @@ export function buildPrintReport(input: {
           ? `${formatSafeWeekdayShort(noon(startDateKey))} → ${formatSafeWeekdayShort(noon(endDateKey))}`
           : formatSafeWeekdayShort(noon(startDateKey)) || DASH;
 
-        let timeStr = text(r.shift_time);
-        if (isNextDay && timeStr && !/\(next\s*day\)/i.test(timeStr)) {
-          timeStr = `${timeStr} (Next Day)`;
+        const timeStr = String(r.shift_time ?? "");
+        const isMulti = timeStr.includes("\n") || String(r.starts_at ?? "").includes("\n");
+
+        if (isMulti) {
+          const tList = timeStr.split("\n");
+          const dList = String(r.duty_type ?? "").split("\n");
+          const nList = String(r.notes ?? "").split("\n");
+          const fList = String(r.ta_from ?? "").split("\n");
+          const toList = String(r.ta_to ?? "").split("\n");
+          const distList = String(r.ta_distance_km ?? "").split("\n");
+          const count = Math.max(tList.length, dList.length, fList.length);
+
+          const timesOut: string[] = [];
+          const dutiesOut: string[] = [];
+          const routesOut: string[] = [];
+          const distsOut: string[] = [];
+
+          for (let i = 0; i < count; i++) {
+            timesOut.push(tList[i] || "");
+            const duty_i = dList[i] || "";
+            const note_i = nList[i] || "";
+            dutiesOut.push(note_i ? `${duty_i} (${note_i})` : duty_i);
+            routesOut.push(route(fList[i] || null, toList[i] || null));
+            distsOut.push(km(distList[i] || null));
+          }
+
+          return {
+            ...(includeOfficer ? { officer: text(r.officer) } : {}),
+            date: dateDisplay,
+            day: dayDisplay,
+            duty: dutiesOut.join(",\n"),
+            time: timesOut.join(",\n"),
+            station: text(r.location),
+            route: routesOut.join(",\n"),
+            distance: distsOut.join(",\n"),
+          };
+        }
+
+        let formattedTime = text(r.shift_time);
+        if (isNextDay && formattedTime && !/\(next\s*day\)/i.test(formattedTime)) {
+          formattedTime = `${formattedTime} (Next Day)`;
         }
 
         return {
@@ -717,7 +865,7 @@ export function buildPrintReport(input: {
           date: dateDisplay,
           day: dayDisplay,
           duty: formatDutyReasonWithNotes(r.duty_type ? String(r.duty_type) : null, r.notes ? String(r.notes) : null),
-          time: timeStr,
+          time: formattedTime,
           station: text(r.location),
           route: route(r.ta_from, r.ta_to),
           distance: km(r.ta_distance_km),

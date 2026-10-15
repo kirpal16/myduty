@@ -48,8 +48,16 @@ export function formatReportCell(
   value: string | number | null,
 ): string {
   if (value === null || value === undefined || value === "") return "—";
+  if (typeof value === "string" && value.includes("\n")) {
+    return value
+      .split("\n")
+      .map((line) => (line.trim() ? formatReportCell(column, line.trim()) : "—"))
+      .join("\n");
+  }
   if (column.key === "ta_amount" || column.key === "holiday_allowance") {
-    return formatCurrency(Number(value));
+    const num = Number(value);
+    if (isNaN(num)) return String(value);
+    return formatCurrency(num);
   }
   if (column.key === "ta_distance_km") {
     const km = Number(value);

@@ -5,6 +5,7 @@ import { Plus } from "lucide-react";
 import { PendingButton } from "./pending-button";
 import { FieldError } from "./field-error";
 import { FormSelect } from "./form-select";
+import { FormToggle } from "./form-toggle";
 import { useToast } from "./toast";
 import { useFormFeedback } from "@/lib/hooks/useFormFeedback";
 import { useFormDirty } from "@/lib/hooks/useFormDirty";
@@ -27,10 +28,10 @@ import type { FormState } from "@/lib/forms/formState";
 export type ActionFormField = {
   name: string;
   label: string;
-  type?: "text" | "number" | "date" | "time" | "select" | "checkbox";
+  type?: "text" | "number" | "date" | "time" | "select" | "checkbox" | "toggle";
   placeholder?: string;
   required?: boolean;
-  defaultValue?: string | number;
+  defaultValue?: string | number | boolean;
   /** For `select`. */
   options?: { value: string; label: string }[];
   hint?: string;
@@ -38,6 +39,9 @@ export type ActionFormField = {
   uppercase?: boolean;
   step?: string;
   min?: string;
+  icon?: string;
+  activeLabel?: string;
+  inactiveLabel?: string;
 };
 
 export function ActionForm({
@@ -108,10 +112,11 @@ export function ActionForm({
       {fields.map((field) => {
         const error = errorProps(field.name);
         const props = fieldProps(field.name);
+        const isToggleOrCheckbox = field.type === "checkbox" || field.type === "toggle";
 
         return (
           <div key={field.name} className="flex flex-col gap-1.5">
-            {field.type !== "checkbox" && (
+            {!isToggleOrCheckbox && (
               <label htmlFor={field.name} className="text-xs font-semibold text-foreground">
                 {field.label}{" "}
                 {field.required ? (
@@ -132,16 +137,20 @@ export function ActionForm({
                 options={field.options ?? []}
                 error={Boolean(error.message)}
               />
-            ) : field.type === "checkbox" ? (
-              <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-foreground">
-                <input
-                  type="checkbox"
-                  id={field.name}
-                  {...props}
-                  className="size-4 rounded border-border"
-                />
-                <span>{field.label}</span>
-              </label>
+            ) : isToggleOrCheckbox ? (
+              <FormToggle
+                id={field.name}
+                name={field.name}
+                label={field.label}
+                hint={field.hint}
+                defaultValue={Boolean(field.defaultValue)}
+                required={field.required}
+                icon={field.icon}
+                activeLabel={field.activeLabel}
+                inactiveLabel={field.inactiveLabel}
+                aria-invalid={props["aria-invalid"]}
+                aria-describedby={props["aria-describedby"]}
+              />
             ) : (
               <input
                 id={field.name}
@@ -149,7 +158,7 @@ export function ActionForm({
                 {...props}
                 required={field.required}
                 placeholder={field.placeholder}
-                defaultValue={field.defaultValue}
+                defaultValue={typeof field.defaultValue === "boolean" ? undefined : field.defaultValue}
                 step={field.step}
                 min={field.min}
                 className={`w-full rounded-xl border border-border bg-card px-3.5 py-2 text-xs shadow-xs transition-colors hover:border-slate-400 focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 dark:hover:border-slate-600 sm:text-sm aria-[invalid]:border-rose-500 ${
@@ -159,7 +168,7 @@ export function ActionForm({
             )}
 
             <FieldError {...error} />
-            {field.hint && !error.message && (
+            {!isToggleOrCheckbox && field.hint && !error.message && (
               <span className="text-[11px] text-muted-foreground">{field.hint}</span>
             )}
           </div>

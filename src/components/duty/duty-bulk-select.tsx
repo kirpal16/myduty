@@ -22,21 +22,37 @@ export { DutySelectModeToggle } from "./duty-select-mode-toggle";
  */
 export function DutyRowCheckbox({
   id,
+  ids,
   label,
   className = "",
 }: {
-  id: string;
+  id?: string;
+  ids?: string[];
   label: string;
   className?: string;
 }) {
-  const { selected, toggle, selectableIds, selectMode } = useDutySelection();
-  if (!selectMode || !selectableIds.includes(id)) return null;
+  const { selected, toggle, toggleMany, selectableIds, selectMode } = useDutySelection();
+  const effectiveIds = ids && ids.length > 0 ? ids : id ? [id] : [];
+  const anySelectable = effectiveIds.some((i) => selectableIds.includes(i));
+  if (!selectMode || !anySelectable) return null;
+
+  const allChecked = effectiveIds.length > 0 && effectiveIds.every((i) => selected.has(i));
+  const someChecked = effectiveIds.some((i) => selected.has(i));
+
+  const handleChange = () => {
+    if (effectiveIds.length === 1) {
+      toggle(effectiveIds[0]);
+    } else {
+      toggleMany(effectiveIds);
+    }
+  };
 
   return (
     <div className={`pt-0.5 shrink-0 animate-in fade-in zoom-in-95 duration-150 ${className}`}>
       <Checkbox
-        checked={selected.has(id)}
-        onChange={() => toggle(id)}
+        checked={allChecked}
+        indeterminate={someChecked && !allChecked}
+        onChange={handleChange}
         aria-label={`Select ${label}`}
       />
     </div>
@@ -81,15 +97,25 @@ export function DutyTableSelectHeader() {
  * Desktop table cell for row checkbox.
  * Hidden when selectMode is false.
  */
-export function DutyTableSelectCell({ id, label }: { id: string; label: string }) {
+export function DutyTableSelectCell({
+  id,
+  ids,
+  label,
+}: {
+  id?: string;
+  ids?: string[];
+  label: string;
+}) {
   const { selectMode, selectableIds } = useDutySelection();
   if (!selectMode) return null;
 
+  const effectiveIds = ids && ids.length > 0 ? ids : id ? [id] : [];
+  const anySelectable = effectiveIds.some((i) => selectableIds.includes(i));
+  if (!anySelectable) return <td className="w-8 py-3.5 pl-4 sm:pl-6" />;
+
   return (
     <td className="w-8 py-3.5 pl-4 sm:pl-6 animate-in fade-in duration-150">
-      {selectableIds.includes(id) && (
-        <DutyRowCheckbox id={id} label={label} />
-      )}
+      <DutyRowCheckbox id={id} ids={ids} label={label} />
     </td>
   );
 }

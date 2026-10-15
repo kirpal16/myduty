@@ -97,6 +97,9 @@ export async function updateUserSettings(
   if (parsed.data.printUseGujaratiDigits !== undefined) {
     upsertData.print_use_gujarati_digits = parsed.data.printUseGujaratiDigits;
   }
+  if (parsed.data.enableMultiDuty !== undefined) {
+    upsertData.enable_multi_duty = parsed.data.enableMultiDuty;
+  }
 
   const { error } = await supabase.from("user_settings").upsert(
     upsertData as any,
@@ -106,5 +109,8 @@ export async function updateUserSettings(
 
   revalidatePath("/settings");
   revalidatePath("/duty/new");
+  revalidatePath("/duty");
+  revalidatePath("/dashboard");
+  revalidatePath("/reports");
   return succeeded("Defaults saved.");
 }

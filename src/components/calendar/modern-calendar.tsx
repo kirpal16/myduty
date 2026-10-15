@@ -225,6 +225,7 @@ export function ModernCalendar({
   events,
   timeFormat = "24h",
   dbHolidays = [],
+  enableMultiDuty = false,
 }: {
   events: CalendarEvent[];
   timeFormat?: TimeFormat;
@@ -233,6 +234,7 @@ export function ModernCalendar({
    * with the same precedence the duty form and the server use.
    */
   dbHolidays?: HolidayRecord[];
+  enableMultiDuty?: boolean;
 }) {
   const { lang, t, isGujarati } = useLanguage();
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -1459,6 +1461,7 @@ export function ModernCalendar({
           }}
           date={selectedDayDate}
           events={events}
+          enableMultiDuty={enableMultiDuty}
         />
       )}
 

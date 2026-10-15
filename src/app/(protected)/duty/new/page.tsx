@@ -78,7 +78,7 @@ export default async function NewDutyPage({
   const isGu = translations.lang === "gu";
 
   return (
-    <main className="w-full px-4 sm:px-6 lg:px-8 py-6 max-w-7xl 2xl:max-w-full mx-auto space-y-6">
+    <main className="w-full px-3 sm:px-6 lg:px-8 py-4 sm:py-6 max-w-7xl 2xl:max-w-full mx-auto space-y-4 sm:space-y-6">
       <div className="flex items-center gap-2">
         <Link
           href="/duty"
@@ -103,10 +103,10 @@ export default async function NewDutyPage({
         }
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Main Form Area */}
         <div className="lg:col-span-2">
-          <Card className="p-6 sm:p-8">
+          <Card className="p-3.5 sm:p-6">
             <DutyForm
               dutyTypes={dutyTypes ?? []}
               canUploadFiles={canAccessStorage}
@@ -114,6 +114,7 @@ export default async function NewDutyPage({
               holidayDayRate={settings.holidayDayRate}
               defaultShiftEnd={settings.defaultShiftEnd}
               defaults={{ startsAt: shift.startsAt, endsAt: shift.endsAt }}
+              enableMultiDuty={settings.enableMultiDuty}
             />
           </Card>
         </div>

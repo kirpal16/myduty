@@ -33,6 +33,38 @@ export const dutyDaySchema = z.object({
   manualHolidayClaim: z.boolean().optional(),
 });
 
+export const additionalShiftSchema = z
+  .object({
+    id: z.uuid().optional(),
+    dutyTypeId: z.uuid({ error: "Select a duty type." }),
+    startsAt: z.iso.datetime({ error: "Enter a start time.", local: true }),
+    endsAt: z.iso.datetime({ error: "Enter an end time.", local: true }),
+    location: z.string().trim().optional(),
+    notes: z.string().trim().optional(),
+    taFromPlace: z.string().trim().optional(),
+    taToPlace: z.string().trim().optional(),
+    taVehicleType: z.string().trim().optional(),
+    taDistanceKm: z
+      .number({ error: "Distance must be a number." })
+      .min(0, { error: "Distance can't be negative." })
+      .optional(),
+    taAmount: z
+      .number({ error: "Amount must be a number." })
+      .min(0, { error: "Amount can't be negative." })
+      .optional(),
+    holidayAllowance: z
+      .number({ error: "Holiday allowance must be a number." })
+      .min(0, { error: "Allowance can't be negative." })
+      .optional(),
+    manualHolidayClaim: z.boolean().optional(),
+  })
+  .refine((data) => new Date(data.endsAt) > new Date(data.startsAt), {
+    error: "End time must be after start time.",
+    path: ["endsAt"],
+  });
+
+export type AdditionalShiftInput = z.infer<typeof additionalShiftSchema>;
+
 export const dutySchema = z
   .object({
     dutyTypeId: z.uuid({ error: "Select a duty type." }),
@@ -63,6 +95,8 @@ export const dutySchema = z
     manualHolidayClaim: z.boolean().optional(),
     /** Present only when the entry spans more than one calendar day. */
     perDay: z.array(dutyDaySchema).optional(),
+    /** Additional non-overlapping shifts logged for the same operational session. */
+    additionalShifts: z.array(additionalShiftSchema).optional(),
   })
   .refine((data) => new Date(data.endsAt) > new Date(data.startsAt), {
     error: "End time must be after start time.",
@@ -116,6 +150,38 @@ function parsePerDay(formData: FormData) {
   return byDate.size > 0 ? [...byDate.values()] : undefined;
 }
 
+/**
+ * Additional shifts for split duty days (e.g. morning + evening) post fields named
+ * `shifts.<index>.<field>`.
+ */
+function parseAdditionalShifts(formData: FormData) {
+  const byIndex = new Map<number, Record<string, unknown>>();
+
+  for (const [key, value] of formData.entries()) {
+    const m = /^shifts\.(\d+)\.(\w+)$/.exec(key);
+    if (!m) continue;
+    const [, indexStr, field] = m;
+    const index = parseInt(indexStr, 10);
+    const row = byIndex.get(index) ?? {};
+    switch (field) {
+      case "taDistanceKm":
+      case "taAmount":
+      case "holidayAllowance":
+        row[field] = num(value);
+        break;
+      case "manualHolidayClaim":
+        row[field] = checked(value);
+        break;
+      default:
+        row[field] = value === "" ? undefined : value;
+    }
+    byIndex.set(index, row);
+  }
+
+  if (byIndex.size === 0) return undefined;
+  return [...byIndex.entries()].sort(([a], [b]) => a - b).map(([, r]) => r);
+}
+
 export function dutyValuesFromForm(formData: FormData) {
   return {
     dutyTypeId: formData.get("dutyTypeId"),
@@ -131,5 +197,6 @@ export function dutyValuesFromForm(formData: FormData) {
     holidayAllowance: num(formData.get("holidayAllowance")),
     manualHolidayClaim: checked(formData.get("manualHolidayClaim")),
     perDay: parsePerDay(formData),
+    additionalShifts: parseAdditionalShifts(formData),
   };
 }

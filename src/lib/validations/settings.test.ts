@@ -53,4 +53,16 @@ describe("userSettings daily salary rate", () => {
     );
     expect(userSettingsSchema.safeParse(values).success).toBe(false);
   });
+
+  it("sets enableMultiDuty to false when unchecked in duty form", () => {
+    const values = userSettingsValuesFromForm(formWith());
+    expect(values.enableMultiDuty).toBe(false);
+    expect(userSettingsSchema.safeParse(values).success).toBe(true);
+  });
+
+  it("sets enableMultiDuty to true when checked in duty form", () => {
+    const values = userSettingsValuesFromForm(formWith({ enableMultiDuty: "on" }));
+    expect(values.enableMultiDuty).toBe(true);
+    expect(userSettingsSchema.safeParse(values).success).toBe(true);
+  });
 });

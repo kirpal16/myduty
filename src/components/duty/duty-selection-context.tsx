@@ -13,6 +13,7 @@ export type SelectionCtx = {
   selectableIds: readonly string[];
   selected: ReadonlySet<string>;
   toggle: (id: string) => void;
+  toggleMany: (ids: string[]) => void;
   setAll: (on: boolean) => void;
   clear: () => void;
   selectMode: boolean;
@@ -24,6 +25,7 @@ const defaultCtx: SelectionCtx = {
   selectableIds: [],
   selected: new Set(),
   toggle: () => {},
+  toggleMany: () => {},
   setAll: () => {},
   clear: () => {},
   selectMode: false,
@@ -63,6 +65,19 @@ export function DutySelectionProvider({
     });
   }, []);
 
+  const toggleMany = useCallback((ids: string[]) => {
+    setPicked((prev) => {
+      const next = new Set(prev);
+      const allSelected = ids.every((id) => next.has(id));
+      if (allSelected) {
+        for (const id of ids) next.delete(id);
+      } else {
+        for (const id of ids) next.add(id);
+      }
+      return next;
+    });
+  }, []);
+
   const setAll = useCallback(
     (on: boolean) => setPicked(on ? new Set(selectableIds) : new Set()),
     [selectableIds],
@@ -85,13 +100,14 @@ export function DutySelectionProvider({
       selectableIds,
       selected,
       toggle,
+      toggleMany,
       setAll,
       clear,
       selectMode,
       setSelectMode,
       toggleSelectMode,
     }),
-    [selectableIds, selected, toggle, setAll, clear, selectMode, toggleSelectMode],
+    [selectableIds, selected, toggle, toggleMany, setAll, clear, selectMode, toggleSelectMode],
   );
 
   return (

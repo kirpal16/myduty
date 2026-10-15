@@ -357,7 +357,7 @@ type SavedPrintConfig = {
           <tbody>
             <tr>
               <td class="rp-body">
-                <div class="rp-gujarati-layout font-sans text-black">
+                <div class="rp-gujarati-layout text-black font-['Shruti',_'Gujarati_Saral',_var(--font-gujarati),_'Noto_Sans_Gujarati',_'Nirmala_UI',_sans-serif]">
                   <div class="flex items-center justify-between border-b-2 border-black pb-3 mb-4">
                     <img src="/Gujarat-police.png" alt="Gujarat Police" class="rp-logo" width="40" height="52" style="width: 40px; height: 52px; object-fit: contain; aspect-ratio: 1542/2000; display: block;" />
                     <div class="text-center flex-1 mx-4">
@@ -385,34 +385,47 @@ type SavedPrintConfig = {
                     <span>${esc(subject)}</span>
                   </div>
 
-                  <div class="mb-4 text-xs leading-relaxed text-gray-900">
+                  <div class="mb-4 text-sm leading-relaxed text-gray-900">
                     <p class="font-semibold">મહેરબાન સાહેબ,</p>
                     <p class="indent-6 mt-1">${esc(salutation)}</p>
                   </div>
 
-                  <table class="rp-table w-full border-collapse text-xs">
+                  <table class="rp-table w-full border-collapse text-xs table-fixed">
                     <thead>
                       <tr>
-                        <th class="rp-idx text-center w-8">અ.નં.</th>
-                        ${visibleColumns.map((c) => `<th class="${c.align === "right" ? "rp-num text-right" : "text-left"}">${esc(c.label)}</th>`).join("")}
+                        <th class="rp-idx text-center whitespace-nowrap" style="width: 5%">અ.નં.</th>
+                        ${visibleColumns
+                          .map((c) => {
+                            const isRight = c.align === "right";
+                            const isCenter = c.align === "center" || c.key === "vehicle";
+                            return `<th class="${isRight ? "rp-num text-right whitespace-nowrap min-w-[75px]" : isCenter ? "rp-center text-center" : "text-left"}">${esc(c.label)}</th>`;
+                          })
+                          .join("")}
                       </tr>
                     </thead>
                     <tbody>
                       ${rows
-          .map(
-            (row, idx) => `
+                        .map(
+                          (row, idx) => `
                         <tr>
-                          <td class="rp-idx text-center font-semibold">${numFn(idx + 1)}</td>
+                          <td class="rp-idx text-center font-semibold align-top whitespace-nowrap" style="width: 5%; vertical-align: top;">${numFn(idx + 1)}</td>
                           ${visibleColumns
-                .map(
-                  (c) =>
-                    `<td class="${c.align === "right" ? "rp-num text-right font-medium" : "text-left"}">${esc(row[c.key] || "—")}</td>`,
-                )
-                .join("")}
+                            .map((c) => {
+                              const isRight = c.align === "right";
+                              const isCenter = c.align === "center" || c.key === "vehicle";
+                              return `<td class="align-top ${
+                                isRight
+                                  ? "rp-num text-right font-medium whitespace-pre min-w-[75px]"
+                                  : isCenter
+                                    ? "rp-center text-center whitespace-pre-line"
+                                    : "whitespace-pre-line text-left"
+                              }" style="vertical-align: top;">${esc(row[c.key] || "—")}</td>`;
+                            })
+                            .join("")}
                         </tr>
                       `,
-          )
-          .join("")}
+                        )
+                        .join("")}
                     </tbody>
                   </table>
 
@@ -836,28 +849,45 @@ type SavedPrintConfig = {
                   <thead>
                     <tr className="border-b border-border bg-muted/50 font-bold text-muted-foreground">
                       <th className="p-2.5 text-center w-10">અ.નં.</th>
-                      {visibleColumns.map((c) => (
-                        <th key={c.key} className="p-2.5">
-                          {c.label}
-                        </th>
-                      ))}
+                      {visibleColumns.map((c) => {
+                        const widthClass =
+                          c.key === "startDate" || c.key === "endDate"
+                            ? "min-w-[155px]"
+                            : c.key === "route"
+                              ? "min-w-[145px]"
+                              : c.key === "reason"
+                                ? "min-w-[155px]"
+                                : c.key === "vehicle"
+                                  ? "w-20 min-w-[75px]"
+                                  : c.key === "distance"
+                                    ? "w-20 min-w-[75px]"
+                                    : "";
+                        return (
+                          <th
+                            key={c.key}
+                            className={`p-2.5 ${c.align === "right" ? "text-right" : c.align === "center" || c.key === "vehicle" ? "text-center" : "text-left"} ${widthClass}`}
+                          >
+                            {c.label}
+                          </th>
+                        );
+                      })}
                       <th className="p-2.5 text-center w-10">ક્રિયા</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
                     {rows.map((row, idx) => (
                       <tr key={idx} className="hover:bg-muted/20">
-                        <td className="p-2 text-center font-bold text-muted-foreground">
+                        <td className="p-2 text-center font-bold text-muted-foreground align-top">
                           {useGujaratiDigits
                             ? String(idx + 1).replace(/\d/g, (d) => "૦૧૨૩૪૫૬૭૮૯"[Number(d)])
                             : idx + 1}
                         </td>
                         {visibleColumns.map((c) => {
                           const val = row[c.key] ?? "";
-                          if (c.key === "vehicle") {
+                          if (c.key === "vehicle" && !val.includes("\n")) {
                             const isGovt = val === "સ.વા." || val?.includes("સરકારી");
                             return (
-                              <td key={c.key} className="p-1.5 text-center">
+                              <td key={c.key} className="p-1.5 text-center align-top">
                                 <button
                                   type="button"
                                   onClick={() =>
@@ -875,21 +905,27 @@ type SavedPrintConfig = {
                               </td>
                             );
                           }
+                          const valStr = typeof val === "string" ? val : String(val ?? "");
+                          const lineCount = Math.min(Math.max(valStr.split("\n").length, 1), 6);
                           return (
-                            <td key={c.key} className="p-1.5">
-                              <input
-                                type="text"
-                                value={val}
+                            <td
+                              key={c.key}
+                              className={`p-1.5 align-top ${c.align === "right" ? "text-right" : c.align === "center" || c.key === "vehicle" ? "text-center" : ""}`}
+                            >
+                              <textarea
+                                rows={lineCount}
+                                value={valStr}
                                 onChange={(e) =>
                                   handleCellChange(idx, c.key, e.target.value)
                                 }
-                                className={`w-full rounded-lg border border-border/70 bg-background px-2 py-1 text-xs text-foreground focus:border-indigo-500 focus:outline-none ${c.align === "right" ? "text-right font-medium" : ""
-                                  }`}
+                                className={`w-full rounded-lg border border-border/70 bg-background px-2 py-1.5 text-xs text-foreground focus:border-indigo-500 focus:outline-none resize-none leading-relaxed whitespace-pre-line ${
+                                  c.align === "right" ? "text-right font-medium whitespace-pre" : c.align === "center" || c.key === "vehicle" ? "text-center" : ""
+                                }`}
                               />
                             </td>
                           );
                         })}
-                        <td className="p-1.5 text-center">
+                        <td className="p-1.5 text-center align-top">
                           <button
                             type="button"
                             onClick={() => handleDeleteRow(idx)}

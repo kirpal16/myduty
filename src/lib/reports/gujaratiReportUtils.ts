@@ -133,6 +133,13 @@ export function formatGujaratiShiftTime(
   useGujaratiDigits = false,
 ): string {
   if (!shiftTime) return "—";
+  if (shiftTime.includes("\n")) {
+    return shiftTime
+      .split("\n")
+      .map((line) => (line.trim() ? formatGujaratiShiftTime(line.trim(), useGujaratiDigits) : "—"))
+      .filter((line) => line && line !== "—")
+      .join(",\n");
+  }
   // Translate "Next Day" and replace hyphens or "to" with Gujarati "થી"
   let cleaned = shiftTime
     .replace(/\(next\s*day\)/gi, "(બીજે દિવસે)")
@@ -154,6 +161,12 @@ export function formatGujaratiShiftTime(
  */
 export function formatVehicleAcronym(vehicleType: string | null | undefined): string {
   if (!vehicleType) return "ખ.વા.";
+  if (vehicleType.includes("\n")) {
+    return vehicleType
+      .split("\n")
+      .map((line) => (line.trim() ? formatVehicleAcronym(line.trim()) : "ખ.વા."))
+      .join(",\n");
+  }
   const v = vehicleType.toLowerCase().trim();
   if (v === "govt" || v === "government" || v.includes("સ.વા") || v.includes("સરકારી")) {
     return "સ.વા.";
@@ -281,10 +294,18 @@ export const DUTY_TRANSLATIONS: Record<string, string> = {
   "government holiday": "સરકારી રજા",
   duty: "ફરજ",
   "standard duty": "સામાન્ય ફરજ",
+  diwali: "દિવાળી",
+  deepavali: "દિવાળી",
 };
 
 export function translateDutyTypeToGujarati(val: string | null | undefined): string {
   if (!val) return "";
+  if (val.includes("\n")) {
+    return val
+      .split("\n")
+      .map((line) => (line.trim() ? translateDutyTypeToGujarati(line.trim()) : ""))
+      .join("\n");
+  }
   const trimmed = val.trim();
   const lower = trimmed.toLowerCase();
   const normalized = lower.replace(/_/g, " ").replace(/\s+/g, " ").trim();
@@ -391,6 +412,20 @@ export function formatDutyReasonWithNotes(
   dutyType: string | null | undefined,
   notes: string | null | undefined,
 ): string {
+  if ((dutyType && dutyType.includes("\n")) || (notes && notes.includes("\n"))) {
+    const dtLines = (dutyType ?? "").split("\n");
+    const ntLines = (notes ?? "").split("\n");
+    const maxLen = Math.max(dtLines.length, ntLines.length);
+    const out: string[] = [];
+    for (let i = 0; i < maxLen; i++) {
+      const formatted = formatDutyReasonWithNotes(dtLines[i] || null, ntLines[i] || null);
+      if (formatted && formatted !== "—") {
+        out.push(formatted);
+      }
+    }
+    return out.length > 0 ? out.join(",\n") : "—";
+  }
+
   const rawDt = dutyType?.trim();
   const rawNt = notes?.trim();
 
@@ -411,11 +446,24 @@ export function formatDutyReasonWithNotes(
  * e.g. "આંબલીયારા થી પ્રાંતિજ"
  */
 export function formatGujaratiRoute(from: string | null | undefined, to: string | null | undefined): string {
+  if ((from && from.includes("\n")) || (to && to.includes("\n"))) {
+    const fLines = (from ?? "").split("\n");
+    const tLines = (to ?? "").split("\n");
+    const maxLen = Math.max(fLines.length, tLines.length);
+    const out: string[] = [];
+    for (let i = 0; i < maxLen; i++) {
+      const r = formatGujaratiRoute(fLines[i] || null, tLines[i] || null);
+      if (r && r !== "—") out.push(r);
+    }
+    return out.length > 0 ? out.join(",\n") : "—";
+  }
+
   const f = from?.trim();
   const t = to?.trim();
   if (!f && !t) return "—";
   if (f && t) return `${f} થી ${t}`;
-  return f || t || "—";
+  const single = f || t || "—";
+  return single.replace(/\s*→\s*/g, " થી ");
 }
 
 /**
@@ -425,11 +473,33 @@ export function formatGujaratiRoute(from: string | null | undefined, to: string 
 export function formatGujaratiDistance(
   distanceKm: number | string | null | undefined,
   useGujaratiDigits = false,
+  minDigits = 0,
 ): string {
   if (distanceKm === null || distanceKm === undefined || distanceKm === "") return "—";
+  const str = String(distanceKm);
+  if (str.includes("\n")) {
+    const lines = str.split("\n");
+    let maxDigits = minDigits;
+    for (const line of lines) {
+      const n = Number(line.trim());
+      if (!isNaN(n) && n > 0) {
+        const intLen = String(Math.floor(n)).length;
+        if (intLen > maxDigits) maxDigits = intLen;
+      }
+    }
+    return lines
+      .map((line) => (line.trim() ? formatGujaratiDistance(line.trim(), useGujaratiDigits, maxDigits) : "—"))
+      .filter((l) => l && l !== "—")
+      .join(",\n");
+  }
   const num = Number(distanceKm);
   if (isNaN(num) || num <= 0) return "—";
-  const numStr = Number.isInteger(num) ? String(num) : num.toFixed(1);
+  let numStr = Number.isInteger(num) ? String(num) : num.toFixed(1);
+  if (minDigits > 1) {
+    const parts = numStr.split(".");
+    parts[0] = parts[0].padStart(minDigits, "0");
+    numStr = parts.join(".");
+  }
   const formatted = useGujaratiDigits ? toGujaratiNumerals(numStr) : numStr;
   return `${formatted} કિ.મી.`;
 }

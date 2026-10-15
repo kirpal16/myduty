@@ -38,6 +38,7 @@ export type ReportParams = {
   month: number | null;
   /** Restrict to one officer. Ignored unless the caller may see others. */
   userId?: string;
+  enableMultiDuty?: boolean;
 };
 
 
@@ -268,12 +269,27 @@ export async function buildMonthlyReport(p: ReportParams): Promise<ReportResult>
 
   if (p.userId) q = q.eq("user_id", p.userId);
   // "TA Data" means journeys, so rows with no claim are not part of it.
-  if (p.type === "ta") q = q.not("ta_amount", "is", null);
+  if (p.type === "ta") {
+    q = q.or("ta_amount.not.is.null,ta_distance_km.gt.0,ta_from_place.not.is.null");
+  }
   // "Holiday Worked" is exactly that: holidays the officer WORKED.
   if (p.type === "holiday") q = q.eq("is_holiday_duty", true);
 
   const { data } = await q;
   const duties = data ?? [];
+
+  const hasShiftTa = (s: {
+    ta_amount?: number | null;
+    ta_distance_km?: number | null;
+    ta_from_place?: string | null;
+    ta_to_place?: string | null;
+  }) =>
+    Boolean(
+      (s.ta_amount != null && Number(s.ta_amount) > 0) ||
+      (s.ta_distance_km != null && Number(s.ta_distance_km) > 0) ||
+      (s.ta_from_place && s.ta_from_place.trim()) ||
+      (s.ta_to_place && s.ta_to_place.trim())
+    );
 
   /**
    * Binpagari days in the same period, for the pay breakdown.
@@ -307,46 +323,167 @@ export async function buildMonthlyReport(p: ReportParams): Promise<ReportResult>
     return r?.isHoliday ? holidayKindLabel(r.kind) : "Working Day";
   };
 
-  const rows: ReportRow[] = duties.map((d) => {
-    const startDateKey = toDateKey(d.starts_at);
-    const endDateKey = toDateKey(d.ends_at);
-    const startTime = hhmm(d.starts_at);
-    const endTime = hhmm(d.ends_at);
-    const isNextDay = startDateKey !== endDateKey;
-    const shiftTime =
-      startTime && endTime
-        ? isNextDay
-          ? `${startTime} - ${endTime} (Next Day)`
-          : `${startTime} - ${endTime}`
-        : isNextDay
-          ? (startTime ? `${startTime} (Next Day)` : endTime ? `${endTime} (Next Day)` : "(Next Day)")
-          : startTime || endTime || "";
+  // Consolidate multiple duties on the same operational date for the same officer if enableMultiDuty is active
+  const enableMultiDuty = p.enableMultiDuty ?? false;
+  const dutyGroups = new Map<string, typeof duties>();
+  for (const d of duties) {
+    const officer = officerName(d.users) ?? "Unknown";
+    const dateKey = toDateKey(d.starts_at);
+    const key = enableMultiDuty ? `${officer}_${dateKey}` : `duty_${d.id}`;
+    const list = dutyGroups.get(key) ?? [];
+    list.push(d);
+    dutyGroups.set(key, list);
+  }
+
+  const rows: ReportRow[] = [];
+
+  for (const [, list] of dutyGroups.entries()) {
+    const sorted = [...list].sort(
+      (a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime()
+    );
+
+    // In TA reports: filter down to shifts that actually carry TA claims.
+    // If only one shift has TA, show only that shift. If both have TA, show both.
+    const targetShifts = p.type === "ta" ? sorted.filter(hasShiftTa) : sorted;
+    if (targetShifts.length === 0) continue;
+
+    if (targetShifts.length === 1) {
+      const d = targetShifts[0];
+      const startDateKey = toDateKey(d.starts_at);
+      const endDateKey = toDateKey(d.ends_at);
+      const startTime = hhmm(d.starts_at);
+      const endTime = hhmm(d.ends_at);
+      const isNextDay = startDateKey !== endDateKey;
+      const shiftTime =
+        startTime && endTime
+          ? isNextDay
+            ? `${startTime} - ${endTime} (Next Day)`
+            : `${startTime} - ${endTime}`
+          : isNextDay
+            ? (startTime ? `${startTime} (Next Day)` : endTime ? `${endTime} (Next Day)` : "(Next Day)")
+            : startTime || endTime || "";
+      const dateDisplay = isNextDay ? `${startDateKey} to ${endDateKey}` : startDateKey;
+
+      rows.push({
+        officer: officerName(d.users),
+        duty_type: named(d.duty_types),
+        notes: d.notes,
+        date: dateDisplay,
+        start_date: startDateKey,
+        end_date: endDateKey,
+        is_next_day: isNextDay ? 1 : 0,
+        shift_time: shiftTime,
+        starts_at: startTime,
+        ends_at: endTime,
+        location: d.location,
+        day_type: dayTypeOf(d.starts_at),
+        // The holiday's own name ("Diwali", "Sunday"), for the printed report.
+        holiday_name: resolved.get(toDateKey(d.starts_at))?.name ?? null,
+        status: d.status,
+        ta_from: d.ta_from_place,
+        ta_to: d.ta_to_place,
+        ta_vehicle_type: d.ta_vehicle_type ?? "private",
+        ta_distance_km: d.ta_distance_km,
+        ta_amount: d.ta_amount,
+        holiday_allowance: d.holiday_allowance ? Number(d.holiday_allowance) : null,
+      });
+      continue;
+    }
+
+    // Consolidated row for multiple shifts on this day: divided into sub-rows via \n
+    const first = targetShifts[0];
+    const last = targetShifts[targetShifts.length - 1];
+    const startDateKey = toDateKey(first.starts_at);
+    const endDateKey = toDateKey(last.ends_at);
+    const hasAnyNextDay = targetShifts.some(
+      (s) => toDateKey(s.starts_at) !== toDateKey(s.ends_at)
+    );
+    const isNextDay = hasAnyNextDay || startDateKey !== endDateKey;
     const dateDisplay = isNextDay ? `${startDateKey} to ${endDateKey}` : startDateKey;
 
-    return {
-      officer: officerName(d.users),
-      duty_type: named(d.duty_types),
-      notes: d.notes,
+    // Shift time and duty type stacked per shift
+    const shiftTimes = targetShifts.map((s) => {
+      const sStart = hhmm(s.starts_at);
+      const sEnd = hhmm(s.ends_at);
+      const sOvernight = toDateKey(s.starts_at) !== toDateKey(s.ends_at);
+      if (sStart && sEnd) {
+        return sOvernight ? `${sStart} - ${sEnd} (Next Day)` : `${sStart} - ${sEnd}`;
+      }
+      return sOvernight ? `${sStart || sEnd || ""} (Next Day)` : sStart || sEnd || "";
+    });
+    const combinedShiftTime = shiftTimes.join("\n");
+
+    const combinedDutyType = targetShifts.map((s) => named(s.duty_types) || "").join("\n");
+    const combinedNotes = targetShifts.map((s) => s.notes?.trim() || "").join("\n");
+    const combinedStartsAt = targetShifts.map((s) => hhmm(s.starts_at)).join("\n");
+    const combinedEndsAt = targetShifts.map((s) => hhmm(s.ends_at)).join("\n");
+    const combinedLocation = targetShifts.map((s) => s.location?.trim() || "").join("\n");
+    const combinedStartDates = targetShifts.map((s) => toDateKey(s.starts_at)).join("\n");
+    const combinedEndDates = targetShifts.map((s) => toDateKey(s.ends_at)).join("\n");
+
+    // TA details:
+    // If p.type === "ta", all targetShifts already have TA.
+    // If holiday or duty, check if one or more shifts have TA.
+    const taShiftsInGroup = targetShifts.filter(hasShiftTa);
+
+    let combinedTaFrom: string | null = null;
+    let combinedTaTo: string | null = null;
+    let combinedVehicle: string | null = null;
+    let combinedDistance: string | number | null = null;
+    let combinedTaAmount: string | number | null = null;
+
+    if (taShiftsInGroup.length === 1) {
+      const singleTa = taShiftsInGroup[0];
+      combinedTaFrom = singleTa.ta_from_place ?? null;
+      combinedTaTo = singleTa.ta_to_place ?? null;
+      combinedVehicle = singleTa.ta_vehicle_type ?? "private";
+      combinedDistance = singleTa.ta_distance_km ?? null;
+      combinedTaAmount = singleTa.ta_amount ?? null;
+    } else if (taShiftsInGroup.length > 1) {
+      combinedTaFrom = taShiftsInGroup.map((s) => s.ta_from_place || "").join("\n");
+      combinedTaTo = taShiftsInGroup.map((s) => s.ta_to_place || "").join("\n");
+      combinedVehicle = taShiftsInGroup.map((s) => s.ta_vehicle_type || "private").join("\n");
+      combinedDistance = taShiftsInGroup.map((s) => (s.ta_distance_km != null ? String(s.ta_distance_km) : "—")).join("\n");
+      combinedTaAmount = taShiftsInGroup.map((s) => (s.ta_amount != null ? String(s.ta_amount) : "—")).join("\n");
+    }
+
+    const totalHolidayPay = targetShifts.reduce(
+      (sum, s) => sum + Number(s.holiday_allowance ?? 0),
+      0
+    );
+
+    rows.push({
+      officer: officerName(first.users),
+      duty_type: combinedDutyType,
+      notes: combinedNotes,
       date: dateDisplay,
       start_date: startDateKey,
       end_date: endDateKey,
+      start_dates: combinedStartDates,
+      end_dates: combinedEndDates,
       is_next_day: isNextDay ? 1 : 0,
-      shift_time: shiftTime,
-      starts_at: startTime,
-      ends_at: endTime,
-      location: d.location,
-      day_type: dayTypeOf(d.starts_at),
-      // The holiday's own name ("Diwali", "Sunday"), for the printed report.
-      holiday_name: resolved.get(toDateKey(d.starts_at))?.name ?? null,
-      status: d.status,
-      ta_from: d.ta_from_place,
-      ta_to: d.ta_to_place,
-      ta_vehicle_type: d.ta_vehicle_type ?? "private",
-      ta_distance_km: d.ta_distance_km,
-      ta_amount: d.ta_amount,
-      holiday_allowance: d.holiday_allowance ? Number(d.holiday_allowance) : null,
-    };
-  });
+      shift_time: combinedShiftTime,
+      starts_at: combinedStartsAt,
+      ends_at: combinedEndsAt,
+      location: combinedLocation,
+      day_type: dayTypeOf(first.starts_at),
+      holiday_name: resolved.get(toDateKey(first.starts_at))?.name ?? null,
+      status: first.status,
+      ta_from: combinedTaFrom,
+      ta_to: combinedTaTo,
+      ta_vehicle_type: combinedVehicle ?? "private",
+      ta_distance_km: combinedDistance,
+      ta_amount: combinedTaAmount,
+      holiday_allowance: totalHolidayPay > 0 ? totalHolidayPay : null,
+    });
+  }
+
+  // Ensure rows read newest first on screen
+  rows.sort((a, b) =>
+    `${b.start_date ?? b.date ?? ""} ${b.starts_at ?? ""}`.localeCompare(
+      `${a.start_date ?? a.date ?? ""} ${a.starts_at ?? ""}`
+    )
+  );
 
   const workedKeys = new Set(
     duties.filter((d) => d.is_holiday_duty).map((d) => toDateKey(d.starts_at)),
@@ -368,9 +505,24 @@ export async function buildMonthlyReport(p: ReportParams): Promise<ReportResult>
   const columns =
     p.type === "ta" ? TA_COLUMNS : p.type === "holiday" ? HOLIDAY_COLUMNS : DUTY_COLUMNS;
 
-  const taAmount = rows.reduce((a, r) => a + Number(r.ta_amount ?? 0), 0);
-  const taDistance = rows.reduce((a, r) => a + Number(r.ta_distance_km ?? 0), 0);
-  const holidayExtraPay = rows.reduce((a, r) => a + Number(r.holiday_allowance ?? 0), 0);
+  const taAmount = rows.reduce((a, r) => {
+    if (typeof r.ta_amount === "string" && r.ta_amount.includes("\n")) {
+      return a + r.ta_amount.split("\n").reduce((sub, v) => sub + (Number(v) || 0), 0);
+    }
+    return a + Number(r.ta_amount ?? 0);
+  }, 0);
+  const taDistance = rows.reduce((a, r) => {
+    if (typeof r.ta_distance_km === "string" && r.ta_distance_km.includes("\n")) {
+      return a + r.ta_distance_km.split("\n").reduce((sub, v) => sub + (Number(v) || 0), 0);
+    }
+    return a + Number(r.ta_distance_km ?? 0);
+  }, 0);
+  const holidayExtraPay = rows.reduce((a, r) => {
+    if (typeof r.holiday_allowance === "string" && r.holiday_allowance.includes("\n")) {
+      return a + r.holiday_allowance.split("\n").reduce((sub, v) => sub + (Number(v) || 0), 0);
+    }
+    return a + Number(r.holiday_allowance ?? 0);
+  }, 0);
   const totalExtraPay = taAmount + holidayExtraPay;
 
   return {
@@ -381,7 +533,7 @@ export async function buildMonthlyReport(p: ReportParams): Promise<ReportResult>
       taAmount,
       taDistance,
       holidaysInPeriod,
-      holidaysWorked: duties.filter((d) => d.is_holiday_duty).length,
+      holidaysWorked: new Set(duties.filter((d) => d.is_holiday_duty).map((d) => `${d.user_id}_${toDateKey(d.starts_at)}`)).size,
       holidayExtraPay,
       totalExtraPay,
       binpagariDays,

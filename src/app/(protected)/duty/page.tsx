@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { formatCurrency } from "@/lib/format/currency";
 import {
   formatDateTime,
+  formatTime,
   toDateKey,
   localDayStart,
   localDayEnd,
@@ -17,6 +18,8 @@ import {
   DutyTaBadge,
 } from "@/components/duty/duty-badges";
 import { PageHeader } from "@/components/ui/page-header";
+import { groupDutiesByDayOrGroup } from "@/lib/duty/groupDuties";
+import { getUserSettings } from "@/lib/settings/getUserSettings";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { SearchInput } from "@/components/ui/search-input";
 import { FilterSelect } from "@/components/ui/filter-select";
@@ -148,7 +151,7 @@ export default async function DutyListPage({
   ]);
 
   const SELECT_COLUMNS =
-    "id, user_id, starts_at, ends_at, status, location, ta_from_place, ta_to_place, ta_distance_km, ta_amount, is_holiday, is_holiday_duty, manual_holiday_claim, holiday_allowance, duty_types(name), users!duties_user_id_fkey(full_name)";
+    "id, user_id, duty_group_id, starts_at, ends_at, status, location, ta_from_place, ta_to_place, ta_distance_km, ta_amount, is_holiday, is_holiday_duty, manual_holiday_claim, holiday_allowance, duty_types(name), users!duties_user_id_fkey(full_name)";
 
   /**
    * Every filter in one place, applied identically to the paged rows and to
@@ -217,7 +220,9 @@ export default async function DutyListPage({
   const totalExtraPay = totalTaAmount + totalHolidayPay;
 
   // Only the caller's own rows can be deleted, so only they get a checkbox.
+  const userSettings = await getUserSettings();
   const ownIds = (duties ?? []).filter((d) => d.user_id === user?.id).map((d) => d.id);
+  const groupedDuties = groupDutiesByDayOrGroup(duties ?? [], isGu, userSettings.enableMultiDuty);
 
   return (
     <main className="w-full px-4 sm:px-6 lg:px-8 py-6 max-w-7xl 2xl:max-w-full mx-auto space-y-6">
@@ -467,83 +472,111 @@ export default async function DutyListPage({
               </tr>
             </thead>
             <tbody className="divide-y divide-border/60">
-              {(duties ?? []).map((d) => {
-                const officerName =
-                  (d.users as unknown as { full_name: string } | null)
-                    ?.full_name ?? "—";
-                const rawTypeName =
-                  (d.duty_types as unknown as { name: string } | null)?.name ??
-                  "—";
-                const typeName =
-                  isGu && rawTypeName !== "—"
-                    ? translateDutyTypeToGujarati(rawTypeName)
-                    : rawTypeName;
-
+              {(groupedDuties ?? []).map((g) => {
                 return (
                   <tr
-                    key={d.id}
+                    key={g.groupKey}
                     className="hover:bg-muted/30 transition-colors group"
                   >
-                    <DutyTableSelectCell id={d.id} label={`${typeName} duty on ${formatDateTime(d.starts_at, timeFormat, isGu ? "gu" : "en-US")}`} />
+                    <DutyTableSelectCell
+                      id={g.primaryId}
+                      ids={g.allIds}
+                      label={`${g.combinedDutyTypeLabel} duty on ${formatDateTime(g.earliestStart, timeFormat, isGu ? "gu" : "en-US")}`}
+                    />
                     <td className="py-3.5 px-4 sm:px-6 font-semibold text-foreground whitespace-nowrap">
                       <Link
-                        href={`/duty/${d.id}`}
+                        href={`/duty/${g.primaryId}`}
                         className="text-indigo-600 dark:text-indigo-400 hover:underline inline-flex items-center gap-1.5"
                       >
-                        {officerName}
+                        {g.officerName}
                       </Link>
                     </td>
                     <td className="py-3.5 px-4 whitespace-nowrap">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <Badge variant="secondary">{typeName}</Badge>
-                        <DutyHolidayBadge duty={d} isGujarati={isGu} />
+                        {g.dutyTypeNames.map((name, idx) => (
+                          <Badge key={idx} variant="secondary">
+                            {name}
+                          </Badge>
+                        ))}
+                        {g.isMultiShift && (
+                          <Badge variant="purple" className="text-[10px] py-0 px-1.5 font-bold">
+                            {isGu ? `${toGujaratiNumerals(g.shiftCount)} શિફ્ટ` : `${g.shiftCount} shifts`}
+                          </Badge>
+                        )}
+                        {g.isHolidayDuty && (
+                          <DutyHolidayBadge duty={g.primaryDuty} isGujarati={isGu} />
+                        )}
                       </div>
                     </td>
                     <td className="py-3.5 px-4 text-muted-foreground whitespace-nowrap">
-                      {formatDateTime(d.starts_at, timeFormat, isGu ? "gu" : "en-US")}
+                      <div className="flex flex-col">
+                        <span className="font-medium text-foreground">
+                          {formatDateTime(g.earliestStart, timeFormat, isGu ? "gu" : "en-US")}
+                        </span>
+                        {g.isMultiShift && (
+                          <span className="text-[10px] text-muted-foreground">
+                            {isGu
+                              ? `પ્રથમ: ${formatTime(g.earliestStart, timeFormat, "gu")}`
+                              : `1st: ${formatTime(g.earliestStart, timeFormat, "en-US")}`}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-3.5 px-4 text-muted-foreground whitespace-nowrap">
-                      {formatDateTime(d.ends_at, timeFormat, isGu ? "gu" : "en-US")}
+                      <div className="flex flex-col">
+                        <span className="font-medium text-foreground">
+                          {formatDateTime(g.latestEnd, timeFormat, isGu ? "gu" : "en-US")}
+                        </span>
+                        {g.isMultiShift && (
+                          <span className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400">
+                            {g.totalDurationLabel}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-3.5 px-4 text-muted-foreground">
-                      {d.location ? (
+                      {g.locationDisplay !== "—" ? (
                         <div className="flex items-center gap-1">
                           <MapPin className="size-3 text-slate-400 shrink-0" />
-                          <span className="truncate max-w-[150px]">{d.location}</span>
+                          <span className="truncate max-w-[150px]">{g.locationDisplay}</span>
                         </div>
                       ) : (
                         "—"
                       )}
                     </td>
                     <td className="py-3.5 px-4 text-muted-foreground whitespace-nowrap">
-                      {d.ta_from_place || d.ta_to_place ? (
+                      {g.taRouteDisplay !== "—" ? (
                         <span className="inline-flex items-center gap-1 font-medium text-foreground">
-                          {d.ta_from_place ?? "?"}{" "}
-                          <ArrowRight className="size-3 text-slate-400" />{" "}
-                          {d.ta_to_place ?? "?"}
+                          {g.taRouteDisplay}
                         </span>
                       ) : (
                         "—"
                       )}
                     </td>
                     <td className="py-3.5 px-4 text-center font-medium">
-                      {d.ta_distance_km ? (
+                      {g.totalTaDistanceKm > 0 ? (
                         <Badge variant="info">
                           <Compass className="size-3" />
                           {isGu
-                            ? `${toGujaratiNumerals(d.ta_distance_km)} કિ.મી.`
-                            : `${d.ta_distance_km} km`}
+                            ? `${toGujaratiNumerals(g.totalTaDistanceKm)} કિ.મી.`
+                            : `${g.totalTaDistanceKm} km`}
                         </Badge>
                       ) : (
                         "—"
                       )}
                     </td>
                     <td className="py-3.5 px-4 font-semibold">
-                      {d.ta_amount ? <DutyTaBadge duty={d} isGujarati={isGu} /> : "—"}
+                      {g.totalTaAmount > 0 ? (
+                        <Badge variant="success">
+                          {isGu ? toGujaratiNumerals(formatCurrency(g.totalTaAmount)) : formatCurrency(g.totalTaAmount)}
+                        </Badge>
+                      ) : (
+                        "—"
+                      )}
                     </td>
                     <td className="py-3.5 px-4 sm:px-6 text-right whitespace-nowrap">
                       <Link
-                        href={`/duty/${d.id}`}
+                        href={`/duty/${g.primaryId}`}
                         className="inline-flex items-center justify-center rounded-lg border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted transition-colors shadow-2xs"
                       >
                         {t.common.details}
@@ -578,87 +611,114 @@ export default async function DutyListPage({
 
         {/* Mobile Card List: Shown ONLY on mobile screens (< md) */}
         <div className="md:hidden flex flex-col divide-y divide-border/60">
-          {(duties ?? []).map((d) => {
-            const officerName =
-              (d.users as unknown as { full_name: string } | null)?.full_name ??
-              "—";
-            const rawTypeName =
-              (d.duty_types as unknown as { name: string } | null)?.name ?? "Duty";
-            const typeName =
-              isGu
-                ? (rawTypeName !== "Duty" ? translateDutyTypeToGujarati(rawTypeName) : "ફરજ")
-                : rawTypeName;
-
+          {(groupedDuties ?? []).map((g) => {
             return (
-              <div key={d.id} className="p-3.5 space-y-2.5 bg-card hover:bg-muted/20 transition-colors">
-                {/* Header row: Checkbox, Officer name, duty type, and badges */}
+              <div key={g.groupKey} className="p-3.5 space-y-2.5 bg-card hover:bg-muted/20 transition-colors">
+                {/* Header row: Checkbox, Officer name, duty types, and badges */}
                 <div className="flex items-start justify-between gap-2">
-                  <DutyRowCheckbox id={d.id} label={`${typeName} duty on ${formatDateTime(d.starts_at, timeFormat)}`} />
+                  <DutyRowCheckbox
+                    id={g.primaryId}
+                    ids={g.allIds}
+                    label={`${g.combinedDutyTypeLabel} duty on ${formatDateTime(g.earliestStart, timeFormat)}`}
+                  />
                   <div className="min-w-0 flex-1">
                     <Link
-                      href={`/duty/${d.id}`}
+                      href={`/duty/${g.primaryId}`}
                       className="flex items-center gap-1.5 text-sm font-bold text-foreground hover:text-indigo-600 transition-colors"
                     >
                       <User className="size-3.5 shrink-0 text-indigo-500" />
-                      <span className="truncate">{officerName}</span>
+                      <span className="truncate">{g.officerName}</span>
                     </Link>
-                    <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-                      {typeName}
-                    </span>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-1">
+                      <span className="text-xs text-muted-foreground font-medium">
+                        {g.combinedDutyTypeLabel}
+                      </span>
+                      {g.isMultiShift && (
+                        <Badge variant="purple" className="text-[10px] py-0 px-1 font-bold">
+                          {isGu ? `${toGujaratiNumerals(g.shiftCount)} શિફ્ટ` : `${g.shiftCount} shifts`}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-1.5">
-                    <DutyStatusBadge status={d.status} isGujarati={isGu} />
-                    <DutyHolidayBadge duty={d} iconOnly isGujarati={isGu} />
-                    <DutyTaBadge duty={d} iconOnly isGujarati={isGu} />
+                    <DutyStatusBadge status={g.status} isGujarati={isGu} />
+                    {g.isHolidayDuty && (
+                      <DutyHolidayBadge duty={g.primaryDuty} iconOnly isGujarati={isGu} />
+                    )}
+                    {g.totalTaAmount > 0 && (
+                      <Badge variant="success" className="text-[10px] py-0.5 px-1.5 font-bold">
+                        {isGu ? toGujaratiNumerals(formatCurrency(g.totalTaAmount)) : formatCurrency(g.totalTaAmount)}
+                      </Badge>
+                    )}
                   </div>
                 </div>
 
-                {/* Sleek inline Time Strip */}
+                {/* Start & End Date-Time strip (shown on all cards like others) */}
                 <div className="flex items-center justify-between gap-1.5 text-[11px] sm:text-xs text-muted-foreground bg-muted/40 px-2.5 py-1.5 rounded-lg border border-border/50">
                   <div className="flex items-center gap-1.5 min-w-0">
                     <Clock className="size-3.5 text-indigo-500 shrink-0" />
                     <span className="font-medium text-foreground truncate">
-                      {formatDateTime(d.starts_at, timeFormat, isGu ? "gu" : "en-US")}
+                      {formatDateTime(g.earliestStart, timeFormat, isGu ? "gu" : "en-US")}
                     </span>
                   </div>
                   <span className="text-muted-foreground/60 shrink-0">→</span>
                   <div className="flex items-center gap-1.5 min-w-0 text-right">
                     <span className="font-medium text-foreground truncate">
-                      {formatDateTime(d.ends_at, timeFormat, isGu ? "gu" : "en-US")}
+                      {formatDateTime(g.latestEnd, timeFormat, isGu ? "gu" : "en-US")}
                     </span>
                   </div>
                 </div>
 
-                {d.location && (
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <MapPin className="size-3 text-rose-500 shrink-0" />
-                    <span className="truncate">{d.location}</span>
+                {/* If multiple shifts on this day, also show the shift breakdown */}
+                {g.isMultiShift && (
+                  <div className="space-y-1 bg-muted/30 p-2 rounded-lg border border-border/50 text-[11px]">
+                    <div className="flex items-center justify-between text-muted-foreground font-semibold pb-1 border-b border-border/40">
+                      <span>{isGu ? "દૈનિક શિફ્ટ્સ" : "Daily Shifts"}</span>
+                      <span className="text-indigo-600 dark:text-indigo-400 font-bold">{g.totalDurationLabel}</span>
+                    </div>
+                    {g.shifts.map((s, idx) => (
+                      <div key={s.id} className="flex items-center justify-between pt-0.5 text-muted-foreground">
+                        <span className="font-medium text-foreground">
+                          {isGu ? `શિફ્ટ ${toGujaratiNumerals(idx + 1)}: ${s.typeName}` : `Shift ${idx + 1}: ${s.typeName}`}
+                        </span>
+                        <span className="font-mono text-[11px]">
+                          {formatTime(s.startsAt, timeFormat, isGu ? "gu" : "en-US")} → {formatTime(s.endsAt, timeFormat, isGu ? "gu" : "en-US")}
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 )}
 
-                {(d.ta_from_place || d.ta_to_place || d.ta_amount) && (
+                {g.locationDisplay !== "—" && (
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <MapPin className="size-3 text-rose-500 shrink-0" />
+                    <span className="truncate">{g.locationDisplay}</span>
+                  </div>
+                )}
+
+                {g.hasTa && (
                   <div className="flex items-center justify-between text-xs pt-1.5 border-t border-border/40 gap-2">
                     <span className="text-muted-foreground flex items-center gap-1.5 flex-wrap">
-                      <span>{d.ta_from_place ?? "?"} → {d.ta_to_place ?? "?"}</span>
-                      {d.ta_distance_km ? (
+                      <span>{g.taRouteDisplay}</span>
+                      {g.totalTaDistanceKm > 0 && (
                         <Badge variant="info" className="text-[10px] py-0 px-1.5">
                           <Compass className="size-3" />
                           {isGu
-                            ? `${toGujaratiNumerals(d.ta_distance_km)} કિ.મી.`
-                            : `${d.ta_distance_km} km`}
+                            ? `${toGujaratiNumerals(g.totalTaDistanceKm)} કિ.મી.`
+                            : `${g.totalTaDistanceKm} km`}
                         </Badge>
-                      ) : null}
+                      )}
                     </span>
-                    {d.ta_amount && (
+                    {g.totalTaAmount > 0 && (
                       <Badge variant="success" className="text-[10px] py-0 px-1.5">
                         <Route className="size-3" />
-                        {isGu ? toGujaratiNumerals(formatCurrency(d.ta_amount)) : formatCurrency(d.ta_amount)}
+                        {isGu ? toGujaratiNumerals(formatCurrency(g.totalTaAmount)) : formatCurrency(g.totalTaAmount)}
                       </Badge>
                     )}
                   </div>
                 )}
 
-                {Number(d.holiday_allowance ?? 0) > 0 && (
+                {g.totalHolidayAllowance > 0 && (
                   <div className="flex items-center justify-between text-xs pt-1.5 border-t border-border/40">
                     <span className="text-muted-foreground flex items-center gap-1">
                       <Sparkles className="size-3 text-amber-500 shrink-0" />
@@ -666,13 +726,13 @@ export default async function DutyListPage({
                     </span>
                     <Badge variant="warning" className="text-[10px] py-0 px-1.5">
                       <Sparkles className="size-3" />
-                      {isGu ? toGujaratiNumerals(formatCurrency(Number(d.holiday_allowance))) : formatCurrency(Number(d.holiday_allowance))}
+                      {isGu ? toGujaratiNumerals(formatCurrency(g.totalHolidayAllowance)) : formatCurrency(g.totalHolidayAllowance)}
                     </Badge>
                   </div>
                 )}
 
                 <Link
-                  href={`/duty/${d.id}`}
+                  href={`/duty/${g.primaryId}`}
                   className="w-full flex items-center justify-center gap-1.5 rounded-lg border border-border bg-card py-1.5 text-xs font-semibold text-foreground hover:bg-muted/70 shadow-2xs transition-colors"
                 >
                   <span>{t.common.details}</span>

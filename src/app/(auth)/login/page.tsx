@@ -11,7 +11,6 @@ import { PwaInstallButton } from "@/components/pwa/install-button";
 import { FieldError } from "@/components/ui/field-error";
 import { AutoDismissBanner } from "@/components/ui/auto-dismiss-banner";
 import { useFormFeedback } from "@/lib/hooks/useFormFeedback";
-import { LanguageToggle } from "@/components/layout/language-toggle";
 import { useLanguage } from "@/lib/i18n/language-context";
 
 function ResetSuccessNotice() {
@@ -47,11 +46,6 @@ export default function LoginPage() {
       </div>
 
       <div className="relative w-full max-w-md">
-        {/* Floating Top Language Switcher */}
-        <div className="flex justify-end mb-3">
-          <LanguageToggle variant="auth" />
-        </div>
-
         <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-8 sm:p-10 shadow-2xl backdrop-blur-xl">
           {/* Brand header */}
           <div className="flex flex-col items-center text-center mb-8">

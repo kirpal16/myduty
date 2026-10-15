@@ -58,6 +58,7 @@ export const userSettingsSchema = z
     printSignatoryName: z.string().trim().optional(),
     printDefaultVehicle: z.enum(["private", "government"]).optional(),
     printUseGujaratiDigits: z.boolean().optional(),
+    enableMultiDuty: z.boolean().optional(),
   })
   // Equal times are allowed: that is a shift running right round to the next
   // day, which `deriveDutyEnd` and `splitIntoDailyDuties` both handle.
@@ -78,6 +79,11 @@ export function userSettingsValuesFromForm(formData: FormData) {
   const rate = formData.get("holidayDayRate");
   const dailyRate = formData.get("dailySalaryRate");
   const rawUseGuj = formData.get("printUseGujaratiDigits");
+  const rawMultiDuty = formData.get("enableMultiDuty");
+  const isDutyDefaultsForm =
+    formData.has("defaultShiftStart") ||
+    formData.has("defaultShiftEnd");
+
   return {
     // A blank rate means "not set", which is 0 — but anything else that is
     // not a number must fail rather than silently become 0.
@@ -98,5 +104,10 @@ export function userSettingsValuesFromForm(formData: FormData) {
     printUseGujaratiDigits: formData.has("printUseGujaratiDigits")
       ? rawUseGuj === "true" || rawUseGuj === "on" || rawUseGuj === "1"
       : undefined,
+    enableMultiDuty: isDutyDefaultsForm
+      ? rawMultiDuty === "true" || rawMultiDuty === "on" || rawMultiDuty === "1"
+      : formData.has("enableMultiDuty")
+        ? rawMultiDuty === "true" || rawMultiDuty === "on" || rawMultiDuty === "1"
+        : undefined,
   };
 }
