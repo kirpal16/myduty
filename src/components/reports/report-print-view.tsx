@@ -41,6 +41,8 @@ export function ReportPrintView({
     signatoryName?: string;
     footerPlace?: string;
     footerNote?: string;
+    showLogo?: boolean;
+    showHeader?: boolean;
   }>({});
 
   useEffect(() => {
@@ -72,6 +74,8 @@ export function ReportPrintView({
   const header2En = config.headerLine2En || report.headerLine2En || officer?.department || "Duty & Roster Records";
   const footerPlace = config.footerPlace || report.footerPlace || (officer?.posting?.split(",")[0] ?? "") || "અરવલ્લી";
   const footerNote = config.footerNote || report.footerNote || "";
+  const showLogo = config.showLogo !== false;
+  const showHeader = config.showHeader !== false;
 
   const toLines = (config.recipientTitle || config.stationName)
     ? `પ્રતિ,\n${config.recipientTitle || "પોલીસ સબ ઇન્સપેક્ટરશ્રી"},\n${config.stationName || officer?.posting || "પોલીસ સ્ટેશન"}`
@@ -96,7 +100,10 @@ export function ReportPrintView({
       <table className="rp-page">
         <thead>
           <tr>
-            <td className="rp-space" />
+            <td
+              className={showHeader ? "rp-space" : ""}
+              style={!showHeader ? { height: 0, padding: 0, border: "none" } : undefined}
+            />
           </tr>
         </thead>
         <tfoot>
@@ -106,27 +113,39 @@ export function ReportPrintView({
         </tfoot>
         <tbody>
           <tr>
-            <td className="rp-body">
+            <td className="rp-body" style={!showHeader ? { paddingTop: 0 } : undefined}>
               {isGujarati ? (
-                <div className="rp-gujarati-layout text-black font-['Shruti',_'Gujarati_Saral',_var(--font-gujarati),_'Noto_Sans_Gujarati',_'Nirmala_UI',_sans-serif]">
+                <div
+                  className="rp-gujarati-layout text-black font-['Shruti',_'Gujarati_Saral',_var(--font-gujarati),_'Noto_Sans_Gujarati',_'Nirmala_UI',_sans-serif]"
+                  style={!showHeader ? { marginTop: 0, paddingTop: 0 } : undefined}
+                >
                   {/* Gujarat Police Official Header */}
-                  <div className="flex items-center justify-between border-b-2 border-black pb-3 mb-4">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src="/Gujarat-police.png" alt="Gujarat Police" width={40} height={52} className="rp-logo object-contain" style={{ width: "40px", height: "52px", aspectRatio: "1542/2000" }} />
-                    <div className="text-center flex-1 mx-4">
-                      <h2 className="text-xl font-bold tracking-wide">{header1}</h2>
-                      <p className="text-sm font-semibold text-gray-800">
-                        {header2}
-                      </p>
+                  {showHeader ? (
+                    <div className="flex items-center justify-between border-b-2 border-black pb-3 mb-4">
+                      {showLogo ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img src="/Gujarat-police.png" alt="Gujarat Police" width={40} height={52} className="rp-logo object-contain" style={{ width: "40px", height: "52px", aspectRatio: "1542/2000" }} />
+                      ) : (
+                        <div style={{ width: "40px", height: "52px", flexShrink: 0 }} />
+                      )}
+                      <div className="text-center flex-1 mx-4">
+                        <h2 className="text-xl font-bold tracking-wide">{header1}</h2>
+                        <p className="text-sm font-semibold text-gray-800">
+                          {header2}
+                        </p>
+                      </div>
+                      <div className="text-right text-xs" style={{ minWidth: "40px", flexShrink: 0 }}>
+                        <span className="block text-gray-600">રિપોર્ટ માસ:</span>
+                        <strong className="text-sm font-bold">{report.periodLabel}</strong>
+                      </div>
                     </div>
-                    <div className="text-right text-xs">
-                      <span className="block text-gray-600">રિપોર્ટ માસ:</span>
-                      <strong className="text-sm font-bold">{report.periodLabel}</strong>
-                    </div>
-                  </div>
+                  ) : null}
 
                   {/* Main Title */}
-                  <h1 className="rp-title text-center text-lg font-bold underline mb-5 tracking-wide">
+                  <h1
+                    className="rp-title text-center text-lg font-bold underline mb-5 tracking-wide"
+                    style={!showHeader ? { marginTop: 0, paddingTop: 0 } : undefined}
+                  >
                     {report.title}
                   </h1>
 
@@ -305,21 +324,32 @@ export function ReportPrintView({
                 </div>
               ) : (
                 /* Standard English Layout */
-                <div>
-                  <header className="rp-letterhead">
-                    {/* eslint-disable-next-line @next/next/no-img-element -- a plain img prints reliably; next/image lazy-loads and can miss the print snapshot */}
-                    <img src="/Gujarat-police.png" alt="" className="rp-logo" />
-                    <div className="rp-org">
-                      <p className="rp-org-name">{header1En}</p>
-                      <p className="rp-org-sub">{header2En}</p>
-                    </div>
-                    <div className="rp-period">
-                      <span>Report Period</span>
-                      <strong>{report.periodLabel}</strong>
-                    </div>
-                  </header>
+                <div style={!showHeader ? { marginTop: 0, paddingTop: 0 } : undefined}>
+                  {showHeader ? (
+                    <header className="rp-letterhead">
+                      {showLogo ? (
+                        /* eslint-disable-next-line @next/next/no-img-element -- a plain img prints reliably; next/image lazy-loads and can miss the print snapshot */
+                        <img src="/Gujarat-police.png" alt="" className="rp-logo" />
+                      ) : (
+                        <div style={{ width: "40px", flexShrink: 0 }} />
+                      )}
+                      <div className="rp-org">
+                        <p className="rp-org-name">{header1En}</p>
+                        <p className="rp-org-sub">{header2En}</p>
+                      </div>
+                      <div className="rp-period">
+                        <span>Report Period</span>
+                        <strong>{report.periodLabel}</strong>
+                      </div>
+                    </header>
+                  ) : null}
 
-                  <h1 className="rp-title">{report.title}</h1>
+                  <h1
+                    className="rp-title"
+                    style={!showHeader ? { marginTop: 0, paddingTop: 0 } : undefined}
+                  >
+                    {report.title}
+                  </h1>
 
                   <dl className="rp-details">
                     {details.map((d) => (

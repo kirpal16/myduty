@@ -1,5 +1,7 @@
 "use client";
 
+import { useState, useEffect } from "react";
+import { Loader2 } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/language-context";
 import { type Language } from "@/lib/i18n/types";
 
@@ -69,13 +71,24 @@ export function LanguageToggle({
   variant = "header",
   className = "",
 }: LanguageToggleProps) {
-  const { language, setLanguage, isGujarati } = useLanguage();
+  const { language, setLanguage, isGujarati, isChangingLanguage } = useLanguage();
+  const [pendingLang, setPendingLang] = useState<Language | null>(null);
+
+  useEffect(() => {
+    if (!isChangingLanguage) {
+      setPendingLang(null);
+    }
+  }, [isChangingLanguage]);
 
   const handleSelect = (lang: Language) => {
-    if (language !== lang) {
+    if (language !== lang && !isChangingLanguage) {
+      setPendingLang(lang);
       setLanguage(lang);
     }
   };
+
+  const isEnLoading = isChangingLanguage && pendingLang === "en";
+  const isGuLoading = isChangingLanguage && pendingLang === "gu";
 
   // Header Variant (Compact, perfect for Mobile and Desktop top bars)
   if (variant === "header") {
@@ -88,14 +101,16 @@ export function LanguageToggle({
         <button
           type="button"
           onClick={() => handleSelect("en")}
+          disabled={isChangingLanguage}
           aria-pressed={language === "en"}
           title="Switch to English"
-          className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold tracking-tight transition-all duration-200 cursor-pointer ${
+          className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold tracking-tight transition-all duration-200 cursor-pointer disabled:cursor-wait whitespace-nowrap ${
             language === "en"
               ? "bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-xs"
               : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
           }`}
         >
+          {isEnLoading && <Loader2 className="size-2.5 animate-spin shrink-0" />}
           <span>EN</span>
         </button>
 
@@ -104,14 +119,16 @@ export function LanguageToggle({
         <button
           type="button"
           onClick={() => handleSelect("gu")}
+          disabled={isChangingLanguage}
           aria-pressed={language === "gu"}
           title="ગુજરાતી ભાષા પસંદ કરો"
-          className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold tracking-tight transition-all duration-200 cursor-pointer ${
+          className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold tracking-tight transition-all duration-200 cursor-pointer disabled:cursor-wait font-gujarati whitespace-nowrap ${
             language === "gu"
               ? "bg-gradient-to-r from-amber-600 to-amber-500 text-white shadow-xs font-gujarati"
               : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 font-gujarati"
           }`}
         >
+          {isGuLoading && <Loader2 className="size-2.5 animate-spin shrink-0" />}
           <span>ગુ</span>
         </button>
       </div>
@@ -142,26 +159,30 @@ export function LanguageToggle({
           <button
             type="button"
             onClick={() => handleSelect("en")}
+            disabled={isChangingLanguage}
             aria-pressed={language === "en"}
-            className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer ${
+            className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer disabled:cursor-wait whitespace-nowrap ${
               language === "en"
                 ? "bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-sm shadow-indigo-600/30"
                 : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/40"
             }`}
           >
+            {isEnLoading && <Loader2 className="size-3 animate-spin shrink-0 text-white" />}
             <span>English</span>
           </button>
 
           <button
             type="button"
             onClick={() => handleSelect("gu")}
+            disabled={isChangingLanguage}
             aria-pressed={language === "gu"}
-            className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer font-gujarati ${
+            className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer disabled:cursor-wait font-gujarati whitespace-nowrap ${
               language === "gu"
                 ? "bg-gradient-to-r from-amber-600 to-amber-500 text-white shadow-sm shadow-amber-600/30"
                 : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/40"
             }`}
           >
+            {isGuLoading && <Loader2 className="size-3 animate-spin shrink-0 text-white" />}
             <span>ગુજરાતી</span>
           </button>
         </div>
@@ -182,26 +203,30 @@ export function LanguageToggle({
           <button
             type="button"
             onClick={() => handleSelect("en")}
+            disabled={isChangingLanguage}
             aria-pressed={language === "en"}
-            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer disabled:cursor-wait whitespace-nowrap ${
               language === "en"
                 ? "bg-indigo-600 text-white shadow-xs"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            EN
+            {isEnLoading && <Loader2 className="size-2.5 animate-spin shrink-0" />}
+            <span>EN</span>
           </button>
           <button
             type="button"
             onClick={() => handleSelect("gu")}
+            disabled={isChangingLanguage}
             aria-pressed={language === "gu"}
-            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer font-gujarati ${
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer disabled:cursor-wait font-gujarati whitespace-nowrap ${
               language === "gu"
                 ? "bg-amber-600 text-white shadow-xs"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            ગુજરાતી
+            {isGuLoading && <Loader2 className="size-2.5 animate-spin shrink-0" />}
+            <span>ગુજરાતી</span>
           </button>
         </div>
       </div>
@@ -222,17 +247,21 @@ export function LanguageToggle({
         <button
           type="button"
           onClick={() => handleSelect("en")}
-          className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer ${
+          disabled={isChangingLanguage}
+          className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer disabled:cursor-wait ${
             language === "en"
               ? "border-indigo-600 bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 ring-2 ring-indigo-600/20"
               : "border-border bg-card text-foreground hover:bg-muted/40"
           }`}
         >
           <div className="flex flex-col text-left">
-            <span className="text-sm font-bold">English</span>
+            <span className="text-sm font-bold flex items-center gap-1.5">
+              {isEnLoading && <Loader2 className="size-3.5 animate-spin text-indigo-600 shrink-0" />}
+              <span>English</span>
+            </span>
             <span className="text-xs text-muted-foreground">Standard English Interface</span>
           </div>
-          {language === "en" && (
+          {language === "en" && !isEnLoading && (
             <span className="flex size-2 rounded-full bg-indigo-600" />
           )}
         </button>
@@ -240,17 +269,21 @@ export function LanguageToggle({
         <button
           type="button"
           onClick={() => handleSelect("gu")}
-          className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer ${
+          disabled={isChangingLanguage}
+          className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer disabled:cursor-wait ${
             language === "gu"
               ? "border-amber-600 bg-amber-600/10 text-amber-600 dark:text-amber-400 ring-2 ring-amber-600/20"
               : "border-border bg-card text-foreground hover:bg-muted/40"
           }`}
         >
           <div className="flex flex-col text-left font-gujarati">
-            <span className="text-sm font-bold">ગુજરાતી</span>
+            <span className="text-sm font-bold flex items-center gap-1.5">
+              {isGuLoading && <Loader2 className="size-3.5 animate-spin text-amber-600 shrink-0" />}
+              <span>ગુજરાતી</span>
+            </span>
             <span className="text-xs text-muted-foreground">સત્તાવાર ગુજરાત પોલીસ ઇન્ટરફેસ</span>
           </div>
-          {language === "gu" && (
+          {language === "gu" && !isGuLoading && (
             <span className="flex size-2 rounded-full bg-amber-600" />
           )}
         </button>

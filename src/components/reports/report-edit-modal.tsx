@@ -11,6 +11,9 @@ import {
   Car,
   Loader2,
   FileSignature,
+  Shield,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import {
   buildPrintReport,
@@ -59,6 +62,30 @@ export function ReportEditModal({
     initialReport.useGujaratiDigits ?? true,
   );
   const [includeSignature, setIncludeSignature] = useState<boolean>(false);
+  const [showLogo, setShowLogo] = useState<boolean>(() => {
+    try {
+      if (typeof window !== "undefined") {
+        const raw = localStorage.getItem("duty_print_config");
+        if (raw) {
+          const cfg = JSON.parse(raw);
+          if (typeof cfg.showLogo === "boolean") return cfg.showLogo;
+        }
+      }
+    } catch {}
+    return true;
+  });
+  const [showHeader, setShowHeader] = useState<boolean>(() => {
+    try {
+      if (typeof window !== "undefined") {
+        const raw = localStorage.getItem("duty_print_config");
+        if (raw) {
+          const cfg = JSON.parse(raw);
+          if (typeof cfg.showHeader === "boolean") return cfg.showHeader;
+        }
+      }
+    } catch {}
+    return true;
+  });
 
   // Letter text for whichever report this is (TA, holiday, duty or leave).
   const defaultHeaders = (digits: boolean) =>
@@ -92,6 +119,8 @@ type SavedPrintConfig = {
   defaultVehicle?: string;
   useGujaratiDigits?: boolean;
   toLines?: string;
+  showLogo?: boolean;
+  showHeader?: boolean;
 };
 
   const getSavedConfig = (): SavedPrintConfig => {
@@ -241,6 +270,8 @@ type SavedPrintConfig = {
     setSubject(getSubjectText(useGujaratiDigits));
     setSalutation(getSalutationText(useGujaratiDigits));
     setApplicantLine(getApplicantText(useGujaratiDigits));
+    if (typeof saved.showLogo === "boolean") setShowLogo(saved.showLogo);
+    if (typeof saved.showHeader === "boolean") setShowHeader(saved.showHeader);
     /* eslint-enable react-hooks/set-state-in-effect */
   }, [isOpen, initialReport, officer, useGujaratiDigits]);
 
@@ -283,6 +314,15 @@ type SavedPrintConfig = {
     setIsSwitchingMode(false);
     setHiddenColumnKeys([]);
     setIncludeSignature(false);
+    setShowLogo(true);
+    setShowHeader(true);
+    try {
+      const saved = getSavedConfig();
+      localStorage.setItem(
+        "duty_print_config",
+        JSON.stringify({ ...saved, showLogo: true, showHeader: true }),
+      );
+    } catch {}
     toast("ઓરિજિનલ ડેટા રીસેટ કર્યો. (Reset to template)");
   };
 
@@ -352,25 +392,31 @@ type SavedPrintConfig = {
 
       printRoot.innerHTML = `
         <table class="rp-page">
-          <thead><tr><td class="rp-space"></td></tr></thead>
+          <thead><tr><td class="${showHeader ? "rp-space" : ""}" style="${!showHeader ? "height: 0px !important; padding: 0 !important; border: none !important;" : ""}"></td></tr></thead>
           <tfoot><tr><td class="rp-space"></td></tr></tfoot>
           <tbody>
             <tr>
-              <td class="rp-body">
-                <div class="rp-gujarati-layout text-black font-['Shruti',_'Gujarati_Saral',_var(--font-gujarati),_'Noto_Sans_Gujarati',_'Nirmala_UI',_sans-serif]">
+              <td class="rp-body" style="${!showHeader ? "padding-top: 0 !important;" : ""}">
+                <div class="rp-gujarati-layout text-black font-['Shruti',_'Gujarati_Saral',_var(--font-gujarati),_'Noto_Sans_Gujarati',_'Nirmala_UI',_sans-serif]" style="${!showHeader ? "margin-top: 0 !important; padding-top: 0 !important;" : ""}">
+                  ${showHeader ? `
                   <div class="flex items-center justify-between border-b-2 border-black pb-3 mb-4">
+                    ${showLogo ? `
                     <img src="/Gujarat-police.png" alt="Gujarat Police" class="rp-logo" width="40" height="52" style="width: 40px; height: 52px; object-fit: contain; aspect-ratio: 1542/2000; display: block;" />
+                    ` : `
+                    <div style="width: 40px; height: 52px; flex-shrink: 0;"></div>
+                    `}
                     <div class="text-center flex-1 mx-4">
                       <h2 class="text-xl font-bold tracking-wide">${esc(header1)}</h2>
                       <p class="text-sm font-semibold text-gray-800">${esc(header2)}</p>
                     </div>
-                    <div class="text-right text-xs">
+                    <div class="text-right text-xs" style="min-width: 40px; flex-shrink: 0;">
                       <span class="block text-gray-600">રિપોર્ટ માસ:</span>
                       <strong class="text-sm font-bold">${esc(initialReport.periodLabel)}</strong>
                     </div>
                   </div>
+                  ` : ``}
 
-                  <h1 class="rp-title text-center text-lg font-bold underline mb-5 tracking-wide">
+                  <h1 class="rp-title text-center text-lg font-bold underline mb-5 tracking-wide" style="${!showHeader ? "margin-top: 0 !important; padding-top: 0 !important;" : ""}">
                     ${esc(initialReport.title)}
                   </h1>
 
@@ -480,35 +526,119 @@ type SavedPrintConfig = {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-2 sm:p-4 backdrop-blur-xs print:hidden">
       <div className="flex h-[95vh] w-full max-w-5xl flex-col rounded-2xl bg-card border border-border shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-        {/* Top App Bar */}
-        <div className="flex items-center justify-between border-b border-border px-3 py-2.5 bg-muted/40 sm:px-6 sm:py-3 shrink-0 gap-1.5 sm:gap-4 overflow-hidden">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            <div className="flex size-8 sm:size-9 shrink-0 items-center justify-center rounded-xl bg-indigo-600/10 text-indigo-600 dark:text-indigo-400">
-              <Printer className="size-4 sm:size-5" />
+        {/* Top App Bar - Fully Responsive on Mobile & Desktop */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-border px-3 py-2 bg-muted/40 sm:px-6 sm:py-3 shrink-0 gap-2 sm:gap-4">
+          <div className="flex items-center justify-between w-full sm:w-auto gap-2 min-w-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="flex size-7 sm:size-9 shrink-0 items-center justify-center rounded-xl bg-indigo-600/10 text-indigo-600 dark:text-indigo-400">
+                <Printer className="size-3.5 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-xs sm:text-base font-bold text-foreground flex items-center gap-1.5 truncate">
+                  <span className="truncate">
+                    <span className="sm:hidden">પ્રિન્ટ અને એડિટ</span>
+                    <span className="hidden sm:inline">પ્રિન્ટ રિવ્યુ અને એડિટ</span>
+                  </span>
+                  <span className="text-[10px] bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 px-1.5 py-0.5 rounded-full font-semibold shrink-0">
+                    {initialReport.periodLabel}
+                  </span>
+                  <span
+                    className="text-[10px] bg-muted text-muted-foreground border border-border px-1.5 py-0.5 rounded font-mono shrink-0 hidden md:inline"
+                    title="ડાઉનલોડ / સેવ કરવા માટેનું PDF નામ"
+                  >
+                    PDF: {pdfFileName}
+                  </span>
+                </h2>
+                <p className="text-[11px] text-muted-foreground hidden sm:block">
+                  પ્રિન્ટ કરતા પહેલા કોઈ પણ લખાણ, તારીખ, વાહન કે રીમાર્ક્સ સીધા એડિટ કરી શકો છો.
+                </p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <h2 className="text-xs sm:text-base font-bold text-foreground flex items-center gap-1.5 truncate">
-                <span className="truncate">
-                  <span className="sm:hidden">પ્રિન્ટ / એડિટ</span>
-                  <span className="hidden sm:inline">પ્રિન્ટ રિવ્યુ અને એડિટ</span>
-                </span>
-                <span className="text-[10px] bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 px-1.5 py-0.5 rounded-full font-semibold shrink-0">
-                  {initialReport.periodLabel}
-                </span>
-                <span
-                  className="text-[10px] bg-muted text-muted-foreground border border-border px-1.5 py-0.5 rounded font-mono shrink-0 hidden md:inline"
-                  title="ડાઉનલોડ / સેવ કરવા માટેનું PDF નામ"
-                >
-                  PDF: {pdfFileName}
-                </span>
-              </h2>
-              <p className="text-[11px] text-muted-foreground hidden sm:block">
-                પ્રિન્ટ કરતા પહેલા કોઈ પણ લખાણ, તારીખ, વાહન કે રીમાર્ક્સ સીધા એડિટ કરી શકો છો.
-              </p>
-            </div>
+            {/* Mobile close button on top right */}
+            <button
+              type="button"
+              onClick={onClose}
+              className="sm:hidden p-1 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer shrink-0"
+              title="બંધ કરો (Close)"
+            >
+              <X className="size-4" />
+            </button>
           </div>
 
-          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+          <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto no-scrollbar py-0.5 w-full sm:w-auto shrink-0">
+            {/* Police Logo Toggle */}
+            <button
+              type="button"
+              onClick={() => {
+                const nextVal = !showLogo;
+                setShowLogo(nextVal);
+                try {
+                  const saved = getSavedConfig();
+                  localStorage.setItem(
+                    "duty_print_config",
+                    JSON.stringify({ ...saved, showLogo: nextVal }),
+                  );
+                } catch {}
+              }}
+              className={`px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 select-none shadow-2xs ${
+                showLogo
+                  ? "bg-indigo-600 text-white border-indigo-600 shadow-indigo-600/25"
+                  : "bg-card text-muted-foreground border-border hover:bg-muted hover:text-foreground"
+              }`}
+              title="ગુજરાત પોલીસ લોગો ચાલુ / બંધ કરો (Toggle Police Logo)"
+            >
+              <Shield className="size-3.5 shrink-0" />
+              <span>લોગો</span>
+              <span
+                className={`text-[10px] font-bold px-1.5 py-0.2 rounded-md ${
+                  showLogo
+                    ? "bg-white/20 text-white"
+                    : "bg-muted text-muted-foreground"
+                }`}
+              >
+                {showLogo ? "ON" : "OFF"}
+              </span>
+            </button>
+
+            {/* Hide Header Toggle */}
+            <button
+              type="button"
+              onClick={() => {
+                const nextVal = !showHeader;
+                setShowHeader(nextVal);
+                try {
+                  const saved = getSavedConfig();
+                  localStorage.setItem(
+                    "duty_print_config",
+                    JSON.stringify({ ...saved, showHeader: nextVal }),
+                  );
+                } catch {}
+              }}
+              className={`px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 select-none shadow-2xs ${
+                !showHeader
+                  ? "bg-amber-600 text-white border-amber-600 shadow-amber-600/25"
+                  : "bg-card text-foreground border-border hover:bg-muted"
+              }`}
+              title="પહેલેથી છપાયેલ કાગળ માટે હેડર છુપાવો (Toggle Header for Pre-printed Stationery)"
+            >
+              {showHeader ? (
+                <Eye className="size-3.5 text-indigo-500 shrink-0" />
+              ) : (
+                <EyeOff className="size-3.5 shrink-0" />
+              )}
+              <span>હેડર</span>
+              <span
+                className={`text-[10px] font-bold px-1.5 py-0.2 rounded-md ${
+                  !showHeader
+                    ? "bg-white/20 text-white"
+                    : "bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400"
+                }`}
+              >
+                {!showHeader ? "છુપાવેલ" : "સામાન્ય"}
+              </span>
+            </button>
+
+            {/* Signature Toggle */}
             <button
               type="button"
               onClick={() => {
@@ -556,10 +686,11 @@ type SavedPrintConfig = {
               <span className="sm:hidden">પ્રિન્ટ</span>
               <span className="hidden sm:inline">પ્રિન્ટ કરો (Print)</span>
             </button>
+            {/* Desktop close button */}
             <button
               type="button"
               onClick={onClose}
-              className="p-1 sm:p-2 rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer shrink-0"
+              className="hidden sm:flex p-1 sm:p-2 rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer shrink-0"
               title="બંધ કરો (Close)"
             >
               <X className="size-4 sm:size-5" />
@@ -568,34 +699,107 @@ type SavedPrintConfig = {
         </div>
 
         {/* Scrollable Letterhead Canvas */}
-        <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-5 bg-background">
-          <div className="max-w-4xl mx-auto rounded-xl border border-border bg-card p-5 sm:p-8 shadow-sm space-y-5">
+        <div className="flex-1 overflow-y-auto overscroll-contain p-2 sm:p-6 space-y-4 sm:space-y-5 bg-background">
+          <div className="max-w-4xl mx-auto rounded-xl border border-border bg-card p-3 sm:p-8 shadow-sm space-y-4 sm:space-y-5">
             {/* Header Title Preview */}
-            <div className="text-center pb-4 border-b border-border/80 space-y-1">
-              <div className="flex items-center justify-center gap-3">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/Gujarat-police.png" alt="Gujarat Police" width={40} height={52} className="h-12 w-auto object-contain shrink-0" style={{ aspectRatio: "1542/2000" }} />
-                <div className="text-left flex-1 max-w-md">
+            {showHeader ? (
+              <div className="text-center pb-3 sm:pb-4 border-b border-border/80 space-y-2">
+                {/* Mobile View (<sm): Stacked so inputs have 100% full width and never get clipped */}
+                <div className="flex sm:hidden items-center justify-between gap-2 pb-1 border-b border-border/30">
+                  {showLogo ? (
+                    <div className="w-10 flex justify-start items-center shrink-0">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src="/Gujarat-police.png"
+                        alt="Gujarat Police"
+                        width={36}
+                        height={46}
+                        className="h-10 w-auto object-contain shrink-0"
+                        style={{ aspectRatio: "1542/2000" }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-10 shrink-0" />
+                  )}
+                  <div className="text-right">
+                    <span className="text-[10px] text-muted-foreground font-medium">રિપોર્ટ માસ: </span>
+                    <strong className="text-xs font-bold text-foreground bg-muted px-2 py-0.5 rounded-md border border-border">
+                      {initialReport.periodLabel}
+                    </strong>
+                  </div>
+                </div>
+
+                <div className="sm:hidden text-center space-y-1">
                   <input
                     type="text"
                     value={header1}
                     onChange={(e) => setHeader1(e.target.value)}
                     placeholder="ગુજરાત પોલીસ (GUJARAT POLICE)"
-                    className="w-full text-base sm:text-lg font-bold text-foreground bg-transparent border-b border-border/50 hover:border-indigo-500 focus:border-indigo-500 focus:outline-none"
+                    className="w-full text-center text-sm font-bold text-foreground bg-transparent border-b border-border/50 hover:border-indigo-500 focus:border-indigo-500 focus:outline-none py-0.5"
                   />
                   <input
                     type="text"
                     value={header2}
                     onChange={(e) => setHeader2(e.target.value)}
                     placeholder="QRT અરવલ્લી પોલીસ"
-                    className="w-full text-xs sm:text-sm font-semibold text-muted-foreground bg-transparent border-b border-border/30 hover:border-indigo-500 focus:border-indigo-500 focus:outline-none mt-1"
+                    className="w-full text-center text-xs font-semibold text-muted-foreground bg-transparent border-b border-border/30 hover:border-indigo-500 focus:border-indigo-500 focus:outline-none py-0.5"
                   />
                 </div>
+
+                {/* Tablet / Desktop View (>=sm): 3-column layout */}
+                <div className="hidden sm:flex items-center justify-between gap-3">
+                  {showLogo ? (
+                    <div className="w-12 flex justify-start items-center shrink-0">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src="/Gujarat-police.png"
+                        alt="Gujarat Police"
+                        width={40}
+                        height={52}
+                        className="h-12 w-auto object-contain shrink-0"
+                        style={{ aspectRatio: "1542/2000" }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-12 shrink-0" />
+                  )}
+                  <div className="text-center flex-1 max-w-md">
+                    <input
+                      type="text"
+                      value={header1}
+                      onChange={(e) => setHeader1(e.target.value)}
+                      placeholder="ગુજરાત પોલીસ (GUJARAT POLICE)"
+                      className="w-full text-center text-base sm:text-lg font-bold text-foreground bg-transparent border-b border-border/50 hover:border-indigo-500 focus:border-indigo-500 focus:outline-none"
+                    />
+                    <input
+                      type="text"
+                      value={header2}
+                      onChange={(e) => setHeader2(e.target.value)}
+                      placeholder="QRT અરવલ્લી પોલીસ"
+                      className="w-full text-center text-xs sm:text-sm font-semibold text-muted-foreground bg-transparent border-b border-border/30 hover:border-indigo-500 focus:border-indigo-500 focus:outline-none mt-1"
+                    />
+                  </div>
+                  <div className="w-auto min-w-[90px] shrink-0 text-right text-xs">
+                    <span className="block text-gray-500 text-[10px]">રિપોર્ટ માસ:</span>
+                    <strong className="text-xs font-bold whitespace-nowrap">{initialReport.periodLabel}</strong>
+                  </div>
+                </div>
+
+                <h4 className="text-xs sm:text-sm font-bold text-indigo-600 dark:text-indigo-400 underline pt-1 sm:pt-2">
+                  {initialReport.title}
+                </h4>
               </div>
-              <h4 className="text-sm font-bold text-indigo-600 dark:text-indigo-400 underline pt-2">
-                {initialReport.title}
-              </h4>
-            </div>
+            ) : (
+              <div className="space-y-2 pb-2 border-b border-border/80">
+                <div className="text-center py-2 bg-amber-500/10 border border-amber-500/30 rounded-lg text-xs text-amber-800 dark:text-amber-300 font-semibold print:hidden flex items-center justify-center gap-1.5 shadow-2xs">
+                  <EyeOff className="size-3.5 text-amber-600" />
+                  <span>લેટરહેડ હેડર છુપાવેલ છે (પહેલેથી છપાયેલ સરકારી કાગળ માટે)</span>
+                </div>
+                <h4 className="text-center text-xs sm:text-sm font-bold text-indigo-600 dark:text-indigo-400 underline pt-1">
+                  {initialReport.title}
+                </h4>
+              </div>
+            )}
 
             {/* Editable Addressee (પ્રતિ) & Subject */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
