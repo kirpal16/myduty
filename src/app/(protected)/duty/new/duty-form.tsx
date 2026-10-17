@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useActionState, startTransition } from "react";
+import { useState, useActionState, startTransition, useRef, useEffect } from "react";
 import { NavLink as Link } from "@/components/ui/nav-link";
 import { createDuty, updateDuty, type DutyFormState } from "@/actions/duty";
 import {
@@ -20,7 +20,9 @@ import {
   Moon,
   Trash2,
   AlertTriangle,
+  AlertCircle,
   Check,
+  X,
 } from "lucide-react";
 import { FormFileInput } from "@/components/ui/form-file-input";
 import { FormSelect } from "@/components/ui/form-select";
@@ -41,6 +43,7 @@ import {
   toGujaratiNumerals,
 } from "@/lib/reports/gujaratiReportUtils";
 import { splitIntoDailyDuties } from "@/lib/duty/splitDuty";
+import { translateErrorMessage } from "@/lib/i18n/validation-messages";
 import { useLinkedEndDate, deriveDutyEnd } from "@/lib/hooks/useLinkedEndDate";
 import { DutyDayRows } from "./duty-day-rows";
 import { useLanguage } from "@/lib/i18n/language-context";
@@ -80,17 +83,6 @@ export type AdditionalShiftItem = {
 };
 
 /**
- * Checks whether endIso represents a date after startIso (i.e. overnight into next day).
- */
-function checkIsNextDay(startIso?: string | null, endIso?: string | null): boolean {
-  if (!startIso || !endIso) return false;
-  const startDate = startIso.split("T")[0];
-  const endDate = endIso.split("T")[0];
-  if (!startDate || !endDate) return false;
-  return endDate > startDate;
-}
-
-/**
  * Adds or subtracts days to a YYYY-MM-DD date string without UTC timezone drift.
  */
 function addDaysToDateString(dateStr: string, days: number): string {
@@ -101,6 +93,22 @@ function addDaysToDateString(dateStr: string, days: number): string {
   const nextM = String(dt.getMonth() + 1).padStart(2, "0");
   const nextD = String(dt.getDate()).padStart(2, "0");
   return `${nextY}-${nextM}-${nextD}`;
+}
+
+/**
+ * Checks whether endIso represents a true single overnight shift into the immediate next morning.
+ * Specifically: endDate is strictly startDate + 1 day, and shift end time <= shift start time.
+ * (Multi-day date spans are NOT single overnight shifts; they are multi-day duties).
+ */
+function checkIsNextDay(startIso?: string | null, endIso?: string | null): boolean {
+  if (!startIso || !endIso) return false;
+  const startDate = startIso.split("T")[0];
+  const endDate = endIso.split("T")[0];
+  if (!startDate || !endDate) return false;
+  if (endDate !== addDaysToDateString(startDate, 1)) return false;
+  const startTime = startIso.split("T")[1] || "";
+  const endTime = endIso.split("T")[1] || "";
+  return endTime <= startTime;
 }
 
 /**
@@ -246,6 +254,24 @@ export function DutyForm({
     action,
     undefined
   );
+  const [submitCount, setSubmitCount] = useState(0);
+  const [visibleError, setVisibleError] = useState<string | null>(null);
+  const errorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (state?.message && !pending) {
+      setVisibleError(state.message);
+      errorRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      const timer = setTimeout(() => {
+        setVisibleError(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [state, pending, submitCount]);
+
+  const formattedErrorMessage = isGujarati
+    ? translateErrorMessage(visibleError ?? "", "gu")
+    : visibleError;
 
   const { formRef: dirtyRef, dirty } = useFormDirty();
 
@@ -265,7 +291,7 @@ export function DutyForm({
     : { isHoliday: false, qualifiesForHolidayAllowance: false };
 
   const slots =
-    !dutyId && !isNextDay && startsAtVal && endsAtVal && new Date(endsAtVal) > new Date(startsAtVal)
+    !dutyId && startsAtVal && endsAtVal && new Date(endsAtVal) > new Date(startsAtVal)
       ? splitIntoDailyDuties(new Date(startsAtVal), new Date(endsAtVal))
       : [];
   const isMultiDay = slots.length > 1 && additionalShifts.length === 0;
@@ -300,8 +326,46 @@ export function DutyForm({
     }
   };
 
-  const primaryDuration = calculateShiftDuration(startsAtVal, endsAtVal);
-  const primaryDurationLabel = formatDuration(primaryDuration, isGujarati);
+  const singleShiftDuration =
+    isMultiDay && slots[0]
+      ? calculateShiftDuration(
+          slots[0].startsAt.toISOString(),
+          slots[0].endsAt.toISOString()
+        )
+      : calculateShiftDuration(startsAtVal, endsAtVal);
+
+  const totalMinutes =
+    isMultiDay && singleShiftDuration
+      ? (singleShiftDuration.hours * 60 + singleShiftDuration.minutes) * slots.length
+      : singleShiftDuration
+        ? singleShiftDuration.hours * 60 + singleShiftDuration.minutes
+        : 0;
+
+  const totalDuration =
+    totalMinutes > 0
+      ? { hours: Math.floor(totalMinutes / 60), minutes: totalMinutes % 60 }
+      : null;
+
+  const primaryDurationLabel =
+    isMultiDay && singleShiftDuration && totalDuration
+      ? t.duty.multiDayShiftDuration
+          .replace(
+            "{shiftDuration}",
+            formatDuration(singleShiftDuration, isGujarati) || ""
+          )
+          .replace(
+            "{hours}",
+            isGujarati
+              ? toGujaratiNumerals(totalDuration.hours)
+              : String(totalDuration.hours)
+          )
+          .replace(
+            "{days}",
+            isGujarati
+              ? toGujaratiNumerals(slots.length)
+              : String(slots.length)
+          )
+      : formatDuration(singleShiftDuration, isGujarati);
 
   const handleAddShift = () => {
     const baseDate = startsAtVal ? startsAtVal.split("T")[0] : new Date().toISOString().split("T")[0];
@@ -383,37 +447,40 @@ export function DutyForm({
       onSubmit={(e) => {
         e.preventDefault();
         if (hasShiftConflict) return;
+        setSubmitCount((c) => c + 1);
         const data = new FormData(e.currentTarget);
         startTransition(() => formAction(data));
       }}
       noValidate
       className="flex flex-col gap-3.5 sm:gap-4"
     >
-      {state?.message && (
+      {visibleError && (
         <AutoDismissBanner
-          message={state.message}
+          key={`top-${visibleError}-${submitCount}`}
+          message={formattedErrorMessage}
           tone="error"
-          autoHideMs={4000}
+          autoHideMs={3000}
+          onDismiss={() => setVisibleError(null)}
         />
       )}
 
       {/* Hidden input to signal explicit overnight to server action */}
-      <input type="hidden" name="isNextDay" value={isNextDay ? "true" : "false"} />
+      <input type="hidden" name="isNextDay" value={!isMultiDay && isNextDay ? "true" : "false"} />
 
       {/* Primary Shift Container */}
       <div className="rounded-xl border border-border/70 bg-card/70 p-3 sm:p-4 space-y-3 shadow-2xs">
         {/* Compact Header */}
-        <div className="flex items-center justify-between border-b border-border/50 pb-2">
-          <div className="flex items-center gap-2">
-            <Clock className="size-3.5 text-indigo-500" />
+        <div className="flex flex-wrap items-center justify-between gap-1.5 sm:gap-2 border-b border-border/50 pb-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <Clock className="size-3.5 text-indigo-500 shrink-0" />
             <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
               {enableMultiDuty && additionalShifts.length > 0 ? t.duty.shift1Title : t.duty.shiftDetailsTitle}
             </h3>
           </div>
 
           {primaryDurationLabel && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-muted/80 text-foreground border border-border/60">
-              <Clock className="size-2.5 text-slate-400" />
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-muted/80 text-foreground border border-border/60 whitespace-nowrap shrink-0">
+              <Clock className="size-2.5 text-slate-400 shrink-0" />
               <span>{primaryDurationLabel}</span>
             </span>
           )}
@@ -486,21 +553,23 @@ export function DutyForm({
                 <span className="text-rose-500">*</span>
               </label>
 
-              {/* Compact Inline Next Day Button */}
-              <button
-                type="button"
-                onClick={handleTogglePrimaryNextDay}
-                aria-pressed={isNextDay}
-                title={t.duty.overnightDutyHint}
-                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold transition-all cursor-pointer select-none active:scale-95 shrink-0 ${
-                  isNextDay
-                    ? "bg-indigo-600 text-white shadow-xs"
-                    : "bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground border border-border/70"
-                }`}
-              >
-                <Moon className={`size-3 ${isNextDay ? "fill-white text-white" : "text-muted-foreground"}`} />
-                <span>{isNextDay ? t.duty.endsNextDayBadge : t.duty.tillNextDay}</span>
-              </button>
+              {/* Compact Inline Next Day Button - Only when not multi-day */}
+              {!isMultiDay && (
+                <button
+                  type="button"
+                  onClick={handleTogglePrimaryNextDay}
+                  aria-pressed={isNextDay}
+                  title={t.duty.overnightDutyHint}
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold transition-all cursor-pointer select-none active:scale-95 shrink-0 ${
+                    isNextDay
+                      ? "bg-indigo-600 text-white shadow-xs"
+                      : "bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground border border-border/70"
+                  }`}
+                >
+                  <Moon className={`size-3 ${isNextDay ? "fill-white text-white" : "text-muted-foreground"}`} />
+                  <span>{isNextDay ? t.duty.endsNextDayBadge : t.duty.tillNextDay}</span>
+                </button>
+              )}
             </div>
 
             <input
@@ -530,7 +599,7 @@ export function DutyForm({
               <MapPin className="size-3 text-slate-400" />
               <span>{t.duty.stationLocationLabel}</span>
               <span className="text-muted-foreground text-[10px]">
-                ({t.settings.optionalLabel})
+                {t.settings.optionalLabel}
               </span>
             </label>
             <input
@@ -551,7 +620,7 @@ export function DutyForm({
               <FileText className="size-3 text-slate-400" />
               <span>{t.duty.operationalNotesLabel}</span>
               <span className="text-muted-foreground text-[10px]">
-                ({t.settings.optionalLabel})
+                {t.settings.optionalLabel}
               </span>
             </label>
             <input
@@ -569,14 +638,18 @@ export function DutyForm({
         {isMultiDay ? (
           <DutyDayRows
             slots={slots}
+            dutyTypes={dutyTypes}
             holidays={holidays}
             holidayDayRate={holidayDayRate}
+            primaryDutyTypeId={dutyTypeIdVal}
+            primaryLocation={locationVal}
+            primaryNotes={notesVal}
             shared={{
-              taFromPlace: defaults?.taFromPlace ?? undefined,
-              taToPlace: defaults?.taToPlace ?? undefined,
+              taFromPlace: taFromPlaceVal || defaults?.taFromPlace || undefined,
+              taToPlace: taToPlaceVal || defaults?.taToPlace || undefined,
               taVehicleType: vehicleType,
-              taDistanceKm: defaults?.taDistanceKm?.toString(),
-              taAmount: defaults?.taAmount?.toString(),
+              taDistanceKm: taKmVal || defaults?.taDistanceKm?.toString(),
+              taAmount: taAmountVal || defaults?.taAmount?.toString(),
             }}
           />
         ) : holidayInfo.kind === "optional_holiday" ? (
@@ -597,7 +670,13 @@ export function DutyForm({
               onToggle={() => setHolidayPayOpen((o) => !o)}
               summary={
                 <span className="flex items-center gap-1.5">
-                  {holidayPayVal ? <strong className="text-foreground">₹{holidayPayVal}</strong> : t.duty.notClaimed}
+                  {holidayPayVal ? (
+                    <strong className="text-foreground">
+                      ₹{isGujarati ? toGujaratiNumerals(holidayPayVal) : holidayPayVal}
+                    </strong>
+                  ) : (
+                    t.duty.notClaimed
+                  )}
                   <span className="hidden sm:inline">· {holidayInfo.name || holidayKindLabel(holidayInfo.kind)}</span>
                 </span>
               }
@@ -648,7 +727,7 @@ export function DutyForm({
               <div className="flex shrink-0 items-center gap-1.5">
                 {manualClaim && holidayPayVal ? (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/20">
-                    <span>₹{holidayPayVal}</span>
+                    <span>₹{isGujarati ? toGujaratiNumerals(holidayPayVal) : holidayPayVal}</span>
                   </span>
                 ) : (
                   <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10">
@@ -745,8 +824,12 @@ export function DutyForm({
               <div className="flex shrink-0 items-center gap-1.5">
                 {taAmountVal || taKmVal ? (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/20">
-                    <span>₹{taAmountVal || "0"}</span>
-                    {taKmVal && <span>· {taKmVal} km</span>}
+                    <span>₹{isGujarati ? toGujaratiNumerals(taAmountVal || "0") : (taAmountVal || "0")}</span>
+                    {taKmVal && (
+                      <span>
+                        · {isGujarati ? toGujaratiNumerals(taKmVal) : taKmVal} {isGujarati ? "કિ.મી." : "km"}
+                      </span>
+                    )}
                   </span>
                 ) : (
                   <span className="text-[10px] font-medium text-muted-foreground">
@@ -911,8 +994,8 @@ export function DutyForm({
           />
         ))}
 
-      {/* Compact "+ Add Another Shift (Same Day)" Button - Only when enableMultiDuty is active */}
-      {enableMultiDuty && (
+      {/* Compact "+ Add Another Shift (Same Day)" Button - Only when enableMultiDuty is active and not multi-day */}
+      {enableMultiDuty && !isMultiDay && (
         <div>
           <button
             type="button"
@@ -943,6 +1026,30 @@ export function DutyForm({
         <div className="rounded-lg border border-rose-500/40 bg-rose-500/10 p-2.5 text-xs font-semibold text-rose-700 dark:text-rose-300 flex items-center gap-2 animate-in fade-in">
           <AlertTriangle className="size-3.5 shrink-0 text-rose-600" />
           <span>{t.duty.shiftTimeOverlapError}</span>
+        </div>
+      )}
+
+      {/* Server Error Banner (Overlaps, DB errors, holiday clashes) right above the Submit button */}
+      {visibleError && (
+        <div
+          ref={errorRef}
+          key={`bottom-${visibleError}-${submitCount}`}
+          className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-3 text-xs font-semibold text-rose-700 dark:text-rose-300 flex items-start gap-2.5 animate-in fade-in duration-150"
+        >
+          <AlertCircle className="size-4 shrink-0 text-rose-600 mt-0.5" />
+          <div className="flex-1">
+            <p className="font-bold">{t.duty.dutySaveFailed}</p>
+            <p className="text-[11px] font-normal mt-0.5 text-rose-600 dark:text-rose-300">
+              {formattedErrorMessage}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setVisibleError(null)}
+            className="text-rose-600 hover:text-rose-700 p-0.5 rounded cursor-pointer"
+          >
+            <X className="size-3.5" />
+          </button>
         </div>
       )}
 
@@ -1212,8 +1319,12 @@ function AdditionalShiftCard({
           <div className="flex shrink-0 items-center gap-1.5">
             {shift.taAmount || shift.taDistanceKm ? (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/20">
-                <span>₹{shift.taAmount || "0"}</span>
-                {shift.taDistanceKm && <span>· {shift.taDistanceKm} km</span>}
+                <span>₹{isGujarati ? toGujaratiNumerals(shift.taAmount || "0") : (shift.taAmount || "0")}</span>
+                {shift.taDistanceKm && (
+                  <span>
+                    · {isGujarati ? toGujaratiNumerals(shift.taDistanceKm) : shift.taDistanceKm} {isGujarati ? "કિ.મી." : "km"}
+                  </span>
+                )}
               </span>
             ) : (
               <span className="text-[10px] font-medium text-muted-foreground">

@@ -281,6 +281,10 @@ export const gu: Translations = {
     multiDayNotice: "આનાથી {count} અલગ ડ્યુટી લોગ બનશે — દિવસ દીઠ એક.",
     multiDayNoticeSub: "દરેક દિવસ સમાન શિફ્ટ સમય જાળવી રાખે છે અને પોતાનો પ્રવાસ રૂટ અને રકમ ધરાવી શકે છે.",
     copyFirstDayTravel: "પ્રથમ દિવસની મુસાફરી વિગતો બધા દિવસોમાં કૉપિ કરો",
+    copyFirstDayDetails: "પ્રથમ દિવસની તમામ વિગતો બધા દિવસોમાં કૉપિ કરો",
+    multiDayShiftDuration: "{shiftDuration}/દિવસ · કુલ {hours} કલાક ({days} દિવસ)",
+    customizeDailyShifts: "દરેક દિવસની શિફ્ટ કસ્ટમાઇઝ કરો",
+    customizingDailyShifts: "શિફ્ટ કસ્ટમાઇઝેશન ચાલુ",
 
     // Duty Details & Edit Pages
     backToDutyLog: "ડ્યુટી યાદી પર પાછા",
@@ -338,6 +342,8 @@ export const gu: Translations = {
     deleteDutyConfirmGroup: "ગ્રુપની તમામ શિફ્ટ કાઢી નાખો",
     singleDutyModeActiveHint: "સિંગલ ડ્યુટી મોડ ચાલુ છે. એક દિવસમાં એકથી વધુ ફરજ ઉમેરવા સેટિંગ્સમાં મલ્ટિ-ડ્યુટી ચાલુ કરો.",
     multiDutyModeActiveHint: "મલ્ટિ-ડ્યુટી મોડ ચાલુ છે. તમે એક જ તારીખમાં એકથી વધુ શિફ્ટ ઉમેરી શકો છો.",
+    dutySaveFailed: "ડ્યુટી સાચવી શકાઈ નથી",
+    dutyOverlapError: "આ સમયગાળામાં તમે પહેલેથી જ ડ્યુટી નોંધેલી છે (સમય ઓવરલેપ થાય છે).",
   },
   leave: {
     pageTitle: "રજા લોગબુક અને બેલેન્સ",

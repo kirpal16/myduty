@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CheckCircle2, AlertCircle, Info, X } from "lucide-react";
+import { useLanguage } from "@/lib/i18n/language-context";
+import { translateErrorMessage } from "@/lib/i18n/validation-messages";
 
 /**
  * A short-lived status message that clears itself.
@@ -45,6 +47,7 @@ export function AutoDismissBanner({
   autoHideMs?: number;
   onDismiss?: () => void;
 }) {
+  const { language } = useLanguage();
   // Which message was dismissed, rather than a boolean reset by an effect —
   // a new message is automatically visible again because it is a different
   // string, so there is nothing to synchronise.
@@ -74,6 +77,7 @@ export function AutoDismissBanner({
   if (!visible || !message) return null;
 
   const { wrap, icon: Icon } = TONES[tone];
+  const displayMessage = translateErrorMessage(message, language);
 
   return (
     <div
@@ -84,7 +88,7 @@ export function AutoDismissBanner({
       className={`flex items-start gap-2.5 rounded-2xl border p-3.5 text-xs duration-200 animate-in fade-in-0 ${wrap}`}
     >
       <Icon className="mt-0.5 size-4 shrink-0" />
-      <span className="flex-1">{message}</span>
+      <span className="flex-1">{displayMessage}</span>
       <button
         type="button"
         onClick={() => hide(message)}

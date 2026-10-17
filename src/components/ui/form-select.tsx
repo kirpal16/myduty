@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useId } from "react";
 import { ModalPortal } from "@/components/ui/modal-portal";
 import { ColorDot } from "@/components/ui/color-dot";
+import { useLanguage } from "@/lib/i18n/language-context";
 import {
   ChevronDown,
   Check,
@@ -86,10 +87,15 @@ export function FormSelect({
   "aria-invalid"?: boolean;
   "aria-describedby"?: string;
 }) {
+  const { isGujarati } = useLanguage();
   const Icon = IconProp || (iconName ? FORM_ICONS[iconName] : undefined);
   const [internalValue, setInternalValue] = useState(value ?? defaultValue ?? "");
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const displayPlaceholder =
+    placeholder === "Select an option" && isGujarati
+      ? "વિકલ્પ પસંદ કરો"
+      : placeholder;
   /**
    * Where the panel sits on screen, in viewport coordinates.
    *
@@ -319,7 +325,7 @@ export function FormSelect({
             <ColorDot color={selectedOption.color} label={selectedOption.label} />
           )}
           <span className={`truncate ${currentValue ? "font-medium text-foreground" : "text-muted-foreground"}`}>
-            {selectedOption ? selectedOption.label : placeholder}
+            {selectedOption ? selectedOption.label : displayPlaceholder}
           </span>
         </div>
 
@@ -353,7 +359,7 @@ export function FormSelect({
               <input
                 type="text"
                 autoFocus
-                placeholder="Search..."
+                placeholder={isGujarati ? "શોધો..." : "Search..."}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full rounded-xl border border-border/70 bg-muted/40 py-1.5 pl-8 pr-3 text-xs placeholder:text-muted-foreground focus:border-indigo-500 focus:outline-hidden focus:bg-card"
@@ -393,7 +399,7 @@ export function FormSelect({
 
             {filteredOptions.length === 0 && (
               <div className="py-4 text-center text-xs text-muted-foreground">
-                No matching options found.
+                {isGujarati ? "કોઈ મેળ ખાતા વિકલ્પો મળ્યા નથી." : "No matching options found."}
               </div>
             )}
           </div>

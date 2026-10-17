@@ -279,6 +279,10 @@ export interface Translations {
     multiDayNotice: string;
     multiDayNoticeSub: string;
     copyFirstDayTravel: string;
+    copyFirstDayDetails: string;
+    multiDayShiftDuration: string;
+    customizeDailyShifts: string;
+    customizingDailyShifts: string;
 
     // Duty Details & Edit Pages
     backToDutyLog: string;
@@ -336,6 +340,8 @@ export interface Translations {
     deleteDutyConfirmGroup: string;
     singleDutyModeActiveHint: string;
     multiDutyModeActiveHint: string;
+    dutySaveFailed: string;
+    dutyOverlapError: string;
   };
   leave: {
     pageTitle: string;

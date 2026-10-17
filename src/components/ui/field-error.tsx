@@ -1,4 +1,6 @@
 import { AlertCircle } from "lucide-react";
+import { useLanguage } from "@/lib/i18n/language-context";
+import { translateErrorMessage } from "@/lib/i18n/validation-messages";
 
 /**
  * The validation message under an input.
@@ -24,9 +26,13 @@ export function FieldError({
   message?: string | null;
   className?: string;
 }) {
+  const { language } = useLanguage();
+
   // Renders nothing rather than an empty element, so the space below an input
   // does not shift as messages come and go.
   if (!message) return null;
+
+  const displayMessage = translateErrorMessage(message, language);
 
   return (
     <p
@@ -35,7 +41,7 @@ export function FieldError({
       className={`flex items-start gap-1 text-xs text-rose-500 ${className}`}
     >
       <AlertCircle aria-hidden className="mt-px size-3.5 shrink-0" />
-      <span>{message}</span>
+      <span>{displayMessage}</span>
     </p>
   );
 }

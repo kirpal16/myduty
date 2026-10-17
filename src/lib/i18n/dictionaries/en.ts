@@ -281,6 +281,10 @@ export const en: Translations = {
     multiDayNotice: "This will create {count} separate duty logs — one per day.",
     multiDayNoticeSub: "Each day keeps the same shift window and can carry its own travel route and amount. Edit or delete any day on its own afterwards.",
     copyFirstDayTravel: "Copy first day's travel to all days",
+    copyFirstDayDetails: "Copy first day's details to all days",
+    multiDayShiftDuration: "{shiftDuration}/day · Total {hours}h ({days} days)",
+    customizeDailyShifts: "Customize Daily Shifts",
+    customizingDailyShifts: "Customizing Daily Shifts",
 
     // Duty Details & Edit Pages
     backToDutyLog: "Back to Duty Log",
@@ -338,6 +342,8 @@ export const en: Translations = {
     deleteDutyConfirmGroup: "Delete All Shifts in Group",
     singleDutyModeActiveHint: "Single Duty Mode is active. Turn on Multi-Duty in Settings to log multiple shifts per day.",
     multiDutyModeActiveHint: "Multi-Duty Mode is active. You can add split shifts or multiple duties on the same date.",
+    dutySaveFailed: "Duty could not be saved",
+    dutyOverlapError: "This overlaps a duty you've already logged for that time.",
   },
   leave: {
     pageTitle: "Leave Log & Balances",

@@ -1035,6 +1035,7 @@ function EditForm({
   pending: boolean;
   onClose: () => void;
 }) {
+  const { isGujarati } = useLanguage();
   const isApproved = editTarget.status === "APPROVED";
   // Reclassifying is only offered while nothing has been logged -- the server
   // refuses it afterwards, and an option that always fails is worse than none.
@@ -1155,14 +1156,14 @@ function EditForm({
       {canChangeType ? (
         <div className="space-y-1.5">
           <label htmlFor="editLeaveTypeId" className="text-xs font-semibold text-foreground">
-            Leave Classification
+            {isGujarati ? "રજા વર્ગીકરણ" : "Leave Classification"}
           </label>
           <FormSelect
             id="editLeaveTypeId"
             name="leaveTypeId"
             value={leaveTypeId}
             onChange={setLeaveTypeId}
-            placeholder="Select leave classification"
+            placeholder={isGujarati ? "રજા વર્ગીકરણ પસંદ કરો" : "Select leave classification"}
             options={approvalLeaveTypes.map((t) => ({
               value: t.id,
               label: t.name,
@@ -1177,7 +1178,7 @@ function EditForm({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <label htmlFor="editAppliedDate" className="text-xs font-semibold text-foreground">
-            Application Date
+            {isGujarati ? "અરજી તારીખ" : "Application Date"}
           </label>
           <input
             id="editAppliedDate"
@@ -1191,7 +1192,7 @@ function EditForm({
         </div>
         <div className="space-y-1.5">
           <label htmlFor="editAppliedDays" className="text-xs font-semibold text-foreground">
-            Days Applied
+            {isGujarati ? "અરજી કરેલ દિવસો" : "Days Applied"}
           </label>
           <input
             id="editAppliedDays"
@@ -1213,15 +1214,15 @@ function EditForm({
 
       <div className="space-y-1.5">
         <label className="text-xs font-semibold text-foreground flex items-center justify-between">
-          <span>Sanction Date Range (Optional)</span>
+          <span>{isGujarati ? "મંજૂરી તારીખ ગાળો (વૈકલ્પિક)" : "Sanction Date Range (Optional)"}</span>
           <span className="text-[10px] text-muted-foreground font-normal">
-            If fixed by sanction order
+            {isGujarati ? "ઓર્ડર મુજબ નિર્ધારિત તારીખો" : "If fixed by sanction order"}
           </span>
         </label>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <div>
             <label htmlFor="editValidFrom" className="text-[10px] text-muted-foreground">
-              Valid From
+              {isGujarati ? "માન્ય શરૂઆત તારીખ" : "Valid From"}
             </label>
             <input
               id="editValidFrom"
@@ -1234,7 +1235,7 @@ function EditForm({
           </div>
           <div>
             <label htmlFor="editValidTo" className="text-[10px] text-muted-foreground">
-              Valid To
+              {isGujarati ? "માન્ય અંત તારીખ" : "Valid To"}
             </label>
             <input
               id="editValidTo"
@@ -1252,7 +1253,7 @@ function EditForm({
 
       <div className="space-y-1.5">
         <label htmlFor="editReason" className="text-xs font-semibold text-foreground">
-          Reason (Optional)
+          {isGujarati ? "કારણ (વૈકલ્પિક)" : "Reason (Optional)"}
         </label>
         <textarea
           id="editReason"
@@ -1266,7 +1267,7 @@ function EditForm({
 
       <div className="space-y-1.5">
         <label htmlFor="editOrderNo" className="text-xs font-semibold text-foreground">
-          Sanction Order No. (Optional)
+          {isGujarati ? "મંજૂરી ઓર્ડર નં. (વૈકલ્પિક)" : "Sanction Order No. (Optional)"}
         </label>
         <input
           id="editOrderNo"
@@ -1394,6 +1395,7 @@ function ApproveForm({
   pending: boolean;
   onClose: () => void;
 }) {
+  const { isGujarati } = useLanguage();
   const [approvedDate, setApprovedDate] = useState(
     new Date().toISOString().split("T")[0],
   );
@@ -1540,12 +1542,16 @@ function ApproveForm({
       {/* Optional Date Range */}
       <div className="space-y-1.5">
         <label className="text-xs font-semibold text-foreground flex items-center justify-between">
-          <span>Sanction Date Range (Optional)</span>
-          <span className="text-[10px] text-muted-foreground font-normal">If fixed by sanction order</span>
+          <span>{isGujarati ? "મંજૂરી તારીખ ગાળો (વૈકલ્પિક)" : "Sanction Date Range (Optional)"}</span>
+          <span className="text-[10px] text-muted-foreground font-normal">
+            {isGujarati ? "ઓર્ડર મુજબ નિર્ધારિત તારીખો" : "If fixed by sanction order"}
+          </span>
         </label>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <div>
-            <label htmlFor="validFrom" className="text-[10px] text-muted-foreground">Valid From</label>
+            <label htmlFor="validFrom" className="text-[10px] text-muted-foreground">
+              {isGujarati ? "માન્ય શરૂઆત તારીખ" : "Valid From"}
+            </label>
             <input
               id="validFrom"
               name="validFrom"
@@ -1556,7 +1562,9 @@ function ApproveForm({
             />
           </div>
           <div>
-            <label htmlFor="validTo" className="text-[10px] text-muted-foreground">Valid To</label>
+            <label htmlFor="validTo" className="text-[10px] text-muted-foreground">
+              {isGujarati ? "માન્ય અંત તારીખ" : "Valid To"}
+            </label>
             <input
               id="validTo"
               name="validTo"
@@ -1576,10 +1584,12 @@ function ApproveForm({
         <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-700 dark:text-amber-300 space-y-1">
           <div className="flex items-center gap-1.5 font-semibold">
             <Clock className="size-3.5 text-amber-500 shrink-0" />
-            <span>6-Month Validity Rule</span>
+            <span>{isGujarati ? "૬-મહિનાની માન્યતા નિયમ" : "6-Month Validity Rule"}</span>
           </div>
           <p className="text-[11px] text-amber-600/90 dark:text-amber-400/90">
-            This sanction automatically expires on <strong>{expiryPreview}</strong> (6 months from approval date). Any unlogged days after this date will lapse.
+            {isGujarati
+              ? `આ મંજૂરી આપમેળે ${expiryPreview} (મંજૂરી તારીખથી ૬ મહિના) ના રોજ સમાપ્ત થાય છે. આ તારીખ પછી બાકી રહેલા કોઈપણ દિવસો રદ થશે.`
+              : `This sanction automatically expires on ${expiryPreview} (6 months from approval date). Any unlogged days after this date will lapse.`}
           </p>
         </div>
       )}
@@ -1587,7 +1597,7 @@ function ApproveForm({
       {/* Order / Dispatch Number */}
       <div className="space-y-1.5">
         <label htmlFor="orderNo" className="text-xs font-semibold text-foreground">
-          Sanction Order No. (Optional)
+          {isGujarati ? "મંજૂરી ઓર્ડર નં. (વૈકલ્પિક)" : "Sanction Order No. (Optional)"}
         </label>
         <input
           id="orderNo"
@@ -1607,7 +1617,7 @@ function ApproveForm({
           onClick={onClose}
           className="rounded-xl border border-border px-4 py-2 text-xs font-medium hover:bg-muted cursor-pointer"
         >
-          Cancel
+          {isGujarati ? "રદ કરો" : "Cancel"}
         </button>
         <button
           type="submit"
@@ -1617,7 +1627,7 @@ function ApproveForm({
           className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-all"
         >
           {pending && <Loader2 className="size-3.5 animate-spin" />}
-          <span>Confirm Approval</span>
+          <span>{isGujarati ? "મંજૂરી કન્ફર્મ કરો" : "Confirm Approval"}</span>
         </button>
       </div>
     </form>

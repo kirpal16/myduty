@@ -7,6 +7,7 @@ import { FieldError } from "./field-error";
 import { FormSelect } from "./form-select";
 import { FormToggle } from "./form-toggle";
 import { useToast } from "./toast";
+import { useLanguage } from "@/lib/i18n/language-context";
 import { useFormFeedback } from "@/lib/hooks/useFormFeedback";
 import { useFormDirty } from "@/lib/hooks/useFormDirty";
 import type { FormState } from "@/lib/forms/formState";
@@ -70,6 +71,7 @@ export function ActionForm({
   /** Clear the fields after a successful save. Off for edit forms. */
   resetOnSuccess?: boolean;
 }) {
+  const { isGujarati } = useLanguage();
   const [state, formAction] = useActionState<FormState, FormData>(action, undefined);
   const { formRef, fieldProps, errorProps } = useFormFeedback({ state });
   const { formRef: dirtyRef, dirty, markClean } = useFormDirty();
@@ -122,7 +124,9 @@ export function ActionForm({
                 {field.required ? (
                   <span className="text-rose-500">*</span>
                 ) : (
-                  <span className="text-[10px] text-muted-foreground">(Optional)</span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {isGujarati ? "(વૈકલ્પિક)" : "(Optional)"}
+                  </span>
                 )}
               </label>
             )}
@@ -132,7 +136,12 @@ export function ActionForm({
                 id={field.name}
                 {...props}
                 required={field.required}
-                placeholder={field.placeholder ?? `Select ${field.label.toLowerCase()}`}
+                placeholder={
+                  field.placeholder ??
+                  (isGujarati
+                    ? `${field.label} પસંદ કરો`
+                    : `Select ${field.label.toLowerCase()}`)
+                }
                 defaultValue={String(field.defaultValue ?? "")}
                 options={field.options ?? []}
                 error={Boolean(error.message)}

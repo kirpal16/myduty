@@ -517,7 +517,7 @@ export function LeaveForm({
             className="text-xs font-semibold text-foreground flex items-center gap-1"
           >
             <Calendar className="size-3 text-purple-500" />
-            <span>Declared Optional Holiday Date</span>
+            <span>{isGujarati ? "જાહેર મરજિયાત રજા તારીખ" : "Declared Optional Holiday Date"}</span>
             <span className="text-rose-500">*</span>
           </label>
 
@@ -526,7 +526,7 @@ export function LeaveForm({
               id="startDate"
               {...fieldProps("startDate")}
               required
-              placeholder="Select an Optional Holiday from the declared list…"
+              placeholder={isGujarati ? "જાહેર યાદીમાંથી મરજિયાત રજા પસંદ કરો…" : "Select an Optional Holiday from the declared list…"}
               value={startDateVal}
               onChange={(val) => {
                 setStartDateVal(val);
@@ -847,7 +847,7 @@ export function LeaveForm({
               required
               value={selectedSanctionId}
               onChange={(val) => setSelectedSanctionId(val)}
-              placeholder="Select an approved sanction…"
+              placeholder={isGujarati ? "મંજૂર થયેલ મંજૂરી પસંદ કરો…" : "Select an approved sanction…"}
               // Short on purpose: the trigger truncates on a phone, and the
               // approved total, order no., expiry and date range are all
               // spelled out in the details panel below.
@@ -1289,7 +1289,7 @@ export function LeaveForm({
               {/* Step 2: Select Paired Leave Classification */}
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-foreground flex items-center justify-between">
-                  <span>Accompanying Leave Classification (CL, HL, PL, etc.)</span>
+                  <span>{isGujarati ? "સાથે જોડાયેલ રજા વર્ગીકરણ (CL, HL, PL, વગેરે)" : "Accompanying Leave Classification (CL, HL, PL, etc.)"}</span>
                   <span className="text-rose-500">*</span>
                 </label>
                 <FormSelect
@@ -1297,7 +1297,7 @@ export function LeaveForm({
                   value={pairedLeaveTypeId}
                   onChange={(val) => setPairedLeaveTypeId(val)}
                   icon={CalendarOff}
-                  placeholder="Select accompanying leave classification"
+                  placeholder={isGujarati ? "સાથે જોડાયેલ રજા વર્ગીકરણ પસંદ કરો" : "Select accompanying leave classification"}
                   options={otherLeaveTypes.map((t) => {
                     const b = balances?.find((x) => x.leaveTypeId === t.id);
                     const balText = b ? ` (${b.remaining} remaining)` : "";

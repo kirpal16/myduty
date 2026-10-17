@@ -12,6 +12,8 @@ import {
 import { CheckCircle2, AlertCircle, Info, X } from "lucide-react";
 import { ModalPortal } from "./modal-portal";
 import type { BannerTone } from "./auto-dismiss-banner";
+import { useLanguage } from "@/lib/i18n/language-context";
+import { translateErrorMessage } from "@/lib/i18n/validation-messages";
 
 /**
  * Short-lived confirmations, floating above the page.
@@ -120,8 +122,10 @@ function ToastItem({
   toast: Toast;
   onDismiss: (id: number) => void;
 }) {
+  const { language } = useLanguage();
   const [paused, setPaused] = useState(false);
   const { wrap, icon: Icon } = TONES[toast.tone];
+  const displayMessage = translateErrorMessage(toast.message, language);
 
   useEffect(() => {
     if (paused || toast.durationMs <= 0) return;
@@ -140,7 +144,7 @@ function ToastItem({
       className={`pointer-events-auto flex w-full max-w-sm items-start gap-2.5 rounded-2xl border p-3.5 text-xs font-medium shadow-lg backdrop-blur-sm animate-in fade-in-0 slide-in-from-bottom-2 duration-200 sm:text-sm ${wrap}`}
     >
       <Icon aria-hidden className="mt-px size-4 shrink-0" />
-      <span className="flex-1">{toast.message}</span>
+      <span className="flex-1">{displayMessage}</span>
       <button
         type="button"
         onClick={() => onDismiss(toast.id)}

@@ -172,7 +172,7 @@ export function FormFileInput({
         </span>
         {optional && (
           <span className="text-[10px] font-semibold text-muted-foreground bg-muted/80 px-2 py-0.5 rounded-full border border-border/50">
-            Optional
+            {isGujarati ? "વૈકલ્પિક" : "Optional"}
           </span>
         )}
       </div>
@@ -234,11 +234,11 @@ export function FormFileInput({
                   {activeFileSize && <span>{formatSize(activeFileSize)}</span>}
                   {file ? (
                     <span className="text-indigo-600 dark:text-indigo-400 font-semibold flex items-center gap-1">
-                      <CheckCircle2 className="size-3" /> Ready to upload
+                      <CheckCircle2 className="size-3" /> {isGujarati ? "અપલોડ માટે તૈયાર" : "Ready to upload"}
                     </span>
                   ) : (
                     <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
-                      <CheckCircle2 className="size-3" /> Attached document
+                      <CheckCircle2 className="size-3" /> {isGujarati ? "જોડાયેલ દસ્તાવેજ" : "Attached document"}
                     </span>
                   )}
                 </div>
@@ -252,10 +252,10 @@ export function FormFileInput({
                   type="button"
                   onClick={handleOpenPreview}
                   className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-border bg-card text-xs font-semibold text-foreground hover:bg-muted hover:border-sky-500/50 transition-colors shadow-2xs cursor-pointer"
-                  title="View / Lightbox preview"
+                  title={t.common.preview}
                 >
                   <Eye className="size-3.5 text-sky-500" />
-                  <span className="hidden sm:inline">Preview</span>
+                  <span className="hidden sm:inline">{t.common.preview}</span>
                 </button>
               )}
 
@@ -263,20 +263,20 @@ export function FormFileInput({
                 type="button"
                 onClick={() => setIsCameraModalOpen(true)}
                 className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-border bg-card text-xs font-semibold text-foreground hover:bg-muted hover:border-indigo-500/50 transition-colors shadow-2xs cursor-pointer"
-                title="Retake with Camera"
+                title={t.common.camera}
               >
                 <Camera className="size-3.5 text-indigo-500" />
-                <span className="hidden sm:inline">Camera</span>
+                <span className="hidden sm:inline">{t.common.camera}</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-border bg-card text-xs font-semibold text-foreground hover:bg-muted hover:border-indigo-500/50 transition-colors shadow-2xs cursor-pointer"
-                title="Choose Another File"
+                title={t.common.change}
               >
                 <Pencil className="size-3.5 text-slate-500" />
-                <span className="hidden sm:inline">Change</span>
+                <span className="hidden sm:inline">{t.common.change}</span>
               </button>
 
               <button
@@ -286,10 +286,10 @@ export function FormFileInput({
                   setIsDeleteModalOpen(true);
                 }}
                 className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-rose-500/20 bg-rose-500/10 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 transition-colors shadow-2xs cursor-pointer"
-                title="Delete / Remove Attachment"
+                title={t.common.remove}
               >
                 <Trash2 className="size-3.5" />
-                <span className="hidden sm:inline">Remove</span>
+                <span className="hidden sm:inline">{t.common.remove}</span>
               </button>
             </div>
           </div>
@@ -304,14 +304,14 @@ export function FormFileInput({
                   className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1"
                 >
                   <Tag className="size-3 text-indigo-500" />
-                  <span>Document / Report Name</span>
+                  <span>{isGujarati ? "દસ્તાવેજ / અહેવાલનું નામ" : "Document / Report Name"}</span>
                 </label>
                 <input
                   id="doc-title-input"
                   type="text"
                   value={documentTitle}
                   onChange={(e) => setDocumentTitle(e.target.value)}
-                  placeholder="e.g. Shift Report, Travel Ticket, Medical Slip"
+                  placeholder={isGujarati ? "દા.ત. શિફ્ટ રિપોર્ટ, મુસાફરી ટિકિટ, મેડિકલ સ્લિપ" : "e.g. Shift Report, Travel Ticket, Medical Slip"}
                   className="w-full rounded-xl border border-border bg-card px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/60 shadow-2xs hover:border-indigo-500/40 focus:border-indigo-500 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 transition-all"
                 />
               </div>
@@ -323,7 +323,7 @@ export function FormFileInput({
                   className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1"
                 >
                   <Clock className="size-3 text-sky-500" />
-                  <span>Upload / Document Date & Time</span>
+                  <span>{isGujarati ? "અપલોડ / દસ્તાવેજ તારીખ અને સમય" : "Upload / Document Date & Time"}</span>
                 </label>
                 <input
                   id="doc-date-input"
@@ -447,9 +447,13 @@ export function FormFileInput({
           }
           setIsDeleteModalOpen(false);
         }}
-        title="Remove Selected File"
-        description="Are you sure you want to remove this attached proof document? You can select another file or re-upload before saving."
-        confirmLabel="Remove File"
+        title={isGujarati ? "પસંદ કરેલ ફાઇલ દૂર કરો" : "Remove Selected File"}
+        description={
+          isGujarati
+            ? "શું તમે ખરેખર આ જોડાયેલ પુરાવા દસ્તાવેજને દૂર કરવા માંગો છો? સાચવતા પહેલા તમે બીજી ફાઇલ પસંદ કરી શકો છો અથવા ફરીથી અપલોડ કરી શકો છો."
+            : "Are you sure you want to remove this attached proof document? You can select another file or re-upload before saving."
+        }
+        confirmLabel={isGujarati ? "ફાઇલ દૂર કરો" : "Remove File"}
       />
     </div>
   );

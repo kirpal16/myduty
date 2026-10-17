@@ -159,7 +159,9 @@ export async function createDuty(
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return { message: "Not authenticated" };
 
-  const isExplicitOvernight = formData.get("isNextDay") === "true";
+  const rawSlots = splitIntoDailyDuties(new Date(d.startsAt), new Date(d.endsAt));
+  const isExplicitOvernight =
+    formData.get("isNextDay") === "true" && rawSlots.length <= 1;
   const slots = isExplicitOvernight
     ? [
         {
@@ -168,7 +170,7 @@ export async function createDuty(
           endsAt: new Date(d.endsAt),
         },
       ]
-    : splitIntoDailyDuties(new Date(d.startsAt), new Date(d.endsAt));
+    : rawSlots;
   const settings = await getUserSettings();
   const holidays = await loadHolidays(
     supabase,
@@ -225,13 +227,34 @@ export async function createDuty(
       manualClaim: o?.manualHolidayClaim ?? (slots.length === 1 ? d.manualHolidayClaim : false),
     });
 
+    let startsAtIso = toWallClockISO(slot.startsAt);
+    let endsAtIso = toWallClockISO(slot.endsAt);
+
+    if (o?.startTime && o?.endTime && o.startTime.includes(":") && o.endTime.includes(":")) {
+      const [sH, sM] = o.startTime.split(":").map(Number);
+      const [eH, eM] = o.endTime.split(":").map(Number);
+      const isOvernight = eH * 60 + eM <= sH * 60 + sM;
+
+      const sDate = new Date(slot.startsAt);
+      sDate.setHours(sH, sM, 0, 0);
+
+      const eDate = new Date(slot.startsAt);
+      if (isOvernight) {
+        eDate.setDate(eDate.getDate() + 1);
+      }
+      eDate.setHours(eH, eM, 0, 0);
+
+      startsAtIso = toWallClockISO(sDate);
+      endsAtIso = toWallClockISO(eDate);
+    }
+
     return {
       user_id: auth.user!.id,
-      duty_type_id: d.dutyTypeId,
-      starts_at: toWallClockISO(slot.startsAt),
-      ends_at: toWallClockISO(slot.endsAt),
-      location: d.location ?? null,
-      notes: d.notes ?? null,
+      duty_type_id: o?.dutyTypeId || d.dutyTypeId,
+      starts_at: startsAtIso,
+      ends_at: endsAtIso,
+      location: (o?.location !== undefined ? (o.location || null) : d.location) ?? null,
+      notes: (o?.notes !== undefined ? (o.notes || null) : d.notes) ?? null,
       status,
       duty_group_id: groupId,
       ta_from_place: o?.taFromPlace ?? d.taFromPlace ?? null,

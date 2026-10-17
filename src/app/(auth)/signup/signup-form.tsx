@@ -9,10 +9,12 @@ import { AlertCircle, ArrowRight, Loader2 } from "lucide-react";
 import { FieldError } from "@/components/ui/field-error";
 import { useFormFeedback } from "@/lib/hooks/useFormFeedback";
 import { AutoDismissBanner } from "@/components/ui/auto-dismiss-banner";
+import { useLanguage } from "@/lib/i18n/language-context";
 
 type Profile = { id: string; name: string; code: string };
 
 export function SignupForm({ profiles }: { profiles: Profile[] }) {
+  const { isGujarati } = useLanguage();
   const [state, action, pending] = useActionState<AuthFormState, FormData>(
     signup,
     undefined
@@ -44,7 +46,7 @@ export function SignupForm({ profiles }: { profiles: Profile[] }) {
             id="profileId"
             {...fieldProps("profileId")}
             required
-            placeholder="Select officer profile"
+            placeholder={isGujarati ? "ઓફિસર પ્રોફાઇલ પસંદ કરો" : "Select officer profile"}
             iconName="shield"
             error={!!errorProps("profileId").message}
             options={profiles.map((p) => ({

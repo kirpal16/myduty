@@ -10,6 +10,11 @@ import * as z from "zod";
 export const dutyDaySchema = z.object({
   /** Local calendar day, "YYYY-MM-DD". Identifies which slot this row edits. */
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { error: "Bad day key." }),
+  dutyTypeId: z.uuid().optional(),
+  startTime: z.string().optional(),
+  endTime: z.string().optional(),
+  location: z.string().trim().optional(),
+  notes: z.string().trim().optional(),
   taFromPlace: z.string().trim().optional(),
   taToPlace: z.string().trim().optional(),
   taVehicleType: z.string().trim().optional(),

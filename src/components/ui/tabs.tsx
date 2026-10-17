@@ -60,7 +60,7 @@ export function Tabs({
     <div
       role="tablist"
       aria-label="Settings sections"
-      className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-border bg-card p-1.5 shadow-xs"
+      className="flex flex-nowrap items-center gap-1.5 rounded-2xl border border-border bg-card p-1.5 shadow-xs overflow-x-auto no-scrollbar w-full"
     >
       {tabs.map((tab) => {
         const isActive = tab.id === activeId;
@@ -74,7 +74,7 @@ export function Tabs({
             aria-selected={isActive}
             disabled={isPending}
             onClick={() => select(tab.id)}
-            className={`flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-bold transition-all sm:flex-none sm:px-4 ${
+            className={`flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold whitespace-nowrap transition-all sm:px-4 ${
               isActive
                 ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/25"
                 : isTargetPending
@@ -87,7 +87,7 @@ export function Tabs({
             ) : (
               Icon && <Icon className="size-4 shrink-0" />
             )}
-            <span>{tab.label}</span>
+            <span className="whitespace-nowrap">{tab.label}</span>
           </button>
         );
       })}
