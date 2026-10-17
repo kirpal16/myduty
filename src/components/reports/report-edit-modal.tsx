@@ -23,6 +23,7 @@ import {
   type PrintOfficer,
   type PrintReport,
 } from "@/lib/reports/printReport";
+import { getPrintColStyle } from "./report-print-view";
 import { useToast } from "@/components/ui/toast";
 import {
   translateEnglishMonthsInText,
@@ -392,18 +393,18 @@ type SavedPrintConfig = {
 
       printRoot.innerHTML = `
         <table class="rp-page">
-          <thead><tr><td class="${showHeader ? "rp-space" : ""}" style="${!showHeader ? "height: 0px !important; padding: 0 !important; border: none !important;" : ""}"></td></tr></thead>
+          <thead><tr><td class="${showHeader ? "rp-space" : ""}" style="${!showHeader ? "height: 0px !important; padding: 0 !important; border: none !important;" : "height: 2.5mm !important; padding: 0 !important; border: none !important;"}"></td></tr></thead>
           <tfoot><tr><td class="rp-space"></td></tr></tfoot>
           <tbody>
             <tr>
-              <td class="rp-body" style="${!showHeader ? "padding-top: 0 !important;" : ""}">
-                <div class="rp-gujarati-layout text-black font-['Shruti',_'Gujarati_Saral',_var(--font-gujarati),_'Noto_Sans_Gujarati',_'Nirmala_UI',_sans-serif]" style="${!showHeader ? "margin-top: 0 !important; padding-top: 0 !important;" : ""}">
+              <td class="rp-body" style="padding-top: 0 !important;">
+                <div class="rp-gujarati-layout text-black font-['Shruti',_'Gujarati_Saral',_var(--font-gujarati),_'Noto_Sans_Gujarati',_'Nirmala_UI',_sans-serif]" style="margin-top: 0 !important; padding-top: 0 !important;">
                   ${showHeader ? `
-                  <div class="flex items-center justify-between border-b-2 border-black pb-3 mb-4">
+                  <div class="flex items-center justify-between border-b-2 border-black pb-2 mb-2.5">
                     ${showLogo ? `
-                    <img src="/Gujarat-police.png" alt="Gujarat Police" class="rp-logo" width="40" height="52" style="width: 40px; height: 52px; object-fit: contain; aspect-ratio: 1542/2000; display: block;" />
+                    <img src="/Gujarat-police.png" alt="Gujarat Police" class="rp-logo" width="38" height="48" style="width: 38px; height: 48px; object-fit: contain; aspect-ratio: 1542/2000; display: block;" />
                     ` : `
-                    <div style="width: 40px; height: 52px; flex-shrink: 0;"></div>
+                    <div style="width: 38px; height: 48px; flex-shrink: 0;"></div>
                     `}
                     <div class="text-center flex-1 mx-4">
                       <h2 class="text-xl font-bold tracking-wide">${esc(header1)}</h2>
@@ -416,35 +417,46 @@ type SavedPrintConfig = {
                   </div>
                   ` : ``}
 
-                  <h1 class="rp-title text-center text-lg font-bold underline mb-5 tracking-wide" style="${!showHeader ? "margin-top: 0 !important; padding-top: 0 !important;" : ""}">
+                  <h1 class="rp-title text-center text-lg font-bold underline mb-3 tracking-wide" style="margin-top: 2mm !important; margin-bottom: 3mm !important;">
                     ${esc(initialReport.title)}
                   </h1>
 
-                  <div class="mb-3 text-sm leading-relaxed whitespace-pre-line font-medium">
+                  <div class="mb-2 text-sm leading-relaxed whitespace-pre-line font-medium">
                     ${esc(toLines)}
                   </div>
 
-                  ${applicantLine ? `<div class="mb-3 text-sm text-gray-900 tracking-wide">${formatApplicantLineBoldHtml(applicantLine)}</div>` : ""}
+                  ${applicantLine ? `<div class="mb-2 text-sm text-gray-900 tracking-wide">${formatApplicantLineBoldHtml(applicantLine)}</div>` : ""}
 
-                  <div class="mb-3 text-sm font-bold">
+                  <div class="mb-2 text-sm font-bold">
                     <span>વિષય: </span>
                     <span>${esc(subject)}</span>
                   </div>
 
-                  <div class="mb-4 text-sm leading-relaxed text-gray-900">
+                  <div class="mb-3 text-sm leading-relaxed text-gray-900">
                     <p class="font-semibold">મહેરબાન સાહેબ,</p>
-                    <p class="indent-6 mt-1">${esc(salutation)}</p>
+                    <p class="indent-6 mt-0.5">${esc(salutation)}</p>
                   </div>
 
+                  ${(() => {
+                    const hasOfficer = visibleColumns.some((c) => c.key === "officer");
+                    const isHolidayReport = visibleColumns.some(
+                      (c) => c.key === "dateDay" || c.key === "remarks" || c.key === "holiday",
+                    );
+
+                    return `
                   <table class="rp-table w-full border-collapse text-xs table-fixed">
                     <thead>
                       <tr>
-                        <th class="rp-idx text-center whitespace-nowrap" style="width: 5%">અ.નં.</th>
+                        <th class="rp-idx text-center whitespace-nowrap" style="width: ${hasOfficer ? "4%" : "4.5%"}">અ.નં.</th>
                         ${visibleColumns
                           .map((c) => {
-                            const isRight = c.align === "right";
-                            const isCenter = c.align === "center" || c.key === "vehicle";
-                            return `<th class="${isRight ? "rp-num text-right whitespace-nowrap min-w-[75px]" : isCenter ? "rp-center text-center" : "text-left"}">${esc(c.label)}</th>`;
+                            const col = getPrintColStyle(c.key, hasOfficer, c.align, isHolidayReport);
+                            const isRight = c.align === "right" || col.textAlign === "right";
+                            const isCenter = c.align === "center" || col.textAlign === "center" || c.key === "vehicle";
+                            const isVehicle = c.key === "vehicle";
+                            const padStyle = c.key === "vehicle" ? "padding-left: 1.5mm; padding-right: 1.5mm;" : c.key === "distance" ? "padding-left: 1mm; padding-right: 2.5mm;" : "";
+                            const labelHtml = isVehicle ? "સ.વા. /<br/>ખ.વા." : esc(c.label);
+                            return `<th style="width: ${col.width}; text-align: ${col.textAlign}; ${padStyle}" class="${isRight ? "rp-num text-right whitespace-nowrap" : isCenter ? "rp-center text-center whitespace-nowrap" : "text-left"}">${labelHtml}</th>`;
                           })
                           .join("")}
                       </tr>
@@ -454,18 +466,20 @@ type SavedPrintConfig = {
                         .map(
                           (row, idx) => `
                         <tr>
-                          <td class="rp-idx text-center font-semibold align-top whitespace-nowrap" style="width: 5%; vertical-align: top;">${numFn(idx + 1)}</td>
+                          <td class="rp-idx text-center font-semibold align-top whitespace-nowrap" style="width: ${hasOfficer ? "4%" : "4.5%"}; vertical-align: top;">${numFn(idx + 1)}</td>
                           ${visibleColumns
                             .map((c) => {
-                              const isRight = c.align === "right";
-                              const isCenter = c.align === "center" || c.key === "vehicle";
+                              const col = getPrintColStyle(c.key, hasOfficer, c.align, isHolidayReport);
+                              const isRight = c.align === "right" || col.textAlign === "right";
+                              const isCenter = c.align === "center" || col.textAlign === "center" || c.key === "vehicle";
+                              const padStyle = c.key === "vehicle" ? "padding-left: 1.5mm; padding-right: 1.5mm;" : c.key === "distance" ? "padding-left: 1mm; padding-right: 2.5mm;" : "";
                               return `<td class="align-top ${
                                 isRight
-                                  ? "rp-num text-right font-medium whitespace-pre min-w-[75px]"
+                                  ? "rp-num text-right font-medium whitespace-nowrap"
                                   : isCenter
-                                    ? "rp-center text-center whitespace-pre-line"
+                                    ? "rp-center text-center whitespace-nowrap"
                                     : "whitespace-pre-line text-left"
-                              }" style="vertical-align: top;">${esc(row[c.key] || "—")}</td>`;
+                              }" style="width: ${col.width}; text-align: ${col.textAlign}; vertical-align: top; ${padStyle}">${esc(row[c.key] || "—")}</td>`;
                             })
                             .join("")}
                         </tr>
@@ -474,6 +488,8 @@ type SavedPrintConfig = {
                         .join("")}
                     </tbody>
                   </table>
+                  `;
+                  })()}
 
                   <div class="mt-8 pt-4 flex justify-between items-end text-xs break-inside-avoid">
                     <div class="space-y-1">

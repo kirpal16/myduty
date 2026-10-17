@@ -441,7 +441,8 @@
     overflow: visible !important;
     width: auto !important;
     top: auto !important;
-    padding-right: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
   .min-h-screen {
@@ -489,9 +490,17 @@
 }
 
 .report-print .rp-space {
-  height: 12mm;
-  padding: 0;
-  border: 0;
+  height: 2.5mm !important;
+  padding: 0 !important;
+  border: 0 !important;
+}
+
+.report-print .rp-page > thead .rp-space {
+  height: 2.5mm !important;
+}
+
+.report-print .rp-page > tfoot .rp-space {
+  height: 6mm !important;
 }
 
 .report-print .rp-body {
@@ -502,7 +511,7 @@
   display: flex;
   align-items: center;
   gap: 4mm;
-  padding-bottom: 3mm;
+  padding-bottom: 2mm;
   border-bottom: 3px double #000;
 }
 
@@ -548,7 +557,7 @@
 }
 
 .report-print .rp-title {
-  margin: 6mm 0 5mm;
+  margin: 2mm 0 !important;
   text-align: center;
   font-family: inherit;
   font-size: 14pt;
@@ -593,16 +602,16 @@
 .report-print .rp-table th,
 .report-print .rp-table td {
   border: 1px solid #444;
-  padding: 2.2mm 2mm;
+  padding: 2mm 1.5mm;
   text-align: left;
   vertical-align: top !important;
   white-space: pre-line;
-  word-break: break-word;
+  word-break: normal;
   overflow-wrap: break-word;
 }
 
 .report-print .rp-table th {
-  padding: 2mm 2mm;
+  padding: 1.8mm 1.5mm;
   font-size: 8.5pt;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -622,12 +631,17 @@
 .report-print .rp-center {
   text-align: center !important;
   vertical-align: top !important;
+  white-space: nowrap !important;
+  padding-left: 1.5mm !important;
+  padding-right: 1.5mm !important;
 }
 
 .report-print .rp-num {
   text-align: right !important;
   vertical-align: top !important;
-  white-space: pre !important;
+  white-space: nowrap !important;
+  padding-left: 1mm !important;
+  padding-right: 2.5mm !important;
 }
 
 .report-print .rp-empty {
